@@ -24,14 +24,21 @@ public class TradeController {
         model.addAttribute("trade", new Trade());
         return "trades";
     }
-
+    
     @PostMapping
     public String create(@Valid @ModelAttribute Trade trade, BindingResult bindingResult, Model model) {
         if (bindingResult.hasErrors()) {
+            bindingResult.getAllErrors().forEach(System.out::println);
             model.addAttribute("trades", service.findAll());
             return "trades";
         }
         service.save(trade);
         return "redirect:/trades";
+    }
+
+    @GetMapping("/{id}")
+    public String detail(@PathVariable String id, Model model) {
+        model.addAttribute("trade", service.findById(id));
+        return "tradeDetail";
     }
 }
