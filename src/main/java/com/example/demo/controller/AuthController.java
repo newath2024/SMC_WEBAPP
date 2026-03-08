@@ -2,6 +2,7 @@ package com.example.demo.controller;
 
 import com.example.demo.entity.User;
 import com.example.demo.service.AuthService;
+import com.example.demo.service.UserService;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -13,15 +14,18 @@ public class AuthController {
     public static final String SESSION_USER_ID = "CURRENT_USER_ID";
 
     private final AuthService authService;
+    private final UserService userService;
 
-    public AuthController(AuthService authService) {
+    public AuthController(AuthService authService, UserService userService) {
         this.authService = authService;
+        this.userService = userService;
     }
 
     @GetMapping("/login")
     public String loginPage(HttpSession session) {
-        if (session.getAttribute(SESSION_USER_ID) != null) {
-            return "redirect:/trades";
+        User currentUser = userService.getCurrentUser(session);
+        if (currentUser != null) {
+            return redirectAfterAuth(currentUser);
         }
         return "login";
     }
@@ -36,7 +40,7 @@ public class AuthController {
         try {
             User user = authService.login(usernameOrEmail, password);
             session.setAttribute(SESSION_USER_ID, user.getId());
-            return "redirect:/trades";
+            return redirectAfterAuth(user);
         } catch (IllegalArgumentException e) {
             model.addAttribute("error", e.getMessage());
             model.addAttribute("usernameOrEmail", usernameOrEmail);
@@ -46,8 +50,9 @@ public class AuthController {
 
     @GetMapping("/register")
     public String registerPage(HttpSession session) {
-        if (session.getAttribute(SESSION_USER_ID) != null) {
-            return "redirect:/trades";
+        User currentUser = userService.getCurrentUser(session);
+        if (currentUser != null) {
+            return redirectAfterAuth(currentUser);
         }
         return "register";
     }
@@ -88,9 +93,17 @@ public class AuthController {
 
     @GetMapping("/")
     public String home(HttpSession session) {
-        if (session.getAttribute(SESSION_USER_ID) != null) {
-            return "redirect:/trades";
+        User currentUser = userService.getCurrentUser(session);
+        if (currentUser != null) {
+            return redirectAfterAuth(currentUser);
         }
         return "redirect:/login";
+    }
+
+    private String redirectAfterAuth(User user) {
+        if (userService.isAdmin(user)) {
+            return "redirect:/admin";
+        }
+        return "redirect:/trades";
     }
 }
