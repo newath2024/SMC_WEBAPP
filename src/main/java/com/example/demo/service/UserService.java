@@ -2,8 +2,10 @@ package com.example.demo.service;
 
 import com.example.demo.entity.User;
 import com.example.demo.repository.UserRepository;
-
+import jakarta.servlet.http.HttpSession;
 import org.springframework.stereotype.Service;
+
+import static com.example.demo.controller.AuthController.SESSION_USER_ID;
 
 @Service
 public class UserService {
@@ -14,24 +16,25 @@ public class UserService {
         this.userRepository = userRepository;
     }
 
-    public User getCurrentUser() {
+    public User getCurrentUser(HttpSession session) {
+        Object userIdObj = session.getAttribute(SESSION_USER_ID);
 
-        return userRepository
-                .findByUsername("admin")
-                .orElseGet(() -> createDefaultAdmin());
+        if (userIdObj == null) {
+            return null;
+        }
+
+        String userId = String.valueOf(userIdObj);
+
+        return userRepository.findById(userId).orElse(null);
     }
 
-    private User createDefaultAdmin() {
+    public User requireCurrentUser(HttpSession session) {
+        User user = getCurrentUser(session);
 
-        User u = new User();
+        if (user == null) {
+            throw new IllegalStateException("User is not logged in");
+        }
 
-        u.setUsername("admin");
-        u.setEmail("admin@test.com");
-        u.setPasswordHash("admin");
-        u.setRole("ADMIN");
-        u.setActive(true);
-
-        return userRepository.save(u);
+        return user;
     }
-
 }

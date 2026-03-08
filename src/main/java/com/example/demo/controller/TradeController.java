@@ -4,9 +4,8 @@ import com.example.demo.entity.Trade;
 import com.example.demo.entity.User;
 import com.example.demo.service.TradeService;
 import com.example.demo.service.UserService;
-
+import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
-
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
@@ -24,82 +23,69 @@ public class TradeController {
         this.userService = userService;
     }
 
-    /**
-     * Trang danh sách trade
-     */
     @GetMapping
-    public String list(Model model) {
+    public String list(Model model, HttpSession session) {
+        User currentUser = userService.getCurrentUser(session);
+        if (currentUser == null) {
+            return "redirect:/login";
+        }
 
-        User currentUser = userService.getCurrentUser();
-
-        model.addAttribute(
-                "trades",
-                tradeService.findAllByUser(currentUser.getId())
-        );
-
+        model.addAttribute("currentUser", currentUser);
+        model.addAttribute("trades", tradeService.findAllByUser(currentUser.getId()));
         model.addAttribute("trade", new Trade());
 
         return "trades";
     }
 
-    /**
-     * Lưu trade
-     */
     @PostMapping
     public String create(
             @Valid @ModelAttribute("trade") Trade trade,
             BindingResult bindingResult,
-            Model model
+            Model model,
+            HttpSession session
     ) {
-
-        User currentUser = userService.getCurrentUser();
+        User currentUser = userService.getCurrentUser(session);
+        if (currentUser == null) {
+            return "redirect:/login";
+        }
 
         if (bindingResult.hasErrors()) {
-
-            model.addAttribute(
-                    "trades",
-                    tradeService.findAllByUser(currentUser.getId())
-            );
-
+            model.addAttribute("currentUser", currentUser);
+            model.addAttribute("trades", tradeService.findAllByUser(currentUser.getId()));
             return "trades";
         }
 
         tradeService.saveForUser(trade, currentUser);
-
         return "redirect:/trades";
     }
 
-    /**
-     * Trang chi tiết trade
-     */
     @GetMapping("/{id}")
     public String detail(
             @PathVariable String id,
-            Model model
+            Model model,
+            HttpSession session
     ) {
+        User currentUser = userService.getCurrentUser(session);
+        if (currentUser == null) {
+            return "redirect:/login";
+        }
 
-        User currentUser = userService.getCurrentUser();
+        Trade trade = tradeService.findByIdForUser(id, currentUser.getId());
 
-        Trade trade = tradeService.findByIdForUser(
-                id,
-                currentUser.getId()
-        );
-
+        model.addAttribute("currentUser", currentUser);
         model.addAttribute("trade", trade);
 
         return "tradeDetail";
     }
 
-    /**
-     * Xóa trade
-     */
     @PostMapping("/{id}/delete")
-    public String delete(@PathVariable String id) {
-
-        User currentUser = userService.getCurrentUser();
+    public String delete(@PathVariable String id, HttpSession session) {
+        User currentUser = userService.getCurrentUser(session);
+        if (currentUser == null) {
+            return "redirect:/login";
+        }
 
         tradeService.deleteForUser(id, currentUser.getId());
-
         return "redirect:/trades";
     }
 }
