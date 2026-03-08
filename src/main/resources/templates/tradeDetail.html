@@ -8,28 +8,14 @@
 </head>
 <body class="bg-light">
 
-<div class="d-flex justify-content-between align-items-center mb-4">
-  <div>
-    <h2 class="m-0">Trading Journal</h2>
-    <div class="text-muted" th:if="${currentUser != null}">
-      Logged in as <strong th:text="${currentUser.username}"></strong>
-    </div>
-  </div>
-  <form method="post" action="/logout">
-    <button class="btn btn-outline-danger btn-sm">
-        Logout
-    </button>
-  </form>
-
-  <form method="post" action="/logout">
-    <button class="btn btn-outline-danger" type="submit">Logout</button>
-  </form>
-</div>
-
 <div class="container py-4">
   <div class="d-flex justify-content-between align-items-center mb-3">
     <h2 class="m-0">Trade Detail</h2>
-    <a class="btn btn-outline-secondary" href="/trades">Back to Trades</a>
+
+    <div class="d-flex gap-2">
+      <a class="btn btn-primary" th:href="@{/trades/{id}/edit(id=${trade.id})}">Edit</a>
+      <a class="btn btn-outline-secondary" href="/trades">Back to Trades</a>
+    </div>
   </div>
 
   <div class="card shadow-sm mb-4">
@@ -86,6 +72,19 @@
         <div class="col-md-3">
           <strong>Exit Price</strong>
           <div th:text="${trade.exitPrice}"></div>
+        </div>
+
+        <div class="col-md-3">
+          <strong>Position Size</strong>
+          <div th:text="${trade.positionSize}"></div>
+        </div>
+        <div class="col-md-3">
+          <strong>PnL</strong>
+          <div th:text="${trade.pnl}"></div>
+        </div>
+        <div class="col-md-3">
+          <strong>R Multiple</strong>
+          <div th:text="${trade.rMultiple}"></div>
         </div>
 
         <div class="col-md-6">

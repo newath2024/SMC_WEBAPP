@@ -10,6 +10,7 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 import java.time.Duration;
 import java.math.RoundingMode;
+import org.springframework.format.annotation.DateTimeFormat;
 @Entity
 @Table(name = "trades")
 public class Trade {
@@ -21,8 +22,10 @@ public class Trade {
     private LocalDateTime tradeDate;
 
     @NotNull
+    @DateTimeFormat(pattern = "yyyy-MM-dd'T'HH:mm")
     private LocalDateTime entryTime;
 
+    @DateTimeFormat(pattern = "yyyy-MM-dd'T'HH:mm")
     private LocalDateTime exitTime;
 
     @NotBlank

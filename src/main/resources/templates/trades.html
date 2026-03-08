@@ -233,6 +233,10 @@
             <td th:text="${#numbers.formatDecimal(t.rMultiple,1,2)}"></td>
             <td th:text="${t.session}"></td>
             <td>
+                <a class="btn btn-sm btn-outline-primary"
+                  th:href="@{/trades/{id}/edit(id=${t.id})}">
+                  Edit
+                </a>
               <form th:action="@{/trades/{id}/delete(id=${t.id})}" method="post"
                     onsubmit="return confirm('Delete this trade?');">
                 <button class="btn btn-sm btn-danger" type="submit">Delete</button>
