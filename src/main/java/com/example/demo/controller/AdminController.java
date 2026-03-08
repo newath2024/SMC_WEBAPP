@@ -4,6 +4,7 @@ import com.example.demo.entity.Trade;
 import com.example.demo.entity.User;
 import com.example.demo.repository.TradeRepository;
 import com.example.demo.repository.UserRepository;
+import com.example.demo.service.TradeImageService;
 import com.example.demo.service.UserService;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.data.domain.Sort;
@@ -19,15 +20,18 @@ public class AdminController {
     private final UserRepository userRepository;
     private final TradeRepository tradeRepository;
     private final UserService userService;
+    private final TradeImageService tradeImageService;
 
     public AdminController(
             UserRepository userRepository,
             TradeRepository tradeRepository,
-            UserService userService
+            UserService userService,
+            TradeImageService tradeImageService
     ) {
         this.userRepository = userRepository;
         this.tradeRepository = tradeRepository;
         this.userService = userService;
+        this.tradeImageService = tradeImageService;
     }
 
     @GetMapping
@@ -101,6 +105,9 @@ public class AdminController {
         }
 
         List<Trade> userTrades = tradeRepository.findByUserIdOrderByEntryTimeDesc(target.getId());
+        for (Trade trade : userTrades) {
+            tradeImageService.deleteByTradeId(trade.getId());
+        }
         tradeRepository.deleteAll(userTrades);
 
         userRepository.delete(target);
@@ -123,6 +130,7 @@ public class AdminController {
         Trade trade = tradeRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Trade not found: " + id));
 
+        tradeImageService.deleteByTradeId(trade.getId());
         tradeRepository.delete(trade);
 
         return "redirect:/admin";

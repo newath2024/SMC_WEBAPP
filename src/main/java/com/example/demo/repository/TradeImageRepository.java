@@ -8,4 +8,6 @@ import java.util.List;
 public interface TradeImageRepository extends JpaRepository<TradeImage, String> {
 
     List<TradeImage> findByTradeIdOrderByCreatedAtAsc(String tradeId);
+
+    void deleteByTradeId(String tradeId);
 }

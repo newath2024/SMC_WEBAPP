@@ -3,6 +3,7 @@ package com.example.demo.controller;
 import com.example.demo.entity.Trade;
 import com.example.demo.entity.User;
 import com.example.demo.service.MistakeTagService;
+import com.example.demo.service.TradeImageService;
 import com.example.demo.service.SetupService;
 import com.example.demo.service.TradeService;
 import com.example.demo.service.UserService;
@@ -13,6 +14,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -24,17 +26,20 @@ public class TradeController {
     private final UserService userService;
     private final SetupService setupService;
     private final MistakeTagService mistakeTagService;
+    private final TradeImageService tradeImageService;
 
     public TradeController(
             TradeService tradeService,
             UserService userService,
             SetupService setupService,
-            MistakeTagService mistakeTagService
+            MistakeTagService mistakeTagService,
+            TradeImageService tradeImageService
     ) {
         this.tradeService = tradeService;
         this.userService = userService;
         this.setupService = setupService;
         this.mistakeTagService = mistakeTagService;
+        this.tradeImageService = tradeImageService;
     }
 
     private void fillTradeFormData(Model model, User currentUser) {
@@ -63,6 +68,7 @@ public class TradeController {
             BindingResult bindingResult,
             @RequestParam(value = "mistakeIds", required = false) List<String> mistakeIds,
             @RequestParam(value = "customMistakes", required = false) String customMistakes,
+            @RequestParam(value = "setupImages", required = false) MultipartFile[] setupImages,
             Model model,
             HttpSession session
     ) {
@@ -83,7 +89,8 @@ public class TradeController {
         }
 
         try {
-            tradeService.saveForUser(trade, currentUser, mistakeIds, customMistakes);
+            Trade saved = tradeService.saveForUser(trade, currentUser, mistakeIds, customMistakes);
+            tradeImageService.saveSetupImages(saved, setupImages);
             return "redirect:/trades";
         } catch (RuntimeException ex) {
             model.addAttribute("trades", tradeService.findAllByUser(currentUser.getId()));
@@ -111,6 +118,7 @@ public class TradeController {
 
         model.addAttribute("currentUser", currentUser);
         model.addAttribute("trade", trade);
+        model.addAttribute("tradeImages", tradeImageService.findByTradeId(trade.getId()));
 
         return "tradeDetail";
     }
@@ -144,6 +152,7 @@ public class TradeController {
             BindingResult bindingResult,
             @RequestParam(value = "mistakeIds", required = false) List<String> mistakeIds,
             @RequestParam(value = "customMistakes", required = false) String customMistakes,
+            @RequestParam(value = "setupImages", required = false) MultipartFile[] setupImages,
             Model model,
             HttpSession session
     ) {
@@ -164,11 +173,13 @@ public class TradeController {
         }
 
         try {
+            Trade saved;
             if (userService.isAdmin(currentUser)) {
-                tradeService.updateForAdmin(id, trade, mistakeIds, customMistakes);
+                saved = tradeService.updateForAdmin(id, trade, mistakeIds, customMistakes);
             } else {
-                tradeService.updateForUser(id, trade, currentUser, mistakeIds, customMistakes);
+                saved = tradeService.updateForUser(id, trade, currentUser, mistakeIds, customMistakes);
             }
+            tradeImageService.saveSetupImages(saved, setupImages);
             return "redirect:/trades/" + id;
         } catch (RuntimeException ex) {
             model.addAttribute("trade", trade);
@@ -187,8 +198,10 @@ public class TradeController {
         }
 
         if (userService.isAdmin(currentUser)) {
+            tradeImageService.deleteByTradeId(id);
             tradeService.deleteForAdmin(id);
         } else {
+            tradeImageService.deleteByTradeId(id);
             tradeService.deleteForUser(id, currentUser.getId());
         }
 

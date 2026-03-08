@@ -38,7 +38,7 @@
       <h5 class="card-title mb-3">Add Trade</h5>
       <div class="alert alert-danger" th:if="${error != null}" th:text="${error}"></div>
 
-      <form th:action="@{/trades}" th:object="${trade}" method="post">
+      <form th:action="@{/trades}" th:object="${trade}" method="post" enctype="multipart/form-data">
         <div class="row g-3">
 
           <div class="col-md-3">
@@ -235,6 +235,12 @@
           <div class="col-12">
             <label class="form-label">Note</label>
             <textarea class="form-control" rows="3" th:field="*{note}"></textarea>
+          </div>
+
+          <div class="col-12">
+            <label class="form-label">Setup Images</label>
+            <input class="form-control" type="file" name="setupImages" accept="image/*" multiple>
+            <div class="form-text">Upload chart/setup screenshots for future review and AI analysis.</div>
           </div>
 
           <div class="col-12">

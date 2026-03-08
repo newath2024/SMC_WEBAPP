@@ -154,7 +154,7 @@ public class MistakeTagService {
             }
         }
 
-        throw lastError;
+        throw new IllegalStateException("Retry loop exited without result", lastError);
     }
 
     private String normalizeName(String name) {

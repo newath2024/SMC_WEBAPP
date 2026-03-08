@@ -137,6 +137,25 @@
     </div>
   </div>
 
+  <div class="card shadow-sm mb-4">
+    <div class="card-body">
+      <h5 class="card-title mb-3">Setup Images</h5>
+
+      <div class="row g-3" th:if="${tradeImages != null and !#lists.isEmpty(tradeImages)}">
+        <div class="col-md-4" th:each="img : ${tradeImages}">
+          <div class="border rounded p-2 bg-white h-100">
+            <img th:src="${img.imageUrl}" class="img-fluid rounded mb-2" alt="Setup image">
+            <div class="small text-muted" th:text="${img.caption != null && !#strings.isEmpty(img.caption) ? img.caption : 'Setup image'}"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="text-muted" th:if="${tradeImages == null or #lists.isEmpty(tradeImages)}">
+        No setup images uploaded.
+      </div>
+    </div>
+  </div>
+
   <div class="card shadow-sm">
     <div class="card-body">
       <h5 class="card-title mb-3">Note</h5>
