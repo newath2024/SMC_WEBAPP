@@ -21,6 +21,17 @@ public class SetupService {
         return repo.findByUserIdAndActiveTrueOrderByNameAsc(userId);
     }
 
+    public List<Setup> findAllForAdmin() {
+        return repo.findAll()
+                .stream()
+                .sorted((a, b) -> {
+                    String aName = a.getName() == null ? "" : a.getName();
+                    String bName = b.getName() == null ? "" : b.getName();
+                    return aName.compareToIgnoreCase(bName);
+                })
+                .toList();
+    }
+
     public Setup create(String name, String description, User user) {
         Setup s = new Setup();
         s.setId(UUID.randomUUID().toString());

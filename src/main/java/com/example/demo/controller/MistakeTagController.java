@@ -136,4 +136,15 @@ public class MistakeTagController {
         mistakeTagService.toggleActive(id);
         return "redirect:/mistakes";
     }
+
+    @PostMapping("/{id}/delete")
+    public String delete(@PathVariable String id, HttpSession session) {
+        User currentUser = userService.getCurrentUser(session);
+        if (currentUser == null) {
+            return "redirect:/login";
+        }
+
+        mistakeTagService.delete(id);
+        return "redirect:/mistakes";
+    }
 }

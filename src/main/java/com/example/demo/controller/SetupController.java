@@ -29,8 +29,13 @@ public class SetupController {
         if (user == null) return "redirect:/login";
 
         model.addAttribute("currentUser", user);
-        model.addAttribute("setups",
-                setupService.findActiveByUser(user.getId()));
+        if (userService.isAdmin(user)) {
+            model.addAttribute("adminView", true);
+            model.addAttribute("setups", setupService.findAllForAdmin());
+        } else {
+            model.addAttribute("adminView", false);
+            model.addAttribute("setups", setupService.findActiveByUser(user.getId()));
+        }
 
         return "setups";
     }

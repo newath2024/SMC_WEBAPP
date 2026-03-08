@@ -59,6 +59,12 @@
                     Toggle
                   </button>
                 </form>
+
+                <form th:action="@{/mistakes/{id}/delete(id=${m.id})}"
+                      method="post"
+                      onsubmit="return confirm('Delete this mistake tag? This also removes it from existing trades.');">
+                  <button class="btn btn-sm btn-danger" type="submit">Delete</button>
+                </form>
               </div>
             </td>
           </tr>

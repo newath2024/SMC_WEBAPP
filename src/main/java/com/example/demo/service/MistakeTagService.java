@@ -2,8 +2,10 @@ package com.example.demo.service;
 
 import com.example.demo.entity.MistakeTag;
 import com.example.demo.repository.MistakeTagRepository;
+import com.example.demo.repository.TradeMistakeTagRepository;
 import org.springframework.dao.CannotAcquireLockException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Locale;
@@ -13,9 +15,14 @@ import java.util.function.Supplier;
 public class MistakeTagService {
 
     private final MistakeTagRepository mistakeTagRepository;
+    private final TradeMistakeTagRepository tradeMistakeTagRepository;
 
-    public MistakeTagService(MistakeTagRepository mistakeTagRepository) {
+    public MistakeTagService(
+            MistakeTagRepository mistakeTagRepository,
+            TradeMistakeTagRepository tradeMistakeTagRepository
+    ) {
         this.mistakeTagRepository = mistakeTagRepository;
+        this.tradeMistakeTagRepository = tradeMistakeTagRepository;
     }
 
     public List<MistakeTag> findActive() {
@@ -41,6 +48,7 @@ public class MistakeTagService {
                 .orElseThrow(() -> new IllegalArgumentException("Mistake tag not found: " + id));
     }
 
+    @Transactional
     public MistakeTag create(String code, String name, String description) {
         String normalizedCode = normalizeCode(code, name);
         String normalizedName = normalizeName(name);
@@ -62,6 +70,7 @@ public class MistakeTagService {
         return withSqliteBusyRetry(() -> mistakeTagRepository.save(tag));
     }
 
+    @Transactional
     public MistakeTag update(String id, String code, String name, String description, boolean active) {
         MistakeTag existing = findById(id);
 
@@ -86,12 +95,24 @@ public class MistakeTagService {
         return withSqliteBusyRetry(() -> mistakeTagRepository.save(existing));
     }
 
+    @Transactional
     public void toggleActive(String id) {
         MistakeTag tag = findById(id);
         tag.setActive(!tag.isActive());
         withSqliteBusyRetry(() -> mistakeTagRepository.save(tag));
     }
 
+    @Transactional
+    public void delete(String id) {
+        findById(id);
+        withSqliteBusyRetry(() -> {
+            tradeMistakeTagRepository.deleteByMistakeTagId(id);
+            mistakeTagRepository.deleteById(id);
+            return null;
+        });
+    }
+
+    @Transactional
     public MistakeTag findOrCreateByName(String rawName) {
         String normalizedName = normalizeName(rawName);
         if (normalizedName.isBlank()) {
