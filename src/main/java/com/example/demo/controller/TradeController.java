@@ -60,21 +60,21 @@ public class TradeController {
     }
 
     @GetMapping("/{id}")
-    public String detail(
-            @PathVariable String id,
-            Model model,
-            HttpSession session
-    ) {
+    public String detail(@PathVariable String id, Model model, HttpSession session) {
         User currentUser = userService.getCurrentUser(session);
         if (currentUser == null) {
             return "redirect:/login";
         }
 
-        Trade trade = tradeService.findByIdForUser(id, currentUser.getId());
+        Trade trade;
+        if (userService.isAdmin(currentUser)) {
+            trade = tradeService.findByIdForAdmin(id);
+        } else {
+            trade = tradeService.findByIdForUser(id, currentUser.getId());
+        }
 
         model.addAttribute("currentUser", currentUser);
         model.addAttribute("trade", trade);
-
         return "tradeDetail";
     }
 

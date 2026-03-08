@@ -9,10 +9,23 @@
 <body class="bg-light">
 
 <div class="container py-4">
-  <div class="d-flex justify-content-between align-items-center mb-3">
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
     <h2 class="m-0">Trade Journal</h2>
-    <a class="btn btn-outline-secondary" href="/">Home</a>
+    <div class="text-muted" th:if="${currentUser != null}">
+      Logged in as <strong th:text="${currentUser.username}"></strong>
+      <span th:if="${currentUser.role == 'ADMIN'}">
+        | <a href="/admin">Admin</a>
+      </span>
+    </div>
   </div>
+
+  <div class="d-flex gap-2">
+    <form method="post" action="/logout">
+      <button class="btn btn-outline-danger" type="submit">Logout</button>
+    </form>
+  </div>
+</div>
 
   <div class="card shadow-sm mb-4">
     <div class="card-body">

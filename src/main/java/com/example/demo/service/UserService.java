@@ -23,9 +23,7 @@ public class UserService {
             return null;
         }
 
-        String userId = String.valueOf(userIdObj);
-
-        return userRepository.findById(userId).orElse(null);
+        return userRepository.findById(String.valueOf(userIdObj)).orElse(null);
     }
 
     public User requireCurrentUser(HttpSession session) {
@@ -36,5 +34,19 @@ public class UserService {
         }
 
         return user;
+    }
+
+    public User requireAdmin(HttpSession session) {
+        User user = requireCurrentUser(session);
+
+        if (!isAdmin(user)) {
+            throw new IllegalStateException("Admin access required");
+        }
+
+        return user;
+    }
+
+    public boolean isAdmin(User user) {
+        return user != null && "ADMIN".equalsIgnoreCase(user.getRole());
     }
 }

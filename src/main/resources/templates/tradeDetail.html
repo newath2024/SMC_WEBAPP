@@ -15,6 +15,11 @@
       Logged in as <strong th:text="${currentUser.username}"></strong>
     </div>
   </div>
+  <form method="post" action="/logout">
+    <button class="btn btn-outline-danger btn-sm">
+        Logout
+    </button>
+  </form>
 
   <form method="post" action="/logout">
     <button class="btn btn-outline-danger" type="submit">Logout</button>
