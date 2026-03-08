@@ -26,8 +26,13 @@ public class Trade {
     private LocalDateTime exitTime;
 
     @NotBlank
-    private String account;
+    @Column(name = "account_label", nullable = false)
+    private String accountLabel;
 
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
+    
     @NotBlank
     private String symbol;
 
@@ -42,24 +47,24 @@ public class Trade {
 
     @NotNull
     @Positive
-    private BigDecimal entryPrice;
+    private double entryPrice;
 
     @NotNull
     @Positive
-    private BigDecimal stopLoss;
+    private double stopLoss;
 
     @Positive
-    private BigDecimal takeProfit;
+    private double takeProfit;
 
-    private BigDecimal exitPrice;
+    private double exitPrice;
 
-    private BigDecimal positionSize;
+    private double positionSize;
 
     private String result; // WIN / LOSS / BE
 
-    private BigDecimal pnl;
+    private double pnl;
 
-    private BigDecimal rMultiple;
+    private double rMultiple;
 
     @NotBlank
     private String setup;
@@ -86,27 +91,27 @@ public class Trade {
     }
 
     @Transient
-public Long getHoldingMinutes() {
+    public Long getHoldingMinutes() {
     if (entryTime == null || exitTime == null) {
         return null;
     }
     return Duration.between(entryTime, exitTime).toMinutes();
 }
 
-@Transient
-public Integer getLtfMinutes() {
-    if (ltf == null) return null;
+    @Transient
+    public Integer getLtfMinutes() {
+        if (ltf == null) return null;
 
-    return switch (ltf) {
-        case "M1" -> 1;
-        case "M5" -> 5;
-        case "M15" -> 15;
-        case "M30" -> 30;
-        case "H1" -> 60;
-        case "H4" -> 240;
-        default -> null;
-    };
-}
+        return switch (ltf) {
+            case "M1" -> 1;
+            case "M5" -> 5;
+            case "M15" -> 15;
+            case "M30" -> 30;
+            case "H1" -> 60;
+            case "H4" -> 240;
+            default -> null;
+        };
+    }
 
     @Transient
     public BigDecimal getEquivalentCandles() {
@@ -133,8 +138,8 @@ public Integer getLtfMinutes() {
     public LocalDateTime getExitTime() { return exitTime; }
     public void setExitTime(LocalDateTime exitTime) { this.exitTime = exitTime; }
 
-    public String getAccount() { return account; }
-    public void setAccount(String account) { this.account = account; }
+    public String getAccountLabel() { return accountLabel; }
+    public void setAccountLabel(String accountLabel) { this.accountLabel = accountLabel; }
 
     public String getSymbol() { return symbol; }
     public void setSymbol(String symbol) { this.symbol = symbol; }
@@ -148,29 +153,29 @@ public Integer getLtfMinutes() {
     public String getLtf() { return ltf; }
     public void setLtf(String ltf) { this.ltf = ltf; }
 
-    public BigDecimal getEntryPrice() { return entryPrice; }
-    public void setEntryPrice(BigDecimal entryPrice) { this.entryPrice = entryPrice; }
+    public double getEntryPrice() { return entryPrice; }
+    public void setEntryPrice(double entryPrice) { this.entryPrice = entryPrice; }
 
-    public BigDecimal getStopLoss() { return stopLoss; }
-    public void setStopLoss(BigDecimal stopLoss) { this.stopLoss = stopLoss; }
+    public double getStopLoss() { return stopLoss; }
+    public void setStopLoss(double stopLoss) { this.stopLoss = stopLoss; }
 
-    public BigDecimal getTakeProfit() { return takeProfit; }
-    public void setTakeProfit(BigDecimal takeProfit) { this.takeProfit = takeProfit; }
+    public double getTakeProfit() { return takeProfit; }
+    public void setTakeProfit(double takeProfit) { this.takeProfit = takeProfit; }
 
-    public BigDecimal getExitPrice() { return exitPrice; }
-    public void setExitPrice(BigDecimal exitPrice) { this.exitPrice = exitPrice; }
+    public double getExitPrice() { return exitPrice; }
+    public void setExitPrice(double exitPrice) { this.exitPrice = exitPrice; }
 
-    public BigDecimal getPositionSize() { return positionSize; }
-    public void setPositionSize(BigDecimal positionSize) { this.positionSize = positionSize; }
+    public double getPositionSize() { return positionSize; }
+    public void setPositionSize(double positionSize) { this.positionSize = positionSize; }
 
     public String getResult() { return result; }
     public void setResult(String result) { this.result = result; }
 
-    public BigDecimal getPnl() { return pnl; }
-    public void setPnl(BigDecimal pnl) { this.pnl = pnl; }
+    public double getPnl() { return pnl; }
+    public void setPnl(double pnl) { this.pnl = pnl; }
 
-    public BigDecimal getRMultiple() { return rMultiple; }
-    public void setRMultiple(BigDecimal rMultiple) { this.rMultiple = rMultiple; }
+    public double getRMultiple() { return rMultiple; }
+    public void setRMultiple(double rMultiple) { this.rMultiple = rMultiple; }
 
     public String getSetup() { return setup; }
     public void setSetup(String setup) { this.setup = setup; }
@@ -185,5 +190,16 @@ public Integer getLtfMinutes() {
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
 
     public LocalDateTime getUpdatedAt() { return updatedAt; }
-    public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
+
+    public void setUpdatedAt(LocalDateTime updatedAt) {
+        this.updatedAt = updatedAt;
+    }
+    
+    public User getUser() {
+        return user;
+    }
+
+    public void setUser(User user) {
+        this.user = user;
+    }
 }

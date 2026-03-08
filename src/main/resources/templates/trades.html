@@ -1,213 +1,398 @@
 <!doctype html>
-
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Trade Journal</title>
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trade Journal</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
-
 <body class="bg-light">
 
 <div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="m-0">Trade Journal</h2>
+    <a class="btn btn-outline-secondary" href="/">Home</a>
+  </div>
 
-<div class="d-flex justify-content-between align-items-center mb-3">
-<h2 class="m-0">Trade Journal</h2>
-<a class="btn btn-outline-secondary" href="/">Home</a>
+  <div class="card shadow-sm mb-4">
+    <div class="card-body">
+      <h5 class="card-title mb-3">Add Trade</h5>
+
+      <form th:action="@{/trades}" th:object="${trade}" method="post">
+        <div class="row g-3">
+
+          <div class="col-md-3">
+            <label class="form-label">Account</label>
+            <input class="form-control" th:field="*{accountLabel}">
+            <div class="text-danger small"
+                 th:if="${#fields.hasErrors('accountLabel')}"
+                 th:errors="*{accountLabel}"></div>
+          </div>
+
+          <div class="col-md-3">
+            <label class="form-label">Symbol</label>
+            <select id="symbol" th:field="*{symbol}" class="form-select">
+              <option value="">-- Select Symbol --</option>
+              <option value="XAUUSD">XAUUSD</option>
+              <option value="EURUSD">EURUSD</option>
+              <option value="GBPUSD">GBPUSD</option>
+              <option value="USDJPY">USDJPY</option>
+              <option value="BTCUSD">BTCUSD</option>
+              <option value="ETHUSD">ETHUSD</option>
+            </select>
+            <div class="text-danger small"
+                 th:if="${#fields.hasErrors('symbol')}"
+                 th:errors="*{symbol}"></div>
+          </div>
+
+          <div class="col-md-3">
+            <label class="form-label">Direction</label>
+            <select id="direction" class="form-select" th:field="*{direction}">
+              <option value="">-- Select --</option>
+              <option value="BUY">BUY</option>
+              <option value="SELL">SELL</option>
+            </select>
+            <div class="text-danger small"
+                 th:if="${#fields.hasErrors('direction')}"
+                 th:errors="*{direction}"></div>
+          </div>
+
+          <div class="col-md-3">
+            <label class="form-label">Setup</label>
+            <input class="form-control" th:field="*{setup}">
+            <div class="text-danger small"
+                 th:if="${#fields.hasErrors('setup')}"
+                 th:errors="*{setup}"></div>
+          </div>
+
+          <div class="col-md-3">
+            <label class="form-label">HTF</label>
+            <select class="form-select" th:field="*{htf}">
+              <option value="">-- Select --</option>
+              <option value="H4">H4</option>
+              <option value="H1">H1</option>
+              <option value="M30">M30</option>
+              <option value="M15">M15</option>
+            </select>
+            <div class="text-danger small"
+                 th:if="${#fields.hasErrors('htf')}"
+                 th:errors="*{htf}"></div>
+          </div>
+
+          <div class="col-md-3">
+            <label class="form-label">LTF</label>
+            <select class="form-select" th:field="*{ltf}">
+              <option value="">-- Select --</option>
+              <option value="M15">M15</option>
+              <option value="M5">M5</option>
+              <option value="M1">M1</option>
+            </select>
+            <div class="text-danger small"
+                 th:if="${#fields.hasErrors('ltf')}"
+                 th:errors="*{ltf}"></div>
+          </div>
+
+          <div class="col-md-3">
+            <label class="form-label">Session</label>
+            <select class="form-select" th:field="*{session}">
+              <option value="">-- Select --</option>
+              <option value="ASIA">ASIA</option>
+              <option value="LONDON">LONDON</option>
+              <option value="NEW_YORK">NEW_YORK</option>
+              <option value="OTHER">OTHER</option>
+            </select>
+          </div>
+
+          <div class="col-md-3">
+            <label class="form-label">Result</label>
+            <select id="result" class="form-select" th:field="*{result}">
+              <option value="">-- Select --</option>
+              <option value="WIN">WIN</option>
+              <option value="LOSS">LOSS</option>
+              <option value="BE and take partial">BE and take partial</option>
+            </select>
+          </div>
+
+          <div class="col-md-3">
+            <label class="form-label">Entry Time</label>
+            <input class="form-control" type="datetime-local" th:field="*{entryTime}">
+            <div class="text-danger small"
+                 th:if="${#fields.hasErrors('entryTime')}"
+                 th:errors="*{entryTime}"></div>
+          </div>
+
+          <div class="col-md-3">
+            <label class="form-label">Exit Time</label>
+            <input class="form-control" type="datetime-local" th:field="*{exitTime}">
+          </div>
+
+          <div class="col-md-3">
+            <label class="form-label">Entry Price</label>
+            <input id="entryPrice" class="form-control" type="number" step="0.00001" th:field="*{entryPrice}">
+            <div class="text-danger small"
+                 th:if="${#fields.hasErrors('entryPrice')}"
+                 th:errors="*{entryPrice}"></div>
+          </div>
+
+          <div class="col-md-3">
+            <label class="form-label">Stop Loss</label>
+            <input id="stopLoss" class="form-control" type="number" step="0.00001" th:field="*{stopLoss}">
+            <div class="text-danger small"
+                 th:if="${#fields.hasErrors('stopLoss')}"
+                 th:errors="*{stopLoss}"></div>
+          </div>
+
+          <div class="col-md-3">
+            <label class="form-label">Take Profit</label>
+            <input class="form-control" type="number" step="0.00001" th:field="*{takeProfit}">
+          </div>
+
+          <div class="col-md-3">
+            <label class="form-label">Exit Price</label>
+            <input id="exitPrice" class="form-control" type="number" step="0.00001" th:field="*{exitPrice}">
+          </div>
+
+          <div class="col-md-3">
+            <label class="form-label">Position Size</label>
+            <input id="positionSize" class="form-control" type="number" step="0.01" th:field="*{positionSize}">
+            <div id="volumeHint" class="form-text">Unit: lot</div>
+          </div>
+
+          <div class="col-md-3">
+            <label class="form-label">PnL</label>
+            <input id="pnl" class="form-control" type="number" step="0.01" th:field="*{pnl}" readonly>
+          </div>
+
+          <div class="col-md-3">
+            <label class="form-label">R Multiple</label>
+            <input id="rMultiple" class="form-control" type="number" step="0.01" th:field="*{rMultiple}" readonly>
+          </div>
+
+          <div class="col-12">
+            <label class="form-label">Note</label>
+            <textarea class="form-control" rows="3" th:field="*{note}"></textarea>
+          </div>
+
+          <div class="col-12">
+            <button class="btn btn-primary" type="submit">Save Trade</button>
+          </div>
+
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="card shadow-sm">
+    <div class="card-body">
+      <h5 class="card-title mb-3">Trades</h5>
+
+      <div class="table-responsive">
+        <table class="table table-striped align-middle">
+          <thead>
+          <tr>
+            <th>Symbol</th>
+            <th>Direction</th>
+            <th>HTF</th>
+            <th>LTF</th>
+            <th>Entry</th>
+            <th>SL</th>
+            <th>Exit</th>
+            <th>Result</th>
+            <th>PnL</th>
+            <th>R</th>
+            <th>Session</th>
+            <th>Action</th>
+          </tr>
+          </thead>
+          <tbody>
+          <tr th:each="t : ${trades}">
+            <td>
+              <a th:href="@{/trades/{id}(id=${t.id})}" th:text="${t.symbol}"></a>
+            </td>
+            <td th:text="${t.direction}"></td>
+            <td th:text="${t.htf}"></td>
+            <td th:text="${t.ltf}"></td>
+            <td th:text="${#numbers.formatDecimal(t.entryPrice,1,5)}"></td>
+            <td th:text="${#numbers.formatDecimal(t.stopLoss,1,5)}"></td>
+            <td th:text="${t.exitPrice != 0 ? #numbers.formatDecimal(t.exitPrice,1,5) : '-'}"></td>
+            <td th:text="${t.result}"></td>
+            <td th:text="${#numbers.formatDecimal(t.pnl,1,2)}"></td>
+            <td th:text="${#numbers.formatDecimal(t.rMultiple,1,2)}"></td>
+            <td th:text="${t.session}"></td>
+            <td>
+              <form th:action="@{/trades/{id}/delete(id=${t.id})}" method="post"
+                    onsubmit="return confirm('Delete this trade?');">
+                <button class="btn btn-sm btn-danger" type="submit">Delete</button>
+              </form>
+            </td>
+          </tr>
+          <tr th:if="${#lists.isEmpty(trades)}">
+            <td colspan="12" class="text-center text-muted">No trades yet.</td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
 </div>
 
-<div class="card shadow-sm mb-4">
-<div class="card-body">
+<script>
+function parseNum(value) {
+    if (value === null || value === undefined || value === '') return null;
+    const normalized = String(value).replace(',', '.').trim();
+    const num = Number(normalized);
+    return Number.isFinite(num) ? num : null;
+}
 
-<h5 class="card-title mb-3">Add Trade</h5>
+function round2(value) {
+    return Math.round(value * 100) / 100;
+}
 
-<form th:action="@{/trades}" th:object="${trade}" method="post">
+function updateVolumeHint() {
+    const symbol = document.getElementById('symbol')?.value;
+    const hint = document.getElementById('volumeHint');
+    if (!hint) return;
 
-<div class="row g-3">
+    switch (symbol) {
+        case 'BTCUSD':
+            hint.textContent = 'Unit: BTC';
+            break;
+        case 'ETHUSD':
+            hint.textContent = 'Unit: ETH';
+            break;
+        case 'XAUUSD':
+        case 'EURUSD':
+        case 'GBPUSD':
+        case 'USDJPY':
+            hint.textContent = 'Unit: lot';
+            break;
+        default:
+            hint.textContent = 'Unit: lot';
+            break;
+    }
+}
 
-<div class="col-md-3">
-<label class="form-label">Account</label>
-<input class="form-control" th:field="*{account}">
-</div>
+function calculateRMultiple(direction, result, entry, sl, exit) {
+    if (!direction || entry === null || sl === null || exit === null) {
+        return null;
+    }
 
-<div class="col-md-3">
-<label class="form-label">Symbol</label>
-<input class="form-control" th:field="*{symbol}">
-</div>
+    if (result === 'LOSS') {
+        return -1.00;
+    }
 
-<div class="col-md-3">
-<label class="form-label">Direction</label>
-<select class="form-select" th:field="*{direction}">
-    <option value="">-- Select --</option>
-    <option value="BUY">BUY</option>
-    <option value="SELL">SELL</option>
-</select>
-</div>
+    let risk = null;
+    let reward = null;
 
-<div class="col-md-3">
-<label class="form-label">Setup</label>
-<input class="form-control" th:field="*{setup}">
-</div>
+    if (direction === 'BUY') {
+        risk = entry - sl;
+        reward = exit - entry;
+    } else if (direction === 'SELL') {
+        risk = sl - entry;
+        reward = entry - exit;
+    }
 
-<div class="col-md-3">
-<label class="form-label">HTF</label>
-<select class="form-select" th:field="*{htf}">
-    <option value="">-- Select --</option>
-    <option value="1D">1D</option>
-    <option value="H4">H4</option>
-    <option value="H1">H1</option>
-    <option value="M30">M30</option>
-    <option value="M15">M15</option>
-</select>
-</div>
+    if (risk === null || risk <= 0) {
+        return null;
+    }
 
-<div class="col-md-3">
-<label class="form-label">LTF</label>
-<select class="form-select" th:field="*{ltf}">
-    <option value="">-- Select --</option>
-    <option value="M30">M30</option>
-    <option value="M15">M15</option>
-    <option value="M5">M5</option>
-    <option value="M3">M3</option>
-    <option value="M1">M1</option>
-</select>
-</div>
+    return round2(reward / risk);
+}
 
-<div class="col-md-3">
-<label class="form-label">Session</label>
-<select class="form-select" th:field="*{session}">
-    <option value="">-- Select --</option>
-    <option value="ASIA">ASIA</option>
-    <option value="LONDON">LONDON</option>
-    <option value="NEW_YORK">NEW_YORK</option>
-    <option value="OTHER">OTHER</option>
-</select>
-</div>
+function calculatePnLBySymbol(symbol, direction, entry, exit, size) {
+    if (!symbol || !direction || entry === null || exit === null || size === null || size <= 0) {
+        return null;
+    }
 
-<div class="col-md-3">
-<label class="form-label">Result</label>
-<select class="form-select" th:field="*{result}">
-    <option value="">-- Select --</option>
-    <option value="WIN">WIN</option>
-    <option value="LOSS">LOSS</option>
-    <option value="Take partial and then BE">Take partial and then BE</option>
-</select>
-</div>
+    let priceDiff = null;
 
-<div class="col-md-3">
-<label class="form-label">Entry Time</label>
-<input type="datetime-local" class="form-control" th:field="*{entryTime}">
-</div>
+    if (direction === 'BUY') {
+        priceDiff = exit - entry;
+    } else if (direction === 'SELL') {
+        priceDiff = entry - exit;
+    } else {
+        return null;
+    }
 
-<div class="col-md-3">
-<label class="form-label">Exit Time</label>
-<input type="datetime-local" class="form-control" th:field="*{exitTime}">
-</div>
+    switch (symbol) {
+        case 'XAUUSD':
+            return round2((priceDiff / 0.01) * 1.0 * size);
 
-<div class="col-md-3">
-<label class="form-label">Entry Price</label>
-<input type="number" step="0.00001" class="form-control" th:field="*{entryPrice}">
-</div>
+        case 'EURUSD':
+        case 'GBPUSD':
+            return round2((priceDiff / 0.0001) * 10.0 * size);
 
-<div class="col-md-3">
-<label class="form-label">Stop Loss</label>
-<input type="number" step="0.00001" class="form-control" th:field="*{stopLoss}">
-</div>
+        case 'USDJPY':
+            if (exit <= 0) return null;
+            return round2((priceDiff / 0.01) * (1000.0 / exit) * size);
 
-<div class="col-md-3">
-<label class="form-label">Take Profit</label>
-<input type="number" step="0.00001" class="form-control" th:field="*{takeProfit}">
-</div>
+        case 'BTCUSD':
+        case 'ETHUSD':
+            return round2(priceDiff * size);
 
-<div class="col-md-3">
-<label class="form-label">Exit Price</label>
-<input type="number" step="0.00001" class="form-control" th:field="*{exitPrice}">
-</div>
+        default:
+            return null;
+    }
+}
 
-<div class="col-md-3">
-<label class="form-label">Position Size</label>
-<input type="number" step="0.01" class="form-control" th:field="*{positionSize}">
-</div>
+function calculateLiveMetrics() {
+    const symbol = document.getElementById('symbol')?.value;
+    const direction = document.getElementById('direction')?.value;
+    const result = document.getElementById('result')?.value;
 
-<div class="col-md-3">
-<label class="form-label">PnL</label>
-<input type="number" step="0.01" class="form-control" th:field="*{pnl}">
-</div>
+    const entry = parseNum(document.getElementById('entryPrice')?.value);
+    const sl = parseNum(document.getElementById('stopLoss')?.value);
+    const exit = parseNum(document.getElementById('exitPrice')?.value);
+    const size = parseNum(document.getElementById('positionSize')?.value);
 
-<div class="col-md-3">
-<label class="form-label">R Multiple</label>
-<input type="number" step="0.01" class="form-control" th:field="*{rMultiple}">
-</div>
+    const pnlInput = document.getElementById('pnl');
+    const rInput = document.getElementById('rMultiple');
 
-<div class="col-md-12">
-<label class="form-label">Note</label>
-<textarea class="form-control" rows="3" th:field="*{note}"></textarea>
-</div>
+    if (!pnlInput || !rInput) return;
 
-</div>
+    pnlInput.value = '';
+    rInput.value = '';
 
-<div class="mt-3">
-<button class="btn btn-primary">Save Trade</button>
-</div>
+    const r = calculateRMultiple(direction, result, entry, sl, exit);
+    if (r !== null) {
+        rInput.value = r.toFixed(2);
+    }
 
-</form>
+    const pnl = calculatePnLBySymbol(symbol, direction, entry, exit, size);
+    if (pnl !== null) {
+        pnlInput.value = pnl.toFixed(2);
+    }
+}
 
-</div>
-</div>
+document.addEventListener('DOMContentLoaded', function () {
+    const watchedIds = [
+        'symbol',
+        'direction',
+        'result',
+        'entryPrice',
+        'stopLoss',
+        'exitPrice',
+        'positionSize'
+    ];
 
-<div class="card shadow-sm">
-<div class="card-body">
+    watchedIds.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.addEventListener('input', function () {
+                updateVolumeHint();
+                calculateLiveMetrics();
+            });
+            el.addEventListener('change', function () {
+                updateVolumeHint();
+                calculateLiveMetrics();
+            });
+        }
+    });
 
-<h5 class="card-title mb-3">Trades</h5>
-
-<table class="table table-striped">
-
-<thead>
-<tr>
-<th>Symbol</th>
-<th>Direction</th>
-<th>HTF</th>
-<th>LTF</th>
-<th>Entry</th>
-<th>SL</th>
-<th>Result</th>
-<th>Session</th>
-</tr>
-</thead>
-
-<tbody>
-
-<tr th:each="t : ${trades}">
-
-<td>
-<a th:href="@{/trades/{id}(id=${t.id})}" th:text="${t.symbol}"></a>
-</td>
-
-<td th:text="${t.direction}"></td>
-
-<td th:text="${t.htf}"></td>
-
-<td th:text="${t.ltf}"></td>
-
-<td th:text="${t.entryPrice}"></td>
-
-<td th:text="${t.stopLoss}"></td>
-
-<td th:text="${t.result}"></td>
-
-<td th:text="${t.session}"></td>
-
-</tr>
-
-</tbody>
-
-</table>
-
-</div>
-</div>
-
-</div>
+    updateVolumeHint();
+    calculateLiveMetrics();
+});
+</script>
 
 </body>
 </html>
