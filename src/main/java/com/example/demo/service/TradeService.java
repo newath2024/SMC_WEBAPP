@@ -1,10 +1,15 @@
 package com.example.demo.service;
 
+import com.example.demo.entity.MistakeTag;
 import com.example.demo.entity.Trade;
+import com.example.demo.entity.TradeMistakeTag;
 import com.example.demo.entity.User;
+import com.example.demo.repository.MistakeTagRepository;
+import com.example.demo.repository.TradeMistakeTagRepository;
 import com.example.demo.repository.TradeRepository;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -12,13 +17,25 @@ public class TradeService {
 
     private final TradeRepository repo;
     private final PnLCalculator pnlCalculator;
-
-    public TradeService(TradeRepository repo, PnLCalculator pnlCalculator) {
+    private final TradeMistakeTagRepository tradeMistakeTagRepository;
+    private final MistakeTagRepository mistakeTagRepository;
+    private final MistakeTagService mistakeTagService;
+    
+    public TradeService(
+            TradeRepository repo,
+            PnLCalculator pnlCalculator,
+            TradeMistakeTagRepository tradeMistakeTagRepository,
+            MistakeTagRepository mistakeTagRepository,
+            MistakeTagService mistakeTagService
+    ) {
         this.repo = repo;
         this.pnlCalculator = pnlCalculator;
+        this.tradeMistakeTagRepository = tradeMistakeTagRepository;
+        this.mistakeTagRepository = mistakeTagRepository;
+        this.mistakeTagService = mistakeTagService;
     }
 
-    public Trade saveForUser(Trade trade, User user) {
+    public Trade saveForUser(Trade trade, User user, List<String> mistakeIds, String customMistakes) {
         if (trade == null) {
             throw new IllegalArgumentException("Trade must not be null");
         }
@@ -32,16 +49,27 @@ public class TradeService {
         normalizeTrade(trade);
         autoCalculateMetrics(trade);
 
-        return repo.save(trade);
+        Trade saved = repo.save(trade);
+        replaceMistakes(saved, mistakeIds, customMistakes);
+        loadMistakes(saved);
+
+        return saved;
     }
 
     public List<Trade> findAllByUser(String userId) {
-        return repo.findByUserIdOrderByEntryTimeDesc(userId);
+        List<Trade> trades = repo.findByUserIdOrderByEntryTimeDesc(userId);
+        for (Trade trade : trades) {
+            loadMistakes(trade);
+        }
+        return trades;
     }
 
     public Trade findByIdForUser(String tradeId, String userId) {
-        return repo.findByIdAndUserId(tradeId, userId)
+        Trade trade = repo.findByIdAndUserId(tradeId, userId)
                 .orElseThrow(() -> new IllegalArgumentException("Trade not found: " + tradeId));
+
+        loadMistakes(trade);
+        return trade;
     }
 
     public Trade findEditableByIdForUser(String tradeId, String userId) {
@@ -49,15 +77,22 @@ public class TradeService {
     }
 
     public Trade findByIdForAdmin(String id) {
-        return repo.findById(id)
+        Trade trade = repo.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Trade not found: " + id));
+
+        loadMistakes(trade);
+        return trade;
     }
 
     public List<Trade> findAllForAdmin() {
-        return repo.findAll();
+        List<Trade> trades = repo.findAll();
+        for (Trade trade : trades) {
+            loadMistakes(trade);
+        }
+        return trades;
     }
 
-    public Trade updateForUser(String tradeId, Trade formTrade, User currentUser) {
+    public Trade updateForUser(String tradeId, Trade formTrade, User currentUser, List<String> mistakeIds, String customMistakes) {
         if (currentUser == null) {
             throw new IllegalArgumentException("Current user must not be null");
         }
@@ -68,26 +103,36 @@ public class TradeService {
         normalizeTrade(existing);
         autoCalculateMetrics(existing);
 
-        return repo.save(existing);
+        Trade saved = repo.save(existing);
+        replaceMistakes(saved, mistakeIds, customMistakes);
+        loadMistakes(saved);
+
+        return saved;
     }
 
-    public Trade updateForAdmin(String tradeId, Trade formTrade) {
+    public Trade updateForAdmin(String tradeId, Trade formTrade, List<String> mistakeIds, String customMistakes) {
         Trade existing = findByIdForAdmin(tradeId);
 
         applyEditableFields(existing, formTrade);
         normalizeTrade(existing);
         autoCalculateMetrics(existing);
 
-        return repo.save(existing);
+        Trade saved = repo.save(existing);
+        replaceMistakes(saved, mistakeIds, customMistakes);
+        loadMistakes(saved);
+
+        return saved;
     }
 
     public void deleteForUser(String tradeId, String userId) {
         Trade trade = findByIdForUser(tradeId, userId);
+        tradeMistakeTagRepository.deleteByTradeId(trade.getId());
         repo.delete(trade);
     }
 
     public void deleteForAdmin(String tradeId) {
         Trade trade = findByIdForAdmin(tradeId);
+        tradeMistakeTagRepository.deleteByTradeId(trade.getId());
         repo.delete(trade);
     }
 
@@ -200,6 +245,56 @@ public class TradeService {
 
     public double calculatePnL(Trade trade) {
         return pnlCalculator.calculate(trade);
+    }
+
+    private void replaceMistakes(Trade trade, List<String> mistakeIds, String customMistakes) {
+        tradeMistakeTagRepository.deleteByTradeId(trade.getId());
+
+        List<MistakeTag> selectedTags = new ArrayList<>();
+
+        if (mistakeIds != null && !mistakeIds.isEmpty()) {
+            selectedTags.addAll(mistakeTagRepository.findAllById(mistakeIds));
+        }
+
+        if (customMistakes != null && !customMistakes.isBlank()) {
+            String[] parts = customMistakes.split(",");
+
+            for (String part : parts) {
+                String raw = part.trim();
+                if (raw.isBlank()) {
+                    continue;
+                }
+
+                MistakeTag tag = mistakeTagService.findOrCreateByName(raw);
+
+                boolean alreadyAdded = selectedTags.stream()
+                        .anyMatch(existing -> existing.getId().equals(tag.getId()));
+
+                if (!alreadyAdded) {
+                    selectedTags.add(tag);
+                }
+            }
+        }
+
+        for (MistakeTag tag : selectedTags) {
+            TradeMistakeTag link = new TradeMistakeTag();
+            link.setTrade(trade);
+            link.setMistakeTag(tag);
+            tradeMistakeTagRepository.save(link);
+        }
+
+        trade.setMistakes(selectedTags);
+    }
+
+    private void loadMistakes(Trade trade) {
+        List<TradeMistakeTag> links = tradeMistakeTagRepository.findByTradeId(trade.getId());
+        List<MistakeTag> mistakes = new ArrayList<>();
+
+        for (TradeMistakeTag link : links) {
+            mistakes.add(link.getMistakeTag());
+        }
+
+        trade.setMistakes(mistakes);
     }
 
     private double round2(double value) {

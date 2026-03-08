@@ -24,6 +24,9 @@
     <a th:href="@{/setups}" class="btn btn-outline-secondary">
       Manage Setups
     </a>
+    <a th:href="@{/mistakes}" class="btn btn-outline-secondary">
+      Manage Mistakes
+    </a>
     <form method="post" action="/logout">
       <button class="btn btn-outline-danger" type="submit">Logout</button>
     </form>
@@ -82,7 +85,7 @@
                         th:value="${s.id}"
                         th:text="${s.name}">
                 </option>
-            </select>            
+            </select>
             <div class="text-danger small"
                  th:if="${#fields.hasErrors('setup')}"
                  th:errors="*{setup}"></div>
@@ -192,6 +195,43 @@
           </div>
 
           <div class="col-12">
+            <label class="form-label">Mistakes</label>
+
+            <div class="border rounded p-3 bg-light">
+              <div class="row g-2" th:if="${!#lists.isEmpty(mistakeTags)}">
+                <div class="col-md-4" th:each="m : ${mistakeTags}">
+                  <div class="form-check">
+                    <input class="form-check-input"
+                          type="checkbox"
+                          name="mistakeIds"
+                          th:id="'mistake_' + ${m.id}"
+                          th:value="${m.id}">
+                    <label class="form-check-label"
+                          th:for="'mistake_' + ${m.id}"
+                          th:text="${m.name}">
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              <div class="text-muted small mb-3" th:if="${#lists.isEmpty(mistakeTags)}">
+                No mistake tags available. You can still add custom mistakes below.
+              </div>
+
+              <div class="mt-2">
+                <label class="form-label mb-1">Other mistakes</label>
+                <input class="form-control"
+                      type="text"
+                      name="customMistakes"
+                      placeholder="Example: revenge trade, poor patience, bad news timing">
+                <div class="form-text">
+                  Separate multiple custom mistakes with commas.
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-12">
             <label class="form-label">Note</label>
             <textarea class="form-control" rows="3" th:field="*{note}"></textarea>
           </div>
@@ -243,10 +283,10 @@
             <td th:text="${#numbers.formatDecimal(t.rMultiple,1,2)}"></td>
             <td th:text="${t.session}"></td>
             <td>
-                <a class="btn btn-sm btn-outline-primary"
-                  th:href="@{/trades/{id}/edit(id=${t.id})}">
-                  Edit
-                </a>
+              <a class="btn btn-sm btn-outline-primary"
+                 th:href="@{/trades/{id}/edit(id=${t.id})}">
+                Edit
+              </a>
               <form th:action="@{/trades/{id}/delete(id=${t.id})}" method="post"
                     onsubmit="return confirm('Delete this trade?');">
                 <button class="btn btn-sm btn-danger" type="submit">Delete</button>

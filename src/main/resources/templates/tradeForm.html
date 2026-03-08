@@ -38,7 +38,15 @@
 
           <div class="col-md-3">
             <label class="form-label">Symbol</label>
-            <input id="symbol" class="form-control" type="text" th:field="*{symbol}">
+            <select id="symbol" th:field="*{symbol}" class="form-select">
+              <option value="">-- Select Symbol --</option>
+              <option value="XAUUSD">XAUUSD</option>
+              <option value="EURUSD">EURUSD</option>
+              <option value="GBPUSD">GBPUSD</option>
+              <option value="USDJPY">USDJPY</option>
+              <option value="BTCUSD">BTCUSD</option>
+              <option value="ETHUSD">ETHUSD</option>
+            </select>
             <div class="text-danger small"
                  th:if="${#fields.hasErrors('symbol')}"
                  th:errors="*{symbol}"></div>
@@ -56,16 +64,16 @@
                  th:errors="*{direction}"></div>
           </div>
 
-        <div class="col-md-3">
+          <div class="col-md-3">
             <label class="form-label">Setup</label>
             <select class="form-select" th:field="*{setup}">
-                <option value="">-- Select setup --</option>
-                <option th:each="s : ${setups}"
-                        th:value="${s.id}"
-                        th:text="${s.name}">
-                </option>
+              <option value="">-- Select setup --</option>
+              <option th:each="s : ${setups}"
+                      th:value="${s.id}"
+                      th:text="${s.name}">
+              </option>
             </select>
-        </div>
+          </div>
 
           <div class="col-md-3">
             <label class="form-label">HTF</label>
@@ -118,21 +126,22 @@
               <option value="BE and take partial">BE and take partial</option>
             </select>
           </div>
-            <div class="col-md-3">
+
+          <div class="col-md-3">
             <label class="form-label">Entry Time</label>
             <input class="form-control"
-                    type="datetime-local"
-                    name="entryTime"
-                    th:value="${trade.entryTime != null ? #temporals.format(trade.entryTime, 'yyyy-MM-dd''T''HH:mm') : ''}">
-            </div>
+                   type="datetime-local"
+                   name="entryTime"
+                   th:value="${trade.entryTime != null ? #temporals.format(trade.entryTime, 'yyyy-MM-dd''T''HH:mm') : ''}">
+          </div>
 
-            <div class="col-md-3">
+          <div class="col-md-3">
             <label class="form-label">Exit Time</label>
             <input class="form-control"
-                    type="datetime-local"
-                    name="exitTime"
-                    th:value="${trade.exitTime != null ? #temporals.format(trade.exitTime, 'yyyy-MM-dd''T''HH:mm') : ''}">
-            </div>
+                   type="datetime-local"
+                   name="exitTime"
+                   th:value="${trade.exitTime != null ? #temporals.format(trade.exitTime, 'yyyy-MM-dd''T''HH:mm') : ''}">
+          </div>
 
           <div class="col-md-3">
             <label class="form-label">Entry Price</label>
@@ -163,6 +172,7 @@
           <div class="col-md-3">
             <label class="form-label">Position Size</label>
             <input id="positionSize" class="form-control" type="number" step="0.01" th:field="*{positionSize}">
+            <div id="volumeHint" class="form-text">Unit: lot</div>
           </div>
 
           <div class="col-md-3">
@@ -173,6 +183,44 @@
           <div class="col-md-3">
             <label class="form-label">R Multiple</label>
             <input id="rMultiple" class="form-control" type="number" step="0.01" th:field="*{rMultiple}" readonly>
+          </div>
+
+          <div class="col-12">
+            <label class="form-label">Mistakes</label>
+
+            <div class="border rounded p-3 bg-light">
+              <div class="row g-2" th:if="${!#lists.isEmpty(mistakeTags)}">
+                <div class="col-md-4" th:each="m : ${mistakeTags}">
+                  <div class="form-check">
+                    <input class="form-check-input"
+                          type="checkbox"
+                          name="mistakeIds"
+                          th:id="'mistake_' + ${m.id}"
+                          th:value="${m.id}"
+                          th:checked="${trade.mistakes != null and #lists.contains(trade.mistakes.![id], m.id)}">
+                    <label class="form-check-label"
+                          th:for="'mistake_' + ${m.id}"
+                          th:text="${m.name}">
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              <div class="text-muted small mb-3" th:if="${#lists.isEmpty(mistakeTags)}">
+                No mistake tags available. You can still add custom mistakes below.
+              </div>
+
+              <div class="mt-2">
+                <label class="form-label mb-1">Other mistakes</label>
+                <input class="form-control"
+                      type="text"
+                      name="customMistakes"
+                      placeholder="Example: revenge trade, poor patience, bad news timing">
+                <div class="form-text">
+                  Separate multiple custom mistakes with commas. New ones will be created automatically.
+                </div>
+              </div>
+            </div>
           </div>
 
           <div class="col-12">
@@ -203,102 +251,150 @@ function round2(value) {
     return Math.round(value * 100) / 100;
 }
 
-function calculateRMultiple() {
-    const direction = document.getElementById('direction')?.value;
-    const result = document.getElementById('result')?.value;
-    const entry = parseNum(document.getElementById('entryPrice')?.value);
-    const stopLoss = parseNum(document.getElementById('stopLoss')?.value);
-    const exit = parseNum(document.getElementById('exitPrice')?.value);
-    const output = document.getElementById('rMultiple');
+function updateVolumeHint() {
+    const symbol = document.getElementById('symbol')?.value;
+    const hint = document.getElementById('volumeHint');
+    if (!hint) return;
 
-    if (!output) return;
+    switch (symbol) {
+        case 'BTCUSD':
+            hint.textContent = 'Unit: BTC';
+            break;
+        case 'ETHUSD':
+            hint.textContent = 'Unit: ETH';
+            break;
+        case 'XAUUSD':
+        case 'EURUSD':
+        case 'GBPUSD':
+        case 'USDJPY':
+            hint.textContent = 'Unit: lot';
+            break;
+        default:
+            hint.textContent = 'Unit: lot';
+            break;
+    }
+}
 
-    if (!direction) {
-        output.value = '';
-        return;
+function calculateRMultiple(direction, result, entry, sl, exit) {
+    if (!direction || entry === null || sl === null || exit === null) {
+        return null;
     }
 
     if (result === 'LOSS') {
-        output.value = -1.0;
-        return;
+        return -1.00;
     }
 
-    if (entry === null || stopLoss === null || exit === null || entry <= 0 || stopLoss <= 0 || exit <= 0) {
-        output.value = '';
-        return;
-    }
-
-    let risk = 0;
-    let reward = 0;
+    let risk = null;
+    let reward = null;
 
     if (direction === 'BUY') {
-        risk = entry - stopLoss;
+        risk = entry - sl;
         reward = exit - entry;
     } else if (direction === 'SELL') {
-        risk = stopLoss - entry;
+        risk = sl - entry;
         reward = entry - exit;
-    } else {
-        output.value = '';
-        return;
     }
 
-    if (risk <= 0) {
-        output.value = '';
-        return;
+    if (risk === null || risk <= 0) {
+        return null;
     }
 
-    output.value = round2(reward / risk);
+    return round2(reward / risk);
 }
 
-function calculatePnL() {
-    const direction = document.getElementById('direction')?.value;
-    const entry = parseNum(document.getElementById('entryPrice')?.value);
-    const exit = parseNum(document.getElementById('exitPrice')?.value);
-    const size = parseNum(document.getElementById('positionSize')?.value);
-    const output = document.getElementById('pnl');
-
-    if (!output) return;
-
-    if (!direction || entry === null || exit === null || size === null) {
-        output.value = '';
-        return;
+function calculatePnLBySymbol(symbol, direction, entry, exit, size) {
+    if (!symbol || !direction || entry === null || exit === null || size === null || size <= 0) {
+        return null;
     }
 
-    let pnl = 0;
+    let priceDiff = null;
 
     if (direction === 'BUY') {
-        pnl = (exit - entry) * size;
+        priceDiff = exit - entry;
     } else if (direction === 'SELL') {
-        pnl = (entry - exit) * size;
+        priceDiff = entry - exit;
     } else {
-        output.value = '';
-        return;
+        return null;
     }
 
-    output.value = round2(pnl);
+    switch (symbol) {
+        case 'XAUUSD':
+            return round2((priceDiff / 0.01) * 1.0 * size);
+
+        case 'EURUSD':
+        case 'GBPUSD':
+            return round2((priceDiff / 0.0001) * 10.0 * size);
+
+        case 'USDJPY':
+            if (exit <= 0) return null;
+            return round2((priceDiff / 0.01) * (1000.0 / exit) * size);
+
+        case 'BTCUSD':
+        case 'ETHUSD':
+            return round2(priceDiff * size);
+
+        default:
+            return null;
+    }
 }
 
-function bindRealtimeCalc() {
-    ['direction', 'result', 'entryPrice', 'stopLoss', 'exitPrice', 'positionSize'].forEach(id => {
+function calculateLiveMetrics() {
+    const symbol = document.getElementById('symbol')?.value;
+    const direction = document.getElementById('direction')?.value;
+    const result = document.getElementById('result')?.value;
+
+    const entry = parseNum(document.getElementById('entryPrice')?.value);
+    const sl = parseNum(document.getElementById('stopLoss')?.value);
+    const exit = parseNum(document.getElementById('exitPrice')?.value);
+    const size = parseNum(document.getElementById('positionSize')?.value);
+
+    const pnlInput = document.getElementById('pnl');
+    const rInput = document.getElementById('rMultiple');
+
+    if (!pnlInput || !rInput) return;
+
+    pnlInput.value = '';
+    rInput.value = '';
+
+    const r = calculateRMultiple(direction, result, entry, sl, exit);
+    if (r !== null) {
+        rInput.value = r.toFixed(2);
+    }
+
+    const pnl = calculatePnLBySymbol(symbol, direction, entry, exit, size);
+    if (pnl !== null) {
+        pnlInput.value = pnl.toFixed(2);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+    const watchedIds = [
+        'symbol',
+        'direction',
+        'result',
+        'entryPrice',
+        'stopLoss',
+        'exitPrice',
+        'positionSize'
+    ];
+
+    watchedIds.forEach(id => {
         const el = document.getElementById(id);
-        if (!el) return;
-
-        el.addEventListener('input', () => {
-            calculateRMultiple();
-            calculatePnL();
-        });
-
-        el.addEventListener('change', () => {
-            calculateRMultiple();
-            calculatePnL();
-        });
+        if (el) {
+            el.addEventListener('input', function () {
+                updateVolumeHint();
+                calculateLiveMetrics();
+            });
+            el.addEventListener('change', function () {
+                updateVolumeHint();
+                calculateLiveMetrics();
+            });
+        }
     });
 
-    calculateRMultiple();
-    calculatePnL();
-}
-
-document.addEventListener('DOMContentLoaded', bindRealtimeCalc);
+    updateVolumeHint();
+    calculateLiveMetrics();
+});
 </script>
 
 </body>

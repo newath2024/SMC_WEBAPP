@@ -10,6 +10,8 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @Entity
@@ -83,6 +85,9 @@ public class Trade {
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+
+    @Transient
+    private List<MistakeTag> mistakes = new ArrayList<>();
 
     @PrePersist
     public void prePersist() {
@@ -312,5 +317,13 @@ public class Trade {
 
     public LocalDateTime getUpdatedAt() {
         return updatedAt;
+    }
+
+    public List<MistakeTag> getMistakes() {
+        return mistakes;
+    }
+
+    public void setMistakes(List<MistakeTag> mistakes) {
+        this.mistakes = mistakes;
     }
 }

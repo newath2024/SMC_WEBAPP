@@ -120,6 +120,23 @@
     </div>
   </div>
 
+  <div class="card shadow-sm mb-4">
+    <div class="card-body">
+      <h5 class="card-title mb-3">Mistakes</h5>
+
+      <div th:if="${trade.mistakes != null and !#lists.isEmpty(trade.mistakes)}">
+        <span class="badge text-bg-danger me-2 mb-2"
+              th:each="m : ${trade.mistakes}"
+              th:text="${m.name}">
+        </span>
+      </div>
+
+      <div class="text-muted" th:if="${trade.mistakes == null or #lists.isEmpty(trade.mistakes)}">
+        No mistakes tagged.
+      </div>
+    </div>
+  </div>
+
   <div class="card shadow-sm">
     <div class="card-body">
       <h5 class="card-title mb-3">Note</h5>
