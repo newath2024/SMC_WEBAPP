@@ -4,13 +4,14 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
+import org.springframework.format.annotation.DateTimeFormat;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.UUID;
-import java.time.Duration;
-import java.math.RoundingMode;
-import org.springframework.format.annotation.DateTimeFormat;
+
 @Entity
 @Table(name = "trades")
 public class Trade {
@@ -35,7 +36,11 @@ public class Trade {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
-    
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "setup_id")
+    private Setup setup;
+
     @NotBlank
     private String symbol;
 
@@ -43,10 +48,10 @@ public class Trade {
     private String direction; // BUY / SELL
 
     @NotBlank
-    private String htf; // H4 / H1 / M30 / M15
+    private String htf;
 
     @NotBlank
-    private String ltf; // M15 / M5 / M1
+    private String ltf;
 
     @NotNull
     @Positive
@@ -61,16 +66,15 @@ public class Trade {
 
     private double exitPrice;
 
+    @Positive
     private double positionSize;
 
-    private String result; // WIN / LOSS / BE
+    private String result; // WIN / LOSS / BE and take partial
 
     private double pnl;
 
+    @Column(name = "r_multiple")
     private double rMultiple;
-
-    @NotBlank
-    private String setup;
 
     private String session; // ASIA / LONDON / NEW_YORK / OTHER
 
@@ -91,15 +95,16 @@ public class Trade {
     @PreUpdate
     public void preUpdate() {
         updatedAt = LocalDateTime.now();
+        if (tradeDate == null && entryTime != null) tradeDate = entryTime;
     }
 
     @Transient
     public Long getHoldingMinutes() {
-    if (entryTime == null || exitTime == null) {
-        return null;
+        if (entryTime == null || exitTime == null) {
+            return null;
+        }
+        return Duration.between(entryTime, exitTime).toMinutes();
     }
-    return Duration.between(entryTime, exitTime).toMinutes();
-}
 
     @Transient
     public Integer getLtfMinutes() {
@@ -129,80 +134,183 @@ public class Trade {
                 .divide(BigDecimal.valueOf(ltfMinutes), 1, RoundingMode.HALF_UP);
     }
 
-    public String getId() { return id; }
-    public void setId(String id) { this.id = id; }
-
-    public LocalDateTime getTradeDate() { return tradeDate; }
-    public void setTradeDate(LocalDateTime tradeDate) { this.tradeDate = tradeDate; }
-
-    public LocalDateTime getEntryTime() { return entryTime; }
-    public void setEntryTime(LocalDateTime entryTime) { this.entryTime = entryTime; }
-
-    public LocalDateTime getExitTime() { return exitTime; }
-    public void setExitTime(LocalDateTime exitTime) { this.exitTime = exitTime; }
-
-    public String getAccountLabel() { return accountLabel; }
-    public void setAccountLabel(String accountLabel) { this.accountLabel = accountLabel; }
-
-    public String getSymbol() { return symbol; }
-    public void setSymbol(String symbol) { this.symbol = symbol; }
-
-    public String getDirection() { return direction; }
-    public void setDirection(String direction) { this.direction = direction; }
-
-    public String getHtf() { return htf; }
-    public void setHtf(String htf) { this.htf = htf; }
-
-    public String getLtf() { return ltf; }
-    public void setLtf(String ltf) { this.ltf = ltf; }
-
-    public double getEntryPrice() { return entryPrice; }
-    public void setEntryPrice(double entryPrice) { this.entryPrice = entryPrice; }
-
-    public double getStopLoss() { return stopLoss; }
-    public void setStopLoss(double stopLoss) { this.stopLoss = stopLoss; }
-
-    public double getTakeProfit() { return takeProfit; }
-    public void setTakeProfit(double takeProfit) { this.takeProfit = takeProfit; }
-
-    public double getExitPrice() { return exitPrice; }
-    public void setExitPrice(double exitPrice) { this.exitPrice = exitPrice; }
-
-    public double getPositionSize() { return positionSize; }
-    public void setPositionSize(double positionSize) { this.positionSize = positionSize; }
-
-    public String getResult() { return result; }
-    public void setResult(String result) { this.result = result; }
-
-    public double getPnl() { return pnl; }
-    public void setPnl(double pnl) { this.pnl = pnl; }
-
-    public double getRMultiple() { return rMultiple; }
-    public void setRMultiple(double rMultiple) { this.rMultiple = rMultiple; }
-
-    public String getSetup() { return setup; }
-    public void setSetup(String setup) { this.setup = setup; }
-
-    public String getSession() { return session; }
-    public void setSession(String session) { this.session = session; }
-
-    public String getNote() { return note; }
-    public void setNote(String note) { this.note = note; }
-
-    public LocalDateTime getCreatedAt() { return createdAt; }
-    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
-
-    public LocalDateTime getUpdatedAt() { return updatedAt; }
-
-    public void setUpdatedAt(LocalDateTime updatedAt) {
-        this.updatedAt = updatedAt;
+    public String getId() {
+        return id;
     }
-    
+
+    public void setId(String id) {
+        this.id = id;
+    }
+
+    public LocalDateTime getTradeDate() {
+        return tradeDate;
+    }
+
+    public void setTradeDate(LocalDateTime tradeDate) {
+        this.tradeDate = tradeDate;
+    }
+
+    public LocalDateTime getEntryTime() {
+        return entryTime;
+    }
+
+    public void setEntryTime(LocalDateTime entryTime) {
+        this.entryTime = entryTime;
+    }
+
+    public LocalDateTime getExitTime() {
+        return exitTime;
+    }
+
+    public void setExitTime(LocalDateTime exitTime) {
+        this.exitTime = exitTime;
+    }
+
+    public String getAccountLabel() {
+        return accountLabel;
+    }
+
+    public void setAccountLabel(String accountLabel) {
+        this.accountLabel = accountLabel;
+    }
+
     public User getUser() {
         return user;
     }
 
     public void setUser(User user) {
         this.user = user;
+    }
+
+    public Setup getSetup() {
+        return setup;
+    }
+
+    public void setSetup(Setup setup) {
+        this.setup = setup;
+    }
+
+    public String getSetupName() {
+        return setup != null ? setup.getName() : null;
+    }
+
+    public String getSymbol() {
+        return symbol;
+    }
+
+    public void setSymbol(String symbol) {
+        this.symbol = symbol;
+    }
+
+    public String getDirection() {
+        return direction;
+    }
+
+    public void setDirection(String direction) {
+        this.direction = direction;
+    }
+
+    public String getHtf() {
+        return htf;
+    }
+
+    public void setHtf(String htf) {
+        this.htf = htf;
+    }
+
+    public String getLtf() {
+        return ltf;
+    }
+
+    public void setLtf(String ltf) {
+        this.ltf = ltf;
+    }
+
+    public double getEntryPrice() {
+        return entryPrice;
+    }
+
+    public void setEntryPrice(double entryPrice) {
+        this.entryPrice = entryPrice;
+    }
+
+    public double getStopLoss() {
+        return stopLoss;
+    }
+
+    public void setStopLoss(double stopLoss) {
+        this.stopLoss = stopLoss;
+    }
+
+    public double getTakeProfit() {
+        return takeProfit;
+    }
+
+    public void setTakeProfit(double takeProfit) {
+        this.takeProfit = takeProfit;
+    }
+
+    public double getExitPrice() {
+        return exitPrice;
+    }
+
+    public void setExitPrice(double exitPrice) {
+        this.exitPrice = exitPrice;
+    }
+
+    public double getPositionSize() {
+        return positionSize;
+    }
+
+    public void setPositionSize(double positionSize) {
+        this.positionSize = positionSize;
+    }
+
+    public String getResult() {
+        return result;
+    }
+
+    public void setResult(String result) {
+        this.result = result;
+    }
+
+    public double getPnl() {
+        return pnl;
+    }
+
+    public void setPnl(double pnl) {
+        this.pnl = pnl;
+    }
+
+    public double getRMultiple() {
+        return rMultiple;
+    }
+
+    public void setRMultiple(double rMultiple) {
+        this.rMultiple = rMultiple;
+    }
+
+    public String getSession() {
+        return session;
+    }
+
+    public void setSession(String session) {
+        this.session = session;
+    }
+
+    public String getNote() {
+        return note;
+    }
+
+    public void setNote(String note) {
+        this.note = note;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
     }
 }

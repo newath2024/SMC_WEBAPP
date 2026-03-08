@@ -56,13 +56,16 @@
                  th:errors="*{direction}"></div>
           </div>
 
-          <div class="col-md-3">
+        <div class="col-md-3">
             <label class="form-label">Setup</label>
-            <input class="form-control" type="text" th:field="*{setup}">
-            <div class="text-danger small"
-                 th:if="${#fields.hasErrors('setup')}"
-                 th:errors="*{setup}"></div>
-          </div>
+            <select class="form-select" th:field="*{setup}">
+                <option value="">-- Select setup --</option>
+                <option th:each="s : ${setups}"
+                        th:value="${s.id}"
+                        th:text="${s.name}">
+                </option>
+            </select>
+        </div>
 
           <div class="col-md-3">
             <label class="form-label">HTF</label>
@@ -130,11 +133,6 @@
                     name="exitTime"
                     th:value="${trade.exitTime != null ? #temporals.format(trade.exitTime, 'yyyy-MM-dd''T''HH:mm') : ''}">
             </div>
-
-          <div class="col-md-3">
-            <label class="form-label">Exit Time</label>
-            <input class="form-control" type="datetime-local" th:field="*{exitTime}">
-          </div>
 
           <div class="col-md-3">
             <label class="form-label">Entry Price</label>

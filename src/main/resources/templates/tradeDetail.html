@@ -37,7 +37,7 @@
         </div>
         <div class="col-md-3">
           <strong>Setup</strong>
-          <div th:text="${trade.setup}"></div>
+          <div th:text="${trade.setup != null ? trade.setup.name : '-'}"></div>
         </div>
 
         <div class="col-md-3">

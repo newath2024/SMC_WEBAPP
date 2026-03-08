@@ -2,6 +2,7 @@ package com.example.demo.controller;
 
 import com.example.demo.entity.Trade;
 import com.example.demo.entity.User;
+import com.example.demo.service.SetupService;
 import com.example.demo.service.TradeService;
 import com.example.demo.service.UserService;
 import jakarta.servlet.http.HttpSession;
@@ -17,22 +18,31 @@ public class TradeController {
 
     private final TradeService tradeService;
     private final UserService userService;
+    private final SetupService setupService;
 
-    public TradeController(TradeService tradeService, UserService userService) {
+    public TradeController(TradeService tradeService, UserService userService, SetupService setupService) {
         this.tradeService = tradeService;
         this.userService = userService;
+        this.setupService = setupService;
     }
 
     @GetMapping
     public String list(Model model, HttpSession session) {
+
         User currentUser = userService.getCurrentUser(session);
         if (currentUser == null) {
             return "redirect:/login";
         }
 
         model.addAttribute("currentUser", currentUser);
-        model.addAttribute("trades", tradeService.findAllByUser(currentUser.getId()));
+        model.addAttribute("trades",
+                tradeService.findAllByUser(currentUser.getId()));
+
         model.addAttribute("trade", new Trade());
+
+        // setups cho dropdown
+        model.addAttribute("setups",
+                setupService.findActiveByUser(currentUser.getId()));
 
         return "trades";
     }
@@ -84,8 +94,8 @@ public class TradeController {
     public String editForm(
             @PathVariable String id,
             Model model,
-            HttpSession session
-    ) {
+            HttpSession session) 
+    {
         User currentUser = userService.getCurrentUser(session);
         if (currentUser == null) {
             return "redirect:/login";
@@ -98,6 +108,9 @@ public class TradeController {
         model.addAttribute("currentUser", currentUser);
         model.addAttribute("trade", trade);
         model.addAttribute("editMode", true);
+
+        model.addAttribute("setups",
+                setupService.findActiveByUser(currentUser.getId()));
 
         return "tradeForm";
     }

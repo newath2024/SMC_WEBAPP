@@ -1,5 +1,11 @@
 package com.example.demo.repository;
 
-public class TradeImageRepository {
-    
+import com.example.demo.entity.TradeImage;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+import java.util.List;
+
+public interface TradeImageRepository extends JpaRepository<TradeImage, String> {
+
+    List<TradeImage> findByTradeIdOrderByCreatedAtAsc(String tradeId);
 }

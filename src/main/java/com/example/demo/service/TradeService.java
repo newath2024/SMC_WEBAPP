@@ -148,10 +148,6 @@ public class TradeService {
             trade.setLtf(trade.getLtf().trim().toUpperCase());
         }
 
-        if (trade.getSetup() != null) {
-            trade.setSetup(trade.getSetup().trim());
-        }
-
         if (trade.getTradeDate() == null && trade.getEntryTime() != null) {
             trade.setTradeDate(trade.getEntryTime());
         }

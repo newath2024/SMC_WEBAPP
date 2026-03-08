@@ -6,15 +6,21 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "mistake_tags")
-public class MistakeTag {
+@Table(
+        name = "setups",
+        uniqueConstraints = {
+                @UniqueConstraint(name = "uk_setup_user_name", columnNames = {"user_id", "name"})
+        }
+)
+public class Setup {
 
     @Id
     @Column(length = 36)
     private String id;
 
-    @Column(nullable = false, unique = true, length = 80)
-    private String code;
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
 
     @Column(nullable = false, length = 120)
     private String name;
@@ -48,12 +54,12 @@ public class MistakeTag {
         this.id = id;
     }
 
-    public String getCode() {
-        return code;
+    public User getUser() {
+        return user;
     }
 
-    public void setCode(String code) {
-        this.code = code;
+    public void setUser(User user) {
+        this.user = user;
     }
 
     public String getName() {
