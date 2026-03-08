@@ -41,6 +41,7 @@ public class Trade {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "setup_id")
+    @NotNull(message = "Setup is required")
     private Setup setup;
 
     @NotBlank

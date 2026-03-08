@@ -25,6 +25,7 @@
 
   <div class="card shadow-sm">
     <div class="card-body">
+      <div class="alert alert-danger" th:if="${error != null}" th:text="${error}"></div>
       <form th:action="@{/trades/{id}/edit(id=${trade.id})}" th:object="${trade}" method="post">
         <div class="row g-3">
 
@@ -66,13 +67,16 @@
 
           <div class="col-md-3">
             <label class="form-label">Setup</label>
-            <select class="form-select" th:field="*{setup}">
+            <select class="form-select" th:field="*{setup.id}">
               <option value="">-- Select setup --</option>
               <option th:each="s : ${setups}"
                       th:value="${s.id}"
                       th:text="${s.name}">
               </option>
             </select>
+            <div class="text-danger small"
+                 th:if="${#fields.hasErrors('setup')}"
+                 th:errors="*{setup}"></div>
           </div>
 
           <div class="col-md-3">

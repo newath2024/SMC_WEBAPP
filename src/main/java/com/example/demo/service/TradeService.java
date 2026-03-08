@@ -1,10 +1,12 @@
 package com.example.demo.service;
 
 import com.example.demo.entity.MistakeTag;
+import com.example.demo.entity.Setup;
 import com.example.demo.entity.Trade;
 import com.example.demo.entity.TradeMistakeTag;
 import com.example.demo.entity.User;
 import com.example.demo.repository.MistakeTagRepository;
+import com.example.demo.repository.SetupRepository;
 import com.example.demo.repository.TradeMistakeTagRepository;
 import com.example.demo.repository.TradeRepository;
 import org.springframework.stereotype.Service;
@@ -19,6 +21,7 @@ public class TradeService {
     private final PnLCalculator pnlCalculator;
     private final TradeMistakeTagRepository tradeMistakeTagRepository;
     private final MistakeTagRepository mistakeTagRepository;
+    private final SetupRepository setupRepository;
     private final MistakeTagService mistakeTagService;
     
     public TradeService(
@@ -26,12 +29,14 @@ public class TradeService {
             PnLCalculator pnlCalculator,
             TradeMistakeTagRepository tradeMistakeTagRepository,
             MistakeTagRepository mistakeTagRepository,
+            SetupRepository setupRepository,
             MistakeTagService mistakeTagService
     ) {
         this.repo = repo;
         this.pnlCalculator = pnlCalculator;
         this.tradeMistakeTagRepository = tradeMistakeTagRepository;
         this.mistakeTagRepository = mistakeTagRepository;
+        this.setupRepository = setupRepository;
         this.mistakeTagService = mistakeTagService;
     }
 
@@ -45,6 +50,7 @@ public class TradeService {
         }
 
         trade.setUser(user);
+        trade.setSetup(resolveSetupForUser(trade.getSetup(), user.getId()));
 
         normalizeTrade(trade);
         autoCalculateMetrics(trade);
@@ -100,6 +106,7 @@ public class TradeService {
         Trade existing = findByIdForUser(tradeId, currentUser.getId());
 
         applyEditableFields(existing, formTrade);
+        existing.setSetup(resolveSetupForUser(formTrade.getSetup(), currentUser.getId()));
         normalizeTrade(existing);
         autoCalculateMetrics(existing);
 
@@ -114,6 +121,7 @@ public class TradeService {
         Trade existing = findByIdForAdmin(tradeId);
 
         applyEditableFields(existing, formTrade);
+        existing.setSetup(resolveSetupForAdmin(formTrade.getSetup()));
         normalizeTrade(existing);
         autoCalculateMetrics(existing);
 
@@ -299,5 +307,24 @@ public class TradeService {
 
     private double round2(double value) {
         return Math.round(value * 100.0) / 100.0;
+    }
+
+    private Setup resolveSetupForUser(Setup rawSetup, String userId) {
+        String setupId = extractSetupId(rawSetup);
+        return setupRepository.findByIdAndUserId(setupId, userId)
+                .orElseThrow(() -> new IllegalArgumentException("Invalid setup selected"));
+    }
+
+    private Setup resolveSetupForAdmin(Setup rawSetup) {
+        String setupId = extractSetupId(rawSetup);
+        return setupRepository.findById(setupId)
+                .orElseThrow(() -> new IllegalArgumentException("Invalid setup selected"));
+    }
+
+    private String extractSetupId(Setup rawSetup) {
+        if (rawSetup == null || rawSetup.getId() == null || rawSetup.getId().isBlank()) {
+            throw new IllegalArgumentException("Setup is required");
+        }
+        return rawSetup.getId().trim();
     }
 }

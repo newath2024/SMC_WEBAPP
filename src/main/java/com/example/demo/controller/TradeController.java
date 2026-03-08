@@ -8,6 +8,7 @@ import com.example.demo.service.TradeService;
 import com.example.demo.service.UserService;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
+import org.springframework.dao.CannotAcquireLockException;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
@@ -70,6 +71,10 @@ public class TradeController {
             return "redirect:/login";
         }
 
+        if (trade.getSetup() == null || trade.getSetup().getId() == null || trade.getSetup().getId().isBlank()) {
+            bindingResult.rejectValue("setup", "required", "Setup is required");
+        }
+
         if (bindingResult.hasErrors()) {
             model.addAttribute("trades", tradeService.findAllByUser(currentUser.getId()));
             fillTradeFormData(model, currentUser);
@@ -77,8 +82,16 @@ public class TradeController {
             return "trades";
         }
 
-        tradeService.saveForUser(trade, currentUser, mistakeIds, customMistakes);
-        return "redirect:/trades";
+        try {
+            tradeService.saveForUser(trade, currentUser, mistakeIds, customMistakes);
+            return "redirect:/trades";
+        } catch (RuntimeException ex) {
+            model.addAttribute("trades", tradeService.findAllByUser(currentUser.getId()));
+            fillTradeFormData(model, currentUser);
+            model.addAttribute("trade", trade);
+            model.addAttribute("error", friendlyErrorMessage(ex));
+            return "trades";
+        }
     }
 
     @GetMapping("/{id}")
@@ -139,6 +152,10 @@ public class TradeController {
             return "redirect:/login";
         }
 
+        if (trade.getSetup() == null || trade.getSetup().getId() == null || trade.getSetup().getId().isBlank()) {
+            bindingResult.rejectValue("setup", "required", "Setup is required");
+        }
+
         if (bindingResult.hasErrors()) {
             model.addAttribute("trade", trade);
             model.addAttribute("editMode", true);
@@ -146,13 +163,20 @@ public class TradeController {
             return "tradeForm";
         }
 
-        if (userService.isAdmin(currentUser)) {
-            tradeService.updateForAdmin(id, trade, mistakeIds, customMistakes);
-        } else {
-            tradeService.updateForUser(id, trade, currentUser, mistakeIds, customMistakes);
+        try {
+            if (userService.isAdmin(currentUser)) {
+                tradeService.updateForAdmin(id, trade, mistakeIds, customMistakes);
+            } else {
+                tradeService.updateForUser(id, trade, currentUser, mistakeIds, customMistakes);
+            }
+            return "redirect:/trades/" + id;
+        } catch (RuntimeException ex) {
+            model.addAttribute("trade", trade);
+            model.addAttribute("editMode", true);
+            fillTradeFormData(model, currentUser);
+            model.addAttribute("error", friendlyErrorMessage(ex));
+            return "tradeForm";
         }
-
-        return "redirect:/trades/" + id;
     }
 
     @PostMapping("/{id}/delete")
@@ -169,5 +193,31 @@ public class TradeController {
         }
 
         return "redirect:/trades";
+    }
+
+    private String friendlyErrorMessage(RuntimeException ex) {
+        if (isLockError(ex)) {
+            return "Database is busy. Please try saving again in a few seconds.";
+        }
+        String message = ex.getMessage();
+        if (message == null || message.isBlank()) {
+            return "Unable to save trade. Please check input and try again.";
+        }
+        return message;
+    }
+
+    private boolean isLockError(Throwable throwable) {
+        Throwable current = throwable;
+        while (current != null) {
+            if (current instanceof CannotAcquireLockException) {
+                return true;
+            }
+            String message = current.getMessage();
+            if (message != null && message.contains("SQLITE_BUSY")) {
+                return true;
+            }
+            current = current.getCause();
+        }
+        return false;
     }
 }
