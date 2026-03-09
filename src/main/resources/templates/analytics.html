@@ -373,9 +373,9 @@
         <div class="card-body d-flex flex-column">
           <div class="sidebar-title">Navigation</div>
           <div class="d-grid gap-1 sidebar-nav">
-            <a th:href="@{/analytics}" class="sidebar-link"><i class="bi bi-speedometer2 sidebar-icon"></i><span class="nav-label">Dashboard</span></a>
-            <a th:href="@{/trades}" class="sidebar-link"><i class="bi bi-journal-text sidebar-icon"></i><span class="nav-label">Trades</span></a>
+            <a th:if="${currentUser != null and currentUser.role != null and #strings.equalsIgnoreCase(currentUser.role, 'ADMIN')}" th:href="@{/admin}" class="sidebar-link"><i class="bi bi-speedometer2 sidebar-icon"></i><span class="nav-label">Dashboard</span></a>
             <a th:href="@{/analytics(period='ALL')}" class="sidebar-link active"><i class="bi bi-graph-up-arrow sidebar-icon"></i><span class="nav-label">Analytics</span></a>
+            <a th:if="${currentUser == null or currentUser.role == null or !#strings.equalsIgnoreCase(currentUser.role, 'ADMIN')}" th:href="@{/trades}" class="sidebar-link"><i class="bi bi-journal-text sidebar-icon"></i><span class="nav-label">Trades</span></a>
             <a th:href="@{/mistakes}" class="sidebar-link"><i class="bi bi-exclamation-triangle sidebar-icon"></i><span class="nav-label">Mistakes</span></a>
             <a th:href="@{/setups}" class="sidebar-link"><i class="bi bi-diagram-3 sidebar-icon"></i><span class="nav-label">Setups</span></a>
             <a th:if="${currentUser != null and currentUser.role != null and #strings.equalsIgnoreCase(currentUser.role, 'ADMIN')}" th:href="@{/admin}" class="sidebar-link"><i class="bi bi-shield-lock sidebar-icon"></i><span class="nav-label">Management</span></a>
