@@ -8,6 +8,8 @@ import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
 @Service
 public class AnalyticsService {
@@ -25,8 +27,9 @@ public class AnalyticsService {
         List<BreakdownRow> bySetup = buildBreakdown(trades, Trade::getSetupName);
         List<BreakdownRow> bySession = buildBreakdown(trades, Trade::getSession);
         List<BreakdownRow> bySymbol = buildBreakdown(trades, Trade::getSymbol);
+        List<TrendPoint> equityCurve = buildEquityCurve(trades);
 
-        return new AnalyticsReport(overview, bySetup, bySession, bySymbol);
+        return new AnalyticsReport(overview, bySetup, bySession, bySymbol, equityCurve);
     }
 
     public TradeOverview buildOverviewForUser(String userId) {
@@ -126,6 +129,35 @@ public class AnalyticsService {
         return Math.round(value * 100.0) / 100.0;
     }
 
+    private List<TrendPoint> buildEquityCurve(List<Trade> trades) {
+        List<Trade> sorted = new ArrayList<>(trades);
+        sorted.sort(Comparator
+                .comparing(Trade::getEntryTime, Comparator.nullsLast(LocalDateTime::compareTo))
+                .thenComparing(Trade::getCreatedAt, Comparator.nullsLast(LocalDateTime::compareTo))
+                .thenComparing(Trade::getId, Comparator.nullsLast(String::compareTo)));
+
+        List<TrendPoint> points = new ArrayList<>();
+        double runningPnl = 0.0;
+
+        for (Trade trade : sorted) {
+            runningPnl += trade.getPnl();
+            points.add(new TrendPoint(
+                    buildTradePointLabel(trade),
+                    round2(runningPnl)
+            ));
+        }
+
+        return points;
+    }
+
+    private String buildTradePointLabel(Trade trade) {
+        LocalDateTime entry = trade.getEntryTime();
+        if (entry == null) {
+            return trade.getId();
+        }
+        return entry.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
+    }
+
     @FunctionalInterface
     private interface LabelResolver {
         String resolveLabel(Trade trade);
@@ -143,17 +175,20 @@ public class AnalyticsService {
         private final List<BreakdownRow> bySetup;
         private final List<BreakdownRow> bySession;
         private final List<BreakdownRow> bySymbol;
+        private final List<TrendPoint> equityCurve;
 
         public AnalyticsReport(
                 TradeOverview overview,
                 List<BreakdownRow> bySetup,
                 List<BreakdownRow> bySession,
-                List<BreakdownRow> bySymbol
+                List<BreakdownRow> bySymbol,
+                List<TrendPoint> equityCurve
         ) {
             this.overview = overview;
             this.bySetup = bySetup;
             this.bySession = bySession;
             this.bySymbol = bySymbol;
+            this.equityCurve = equityCurve;
         }
 
         public TradeOverview getOverview() {
@@ -170,6 +205,10 @@ public class AnalyticsService {
 
         public List<BreakdownRow> getBySymbol() {
             return bySymbol;
+        }
+
+        public List<TrendPoint> getEquityCurve() {
+            return equityCurve;
         }
     }
 
@@ -233,6 +272,24 @@ public class AnalyticsService {
 
         public double getAvgR() {
             return avgR;
+        }
+    }
+
+    public static class TrendPoint {
+        private final String label;
+        private final double value;
+
+        public TrendPoint(String label, double value) {
+            this.label = label;
+            this.value = value;
+        }
+
+        public String getLabel() {
+            return label;
+        }
+
+        public double getValue() {
+            return value;
         }
     }
 

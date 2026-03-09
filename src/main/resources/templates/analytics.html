@@ -5,6 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Analytics Overview</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+  <style>
+    .chart-panel {
+      position: relative;
+      height: 280px;
+      width: 100%;
+    }
+  </style>
 </head>
 <body class="bg-light">
 
@@ -85,6 +93,62 @@
           </tr>
           </tbody>
         </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-3 mt-1">
+    <div class="col-lg-8">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <h5 class="card-title mb-3">Equity Curve (Cumulative PnL)</h5>
+          <div class="chart-panel">
+            <canvas id="equityCurveChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-4">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <h5 class="card-title mb-3">Win Rate by Setup</h5>
+          <div class="chart-panel">
+            <canvas id="setupWinRateChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-3 mt-1">
+    <div class="col-lg-4">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <h5 class="card-title mb-3">Total PnL by Setup</h5>
+          <div class="chart-panel">
+            <canvas id="setupPnlChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-4">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <h5 class="card-title mb-3">Total PnL by Session</h5>
+          <div class="chart-panel">
+            <canvas id="sessionPnlChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-4">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <h5 class="card-title mb-3">Total PnL by Symbol</h5>
+          <div class="chart-panel">
+            <canvas id="symbolPnlChart"></canvas>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -200,6 +264,71 @@
     </div>
   </div>
 </div>
+
+<script th:inline="javascript">
+  const equityLabels = /*[[${report.equityCurve.![label]}]]*/ [];
+  const equityValues = /*[[${report.equityCurve.![value]}]]*/ [];
+
+  const setupLabels = /*[[${report.bySetup.![label]}]]*/ [];
+  const setupWinRate = /*[[${report.bySetup.![winRate]}]]*/ [];
+  const setupPnl = /*[[${report.bySetup.![totalPnl]}]]*/ [];
+
+  const sessionLabels = /*[[${report.bySession.![label]}]]*/ [];
+  const sessionPnl = /*[[${report.bySession.![totalPnl]}]]*/ [];
+
+  const symbolLabels = /*[[${report.bySymbol.![label]}]]*/ [];
+  const symbolPnl = /*[[${report.bySymbol.![totalPnl]}]]*/ [];
+
+  function buildLineChart(canvasId, labels, values, label, color) {
+    if (!labels || labels.length === 0) return;
+    new Chart(document.getElementById(canvasId), {
+      type: "line",
+      data: {
+        labels: labels,
+        datasets: [{
+          label: label,
+          data: values,
+          borderColor: color,
+          backgroundColor: color + "22",
+          tension: 0.25,
+          fill: true
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          y: { beginAtZero: false }
+        }
+      }
+    });
+  }
+
+  function buildBarChart(canvasId, labels, values, label, color) {
+    if (!labels || labels.length === 0) return;
+    new Chart(document.getElementById(canvasId), {
+      type: "bar",
+      data: {
+        labels: labels,
+        datasets: [{
+          label: label,
+          data: values,
+          backgroundColor: color
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false
+      }
+    });
+  }
+
+  buildLineChart("equityCurveChart", equityLabels, equityValues, "Cumulative PnL", "#0d6efd");
+  buildBarChart("setupWinRateChart", setupLabels, setupWinRate, "Win Rate (%)", "#198754");
+  buildBarChart("setupPnlChart", setupLabels, setupPnl, "Total PnL", "#0dcaf0");
+  buildBarChart("sessionPnlChart", sessionLabels, sessionPnl, "Total PnL", "#ffc107");
+  buildBarChart("symbolPnlChart", symbolLabels, symbolPnl, "Total PnL", "#dc3545");
+</script>
 
 </body>
 </html>
