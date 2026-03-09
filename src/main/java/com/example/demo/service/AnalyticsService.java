@@ -21,13 +21,18 @@ public class AnalyticsService {
     }
 
     public AnalyticsReport buildReportForUser(String userId) {
-        List<Trade> trades = tradeService.findAllByUser(userId);
-        TradeOverview overview = buildOverview(trades);
+        return buildReportForUser(userId, null, null);
+    }
 
-        List<BreakdownRow> bySetup = buildBreakdown(trades, Trade::getSetupName);
-        List<BreakdownRow> bySession = buildBreakdown(trades, Trade::getSession);
-        List<BreakdownRow> bySymbol = buildBreakdown(trades, Trade::getSymbol);
-        List<TrendPoint> equityCurve = buildEquityCurve(trades);
+    public AnalyticsReport buildReportForUser(String userId, LocalDateTime from, LocalDateTime to) {
+        List<Trade> trades = tradeService.findAllByUser(userId);
+        List<Trade> filteredTrades = filterTradesByRange(trades, from, to);
+        TradeOverview overview = buildOverview(filteredTrades);
+
+        List<BreakdownRow> bySetup = buildBreakdown(filteredTrades, Trade::getSetupName);
+        List<BreakdownRow> bySession = buildBreakdown(filteredTrades, Trade::getSession);
+        List<BreakdownRow> bySymbol = buildBreakdown(filteredTrades, Trade::getSymbol);
+        List<TrendPoint> equityCurve = buildEquityCurve(filteredTrades);
 
         return new AnalyticsReport(overview, bySetup, bySession, bySymbol, equityCurve);
     }
@@ -127,6 +132,38 @@ public class AnalyticsService {
 
     private double round2(double value) {
         return Math.round(value * 100.0) / 100.0;
+    }
+
+    private List<Trade> filterTradesByRange(List<Trade> trades, LocalDateTime from, LocalDateTime to) {
+        if (from == null && to == null) {
+            return trades;
+        }
+
+        List<Trade> filtered = new ArrayList<>();
+        for (Trade trade : trades) {
+            LocalDateTime timestamp = resolveTradeTimestamp(trade);
+            if (timestamp == null) {
+                continue;
+            }
+            if (from != null && timestamp.isBefore(from)) {
+                continue;
+            }
+            if (to != null && timestamp.isAfter(to)) {
+                continue;
+            }
+            filtered.add(trade);
+        }
+        return filtered;
+    }
+
+    private LocalDateTime resolveTradeTimestamp(Trade trade) {
+        if (trade.getEntryTime() != null) {
+            return trade.getEntryTime();
+        }
+        if (trade.getTradeDate() != null) {
+            return trade.getTradeDate();
+        }
+        return trade.getCreatedAt();
     }
 
     private List<TrendPoint> buildEquityCurve(List<Trade> trades) {
