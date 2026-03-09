@@ -39,6 +39,7 @@ public class TradeImageApiController {
     public ResponseEntity<?> uploadImages(
             @PathVariable String id,
             @RequestParam("files") MultipartFile[] files,
+            @RequestParam(value = "imageType", required = false) String imageType,
             HttpSession session
     ) {
         User currentUser = userService.getCurrentUser(session);
@@ -52,7 +53,7 @@ public class TradeImageApiController {
                     ? tradeService.findByIdForAdmin(id)
                     : tradeService.findEditableByIdForUser(id, currentUser.getId());
 
-            tradeImageService.saveSetupImages(trade, files);
+            tradeImageService.saveSetupImages(trade, files, imageType);
 
             List<TradeImage> images = tradeImageService.findByTradeId(trade.getId());
             Map<String, Object> payload = new LinkedHashMap<>();

@@ -8,6 +8,7 @@ import com.example.demo.entity.User;
 import com.example.demo.repository.MistakeTagRepository;
 import com.example.demo.repository.SetupRepository;
 import com.example.demo.repository.TradeMistakeTagRepository;
+import com.example.demo.repository.TradeReviewRepository;
 import com.example.demo.repository.TradeRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,6 +25,7 @@ public class TradeService {
     private final MistakeTagRepository mistakeTagRepository;
     private final SetupRepository setupRepository;
     private final MistakeTagService mistakeTagService;
+    private final TradeReviewRepository tradeReviewRepository;
     
     public TradeService(
             TradeRepository repo,
@@ -31,7 +33,8 @@ public class TradeService {
             TradeMistakeTagRepository tradeMistakeTagRepository,
             MistakeTagRepository mistakeTagRepository,
             SetupRepository setupRepository,
-            MistakeTagService mistakeTagService
+            MistakeTagService mistakeTagService,
+            TradeReviewRepository tradeReviewRepository
     ) {
         this.repo = repo;
         this.pnlCalculator = pnlCalculator;
@@ -39,6 +42,7 @@ public class TradeService {
         this.mistakeTagRepository = mistakeTagRepository;
         this.setupRepository = setupRepository;
         this.mistakeTagService = mistakeTagService;
+        this.tradeReviewRepository = tradeReviewRepository;
     }
 
     @Transactional
@@ -139,6 +143,7 @@ public class TradeService {
     @Transactional
     public void deleteForUser(String tradeId, String userId) {
         Trade trade = findByIdForUser(tradeId, userId);
+        tradeReviewRepository.deleteByTradeId(trade.getId());
         tradeMistakeTagRepository.deleteByTradeId(trade.getId());
         repo.delete(trade);
     }
@@ -146,6 +151,7 @@ public class TradeService {
     @Transactional
     public void deleteForAdmin(String tradeId) {
         Trade trade = findByIdForAdmin(tradeId);
+        tradeReviewRepository.deleteByTradeId(trade.getId());
         tradeMistakeTagRepository.deleteByTradeId(trade.getId());
         repo.delete(trade);
     }

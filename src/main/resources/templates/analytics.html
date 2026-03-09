@@ -7,67 +7,163 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
   <style>
+    .app-shell {
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+    }
+    .sidebar {
+      width: 220px;
+      position: sticky;
+      top: 16px;
+    }
+    .main-content {
+      flex: 1;
+      min-width: 0;
+    }
     .chart-panel {
       position: relative;
       height: 280px;
       width: 100%;
     }
+    @media (max-width: 991.98px) {
+      .app-shell {
+        flex-direction: column;
+      }
+      .sidebar {
+        width: 100%;
+        position: static;
+      }
+    }
   </style>
 </head>
 <body class="bg-light">
 
-<div class="container py-4">
-  <div class="d-flex justify-content-between align-items-center mb-3">
-    <div>
-      <h2 class="m-0">Analytics Overview</h2>
-      <div class="text-muted" th:if="${currentUser != null}">
-        Logged in as <strong th:text="${currentUser.username}"></strong>
+<div class="container-fluid py-3 px-3 px-lg-4">
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <div class="fw-semibold mb-3">Navigation</div>
+          <div class="d-grid gap-2">
+            <a th:href="@{/analytics}" class="btn btn-primary">Analytics</a>
+            <a th:href="@{/analytics/export.csv(period=${period},from=${from},to=${to})}" class="btn btn-outline-success">Export CSV</a>
+            <a th:href="@{/trades(view='table')}" class="btn btn-outline-primary">View Trades</a>
+            <a th:href="@{/trades}" class="btn btn-outline-secondary">Add Trade</a>
+            <a th:href="@{/setups}" class="btn btn-outline-secondary">Setups</a>
+            <a th:href="@{/mistakes}" class="btn btn-outline-secondary">Mistakes</a>
+            <form method="post" action="/logout">
+              <button class="btn btn-outline-danger w-100" type="submit">Logout</button>
+            </form>
+          </div>
+          <div class="text-muted small mt-3" th:if="${currentUser != null}">
+            Logged in as <strong th:text="${currentUser.username}"></strong>
+          </div>
+        </div>
       </div>
-    </div>
+    </aside>
 
-    <div class="d-flex gap-2">
-      <a th:href="@{/trades}" class="btn btn-primary">Add Trade</a>
-      <a th:href="@{/trades}" class="btn btn-outline-secondary">View Trades</a>
-      <form method="post" action="/logout">
-        <button class="btn btn-outline-danger" type="submit">Logout</button>
-      </form>
+    <main class="main-content">
+      <div class="mb-3">
+        <h2 class="m-0">Analytics Overview</h2>
+      </div>
+
+      <div class="card shadow-sm mb-3">
+        <div class="card-body">
+          <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+            <span class="text-muted small me-1">Period:</span>
+            <a th:href="@{/analytics(period='ALL')}"
+               class="btn btn-sm"
+               th:classappend="${period == 'ALL'} ? ' btn-primary' : ' btn-outline-primary'">All</a>
+            <a th:href="@{/analytics(period='7D')}"
+               class="btn btn-sm"
+               th:classappend="${period == '7D'} ? ' btn-primary' : ' btn-outline-primary'">7D</a>
+            <a th:href="@{/analytics(period='30D')}"
+               class="btn btn-sm"
+               th:classappend="${period == '30D'} ? ' btn-primary' : ' btn-outline-primary'">30D</a>
+            <a th:href="@{/analytics(period='90D')}"
+               class="btn btn-sm"
+               th:classappend="${period == '90D'} ? ' btn-primary' : ' btn-outline-primary'">90D</a>
+          </div>
+
+          <form class="row g-2 align-items-end" method="get" th:action="@{/analytics}">
+            <input type="hidden" name="period" value="CUSTOM">
+            <div class="col-md-3">
+              <label class="form-label small mb-1">From date</label>
+              <input class="form-control form-control-sm" type="date" name="from" th:value="${from}">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label small mb-1">To date</label>
+              <input class="form-control form-control-sm" type="date" name="to" th:value="${to}">
+            </div>
+            <div class="col-md-6 d-flex gap-2">
+              <button type="submit" class="btn btn-sm btn-dark">Apply custom range</button>
+              <a th:href="@{/analytics(period='ALL')}" class="btn btn-sm btn-outline-secondary">Clear</a>
+            </div>
+          </form>
+        </div>
+      </div>
+
+  <div class="card shadow-sm mb-3" th:if="${comparison != null}">
+    <div class="card-body">
+      <h5 class="card-title mb-3">Period Comparison</h5>
+      <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0">
+          <thead>
+          <tr>
+            <th>Metric</th>
+            <th>Current</th>
+            <th>Previous</th>
+            <th>Delta</th>
+          </tr>
+          </thead>
+          <tbody>
+          <tr>
+            <td>Total Trades</td>
+            <td th:text="${comparison.current.totalTrades}">0</td>
+            <td th:text="${comparison.previous.totalTrades}">0</td>
+            <td th:text="${comparison.totalTradesDelta > 0 ? '+' + comparison.totalTradesDelta : comparison.totalTradesDelta}">0</td>
+          </tr>
+          <tr>
+            <td>Win Rate</td>
+            <td th:text="${#numbers.formatDecimal(comparison.current.winRate,1,2) + '%'}">0.00%</td>
+            <td th:text="${#numbers.formatDecimal(comparison.previous.winRate,1,2) + '%'}">0.00%</td>
+            <td th:text="${(comparison.winRateDelta > 0 ? '+' : '') + #numbers.formatDecimal(comparison.winRateDelta,1,2) + '%'}">0.00%</td>
+          </tr>
+          <tr>
+            <td>Total PnL</td>
+            <td th:text="${#numbers.formatDecimal(comparison.current.totalPnl,1,2)}">0.00</td>
+            <td th:text="${#numbers.formatDecimal(comparison.previous.totalPnl,1,2)}">0.00</td>
+            <td th:text="${(comparison.totalPnlDelta > 0 ? '+' : '') + #numbers.formatDecimal(comparison.totalPnlDelta,1,2)}">0.00</td>
+          </tr>
+          <tr>
+            <td>Average PnL</td>
+            <td th:text="${#numbers.formatDecimal(comparison.current.avgPnl,1,2)}">0.00</td>
+            <td th:text="${#numbers.formatDecimal(comparison.previous.avgPnl,1,2)}">0.00</td>
+            <td th:text="${(comparison.avgPnlDelta > 0 ? '+' : '') + #numbers.formatDecimal(comparison.avgPnlDelta,1,2)}">0.00</td>
+          </tr>
+          <tr>
+            <td>Total R</td>
+            <td th:text="${#numbers.formatDecimal(comparison.current.totalR,1,2)}">0.00</td>
+            <td th:text="${#numbers.formatDecimal(comparison.previous.totalR,1,2)}">0.00</td>
+            <td th:text="${(comparison.totalRDelta > 0 ? '+' : '') + #numbers.formatDecimal(comparison.totalRDelta,1,2)}">0.00</td>
+          </tr>
+          <tr>
+            <td>Average R</td>
+            <td th:text="${#numbers.formatDecimal(comparison.current.avgR,1,2)}">0.00</td>
+            <td th:text="${#numbers.formatDecimal(comparison.previous.avgR,1,2)}">0.00</td>
+            <td th:text="${(comparison.avgRDelta > 0 ? '+' : '') + #numbers.formatDecimal(comparison.avgRDelta,1,2)}">0.00</td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="text-muted small mt-2">
+        Previous period is the immediate window before the current selected date range, with the same duration.
+      </div>
     </div>
   </div>
-
-  <div class="card shadow-sm mb-3">
-    <div class="card-body">
-      <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
-        <span class="text-muted small me-1">Period:</span>
-        <a th:href="@{/analytics(period='ALL')}"
-           class="btn btn-sm"
-           th:classappend="${period == 'ALL'} ? ' btn-primary' : ' btn-outline-primary'">All</a>
-        <a th:href="@{/analytics(period='7D')}"
-           class="btn btn-sm"
-           th:classappend="${period == '7D'} ? ' btn-primary' : ' btn-outline-primary'">7D</a>
-        <a th:href="@{/analytics(period='30D')}"
-           class="btn btn-sm"
-           th:classappend="${period == '30D'} ? ' btn-primary' : ' btn-outline-primary'">30D</a>
-        <a th:href="@{/analytics(period='90D')}"
-           class="btn btn-sm"
-           th:classappend="${period == '90D'} ? ' btn-primary' : ' btn-outline-primary'">90D</a>
-      </div>
-
-      <form class="row g-2 align-items-end" method="get" th:action="@{/analytics}">
-        <input type="hidden" name="period" value="CUSTOM">
-        <div class="col-md-3">
-          <label class="form-label small mb-1">From date</label>
-          <input class="form-control form-control-sm" type="date" name="from" th:value="${from}">
-        </div>
-        <div class="col-md-3">
-          <label class="form-label small mb-1">To date</label>
-          <input class="form-control form-control-sm" type="date" name="to" th:value="${to}">
-        </div>
-        <div class="col-md-6 d-flex gap-2">
-          <button type="submit" class="btn btn-sm btn-dark">Apply custom range</button>
-          <a th:href="@{/analytics(period='ALL')}" class="btn btn-sm btn-outline-secondary">Clear</a>
-        </div>
-      </form>
-    </div>
+  <div class="alert alert-light border mb-3" th:if="${comparison == null}">
+    Select a preset period (7D/30D/90D) or a custom date range to see period-vs-period comparison.
   </div>
 
   <div class="row g-3">
@@ -101,6 +197,177 @@
           <div class="text-muted small">Average PnL</div>
           <div class="fs-3 fw-bold" th:text="${#numbers.formatDecimal(overview.avgPnl,1,2)}">0.00</div>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-3 mt-1">
+    <div class="col-md-3">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <div class="text-muted small">Profit Factor</div>
+          <div class="fs-5 fw-bold"
+               th:text="${riskMetrics.profitFactor == null ? 'N/A' : #numbers.formatDecimal(riskMetrics.profitFactor,1,2)}">N/A</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <div class="text-muted small">Max Drawdown</div>
+          <div class="fs-5 fw-bold" th:text="${#numbers.formatDecimal(riskMetrics.maxDrawdown,1,2)}">0.00</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-2">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <div class="text-muted small">Expectancy</div>
+          <div class="fs-5 fw-bold" th:text="${#numbers.formatDecimal(riskMetrics.expectancy,1,2)}">0.00</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-2">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <div class="text-muted small">Avg Win</div>
+          <div class="fs-5 fw-bold" th:text="${#numbers.formatDecimal(riskMetrics.avgWin,1,2)}">0.00</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-2">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <div class="text-muted small">Avg Loss</div>
+          <div class="fs-5 fw-bold" th:text="${#numbers.formatDecimal(riskMetrics.avgLoss,1,2)}">0.00</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-3 mt-1">
+    <div class="col-md-3">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <div class="text-muted small">Reviewed Trades</div>
+          <div class="fs-5 fw-bold" th:text="${processMetrics.reviewedTrades + ' / ' + overview.totalTrades}">0 / 0</div>
+          <div class="text-muted small" th:text="${#numbers.formatDecimal(processMetrics.reviewedRate,1,2) + '% reviewed'}">0.00% reviewed</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <div class="text-muted small">High-Quality Trades</div>
+          <div class="fs-5 fw-bold" th:text="${processMetrics.highQualityTrades}">0</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-2">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <div class="text-muted small">Winrate (HQ)</div>
+          <div class="fs-5 fw-bold" th:text="${#numbers.formatDecimal(processMetrics.highQualityWinRate,1,2) + '%'}">0.00%</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-2">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <div class="text-muted small">Avg R (Followed Plan)</div>
+          <div class="fs-5 fw-bold" th:text="${#numbers.formatDecimal(processMetrics.avgRFollowedPlan,1,2)}">0.00</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-2">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <div class="text-muted small">Bad Process Wins</div>
+          <div class="fs-5 fw-bold" th:text="${processMetrics.badProcessWins}">0</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-3 mt-1">
+    <div class="col-md-4">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <div class="text-muted small mb-2">Quality Grade Distribution</div>
+          <div class="d-flex gap-2 flex-wrap">
+            <span class="badge text-bg-success">A: <span th:text="${processMetrics.gradeA}">0</span></span>
+            <span class="badge text-bg-primary">B: <span th:text="${processMetrics.gradeB}">0</span></span>
+            <span class="badge text-bg-secondary">C: <span th:text="${processMetrics.gradeC}">0</span></span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-8">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <div class="text-muted small mb-2">Outcome vs Process</div>
+          <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+              <thead>
+              <tr>
+                <th>Process/Outcome</th>
+                <th>Count</th>
+              </tr>
+              </thead>
+              <tbody>
+              <tr>
+                <td>Good process, good outcome</td>
+                <td th:text="${processMetrics.goodProcessGoodOutcome}">0</td>
+              </tr>
+              <tr>
+                <td>Good process, bad outcome</td>
+                <td th:text="${processMetrics.goodProcessBadOutcome}">0</td>
+              </tr>
+              <tr>
+                <td>Bad process, good outcome</td>
+                <td th:text="${processMetrics.badProcessGoodOutcome}">0</td>
+              </tr>
+              <tr>
+                <td>Bad process, bad outcome</td>
+                <td th:text="${processMetrics.badProcessBadOutcome}">0</td>
+              </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card shadow-sm mt-4">
+    <div class="card-body">
+      <h5 class="card-title mb-3">Bad Process Wins</h5>
+      <div class="table-responsive">
+        <table class="table table-sm table-striped align-middle mb-0">
+          <thead>
+          <tr>
+            <th>Trade</th>
+            <th>Entry Time</th>
+            <th>Symbol</th>
+            <th>Quality Score</th>
+            <th>PnL</th>
+          </tr>
+          </thead>
+          <tbody>
+          <tr th:each="row : ${processMetrics.badProcessWinTrades}">
+            <td>
+              <a th:href="@{/trades/{id}(id=${row.tradeId})}" th:text="${row.tradeId}">trade-id</a>
+            </td>
+            <td th:text="${row.entryTime != null ? #temporals.format(row.entryTime, 'yyyy-MM-dd HH:mm') : '-'}">-</td>
+            <td th:text="${row.symbol}">-</td>
+            <td th:text="${row.qualityScore}">0</td>
+            <td th:text="${#numbers.formatDecimal(row.pnl,1,2)}">0.00</td>
+          </tr>
+          <tr th:if="${#lists.isEmpty(processMetrics.badProcessWinTrades)}">
+            <td colspan="5" class="text-muted text-center">No bad-process wins in selected range.</td>
+          </tr>
+          </tbody>
+        </table>
       </div>
     </div>
   </div>
@@ -208,7 +475,12 @@
           </thead>
           <tbody>
           <tr th:each="row : ${report.bySetup}">
-            <td th:text="${row.label}">N/A</td>
+            <td>
+              <span th:if="${row.label == 'N/A'}" th:text="${row.label}">N/A</span>
+              <a th:if="${row.label != 'N/A'}"
+                 th:href="@{/trades(setup=${row.label},from=${from},to=${to})}"
+                 th:text="${row.label}">Setup</a>
+            </td>
             <td th:text="${row.totalTrades}">0</td>
             <td th:text="${row.winTrades}">0</td>
             <td th:text="${#numbers.formatDecimal(row.winRate,1,2) + '%'}">0.00%</td>
@@ -245,7 +517,12 @@
           </thead>
           <tbody>
           <tr th:each="row : ${report.bySession}">
-            <td th:text="${row.label}">N/A</td>
+            <td>
+              <span th:if="${row.label == 'N/A'}" th:text="${row.label}">N/A</span>
+              <a th:if="${row.label != 'N/A'}"
+                 th:href="@{/trades(session=${row.label},from=${from},to=${to})}"
+                 th:text="${row.label}">Session</a>
+            </td>
             <td th:text="${row.totalTrades}">0</td>
             <td th:text="${row.winTrades}">0</td>
             <td th:text="${#numbers.formatDecimal(row.winRate,1,2) + '%'}">0.00%</td>
@@ -282,7 +559,12 @@
           </thead>
           <tbody>
           <tr th:each="row : ${report.bySymbol}">
-            <td th:text="${row.label}">N/A</td>
+            <td>
+              <span th:if="${row.label == 'N/A'}" th:text="${row.label}">N/A</span>
+              <a th:if="${row.label != 'N/A'}"
+                 th:href="@{/trades(symbol=${row.label},from=${from},to=${to})}"
+                 th:text="${row.label}">Symbol</a>
+            </td>
             <td th:text="${row.totalTrades}">0</td>
             <td th:text="${row.winTrades}">0</td>
             <td th:text="${#numbers.formatDecimal(row.winRate,1,2) + '%'}">0.00%</td>
@@ -299,9 +581,15 @@
       </div>
     </div>
   </div>
+    </main>
+  </div>
 </div>
 
 <script th:inline="javascript">
+  const tradesBaseUrl = /*[[@{/trades}]]*/ "/trades";
+  const currentFrom = /*[[${from}]]*/ null;
+  const currentTo = /*[[${to}]]*/ null;
+
   const equityLabels = /*[[${report.equityCurve.![label]}]]*/ [];
   const equityValues = /*[[${report.equityCurve.![value]}]]*/ [];
 
@@ -340,7 +628,18 @@
     });
   }
 
-  function buildBarChart(canvasId, labels, values, label, color) {
+  function redirectToTradesByFilter(filterKey, filterValue) {
+    if (!filterValue || filterValue === "N/A") {
+      return;
+    }
+    const params = new URLSearchParams();
+    params.set(filterKey, filterValue);
+    if (currentFrom) params.set("from", currentFrom);
+    if (currentTo) params.set("to", currentTo);
+    window.location.href = tradesBaseUrl + "?" + params.toString();
+  }
+
+  function buildBarChart(canvasId, labels, values, label, color, drilldownKey) {
     if (!labels || labels.length === 0) return;
     new Chart(document.getElementById(canvasId), {
       type: "bar",
@@ -354,16 +653,29 @@
       },
       options: {
         responsive: true,
-        maintainAspectRatio: false
+        maintainAspectRatio: false,
+        onHover: (event, elements) => {
+          if (event?.native?.target) {
+            event.native.target.style.cursor = elements.length ? "pointer" : "default";
+          }
+        },
+        onClick: (event, elements, chart) => {
+          if (!elements.length || !drilldownKey) {
+            return;
+          }
+          const index = elements[0].index;
+          const clickedLabel = chart.data.labels[index];
+          redirectToTradesByFilter(drilldownKey, clickedLabel);
+        }
       }
     });
   }
 
   buildLineChart("equityCurveChart", equityLabels, equityValues, "Cumulative PnL", "#0d6efd");
-  buildBarChart("setupWinRateChart", setupLabels, setupWinRate, "Win Rate (%)", "#198754");
-  buildBarChart("setupPnlChart", setupLabels, setupPnl, "Total PnL", "#0dcaf0");
-  buildBarChart("sessionPnlChart", sessionLabels, sessionPnl, "Total PnL", "#ffc107");
-  buildBarChart("symbolPnlChart", symbolLabels, symbolPnl, "Total PnL", "#dc3545");
+  buildBarChart("setupWinRateChart", setupLabels, setupWinRate, "Win Rate (%)", "#198754", "setup");
+  buildBarChart("setupPnlChart", setupLabels, setupPnl, "Total PnL", "#0dcaf0", "setup");
+  buildBarChart("sessionPnlChart", sessionLabels, sessionPnl, "Total PnL", "#ffc107", "session");
+  buildBarChart("symbolPnlChart", symbolLabels, symbolPnl, "Total PnL", "#dc3545", "symbol");
 </script>
 
 </body>

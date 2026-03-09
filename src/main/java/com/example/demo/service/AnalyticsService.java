@@ -1,6 +1,8 @@
 package com.example.demo.service;
 
 import com.example.demo.entity.Trade;
+import com.example.demo.entity.TradeReview;
+import com.example.demo.repository.TradeReviewRepository;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -8,6 +10,8 @@ import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.HashMap;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
@@ -15,9 +19,11 @@ import java.time.format.DateTimeFormatter;
 public class AnalyticsService {
 
     private final TradeService tradeService;
+    private final TradeReviewRepository tradeReviewRepository;
 
-    public AnalyticsService(TradeService tradeService) {
+    public AnalyticsService(TradeService tradeService, TradeReviewRepository tradeReviewRepository) {
         this.tradeService = tradeService;
+        this.tradeReviewRepository = tradeReviewRepository;
     }
 
     public AnalyticsReport buildReportForUser(String userId) {
@@ -28,18 +34,54 @@ public class AnalyticsService {
         List<Trade> trades = tradeService.findAllByUser(userId);
         List<Trade> filteredTrades = filterTradesByRange(trades, from, to);
         TradeOverview overview = buildOverview(filteredTrades);
+        RiskMetrics riskMetrics = buildRiskMetrics(filteredTrades);
+        ProcessMetrics processMetrics = buildProcessMetrics(filteredTrades);
 
         List<BreakdownRow> bySetup = buildBreakdown(filteredTrades, Trade::getSetupName);
         List<BreakdownRow> bySession = buildBreakdown(filteredTrades, Trade::getSession);
         List<BreakdownRow> bySymbol = buildBreakdown(filteredTrades, Trade::getSymbol);
         List<TrendPoint> equityCurve = buildEquityCurve(filteredTrades);
 
-        return new AnalyticsReport(overview, bySetup, bySession, bySymbol, equityCurve);
+        return new AnalyticsReport(overview, riskMetrics, processMetrics, bySetup, bySession, bySymbol, equityCurve);
     }
 
     public TradeOverview buildOverviewForUser(String userId) {
         List<Trade> trades = tradeService.findAllByUser(userId);
         return buildOverview(trades);
+    }
+
+    public List<Trade> findTradesForUser(String userId, LocalDateTime from, LocalDateTime to) {
+        List<Trade> trades = tradeService.findAllByUser(userId);
+        return filterTradesByRange(trades, from, to);
+    }
+
+    public PeriodComparison buildPeriodComparisonForUser(String userId, LocalDateTime currentFrom, LocalDateTime currentTo) {
+        if (currentFrom == null || currentTo == null || currentFrom.isAfter(currentTo)) {
+            return null;
+        }
+
+        List<Trade> allTrades = tradeService.findAllByUser(userId);
+        List<Trade> currentTrades = filterTradesByRange(allTrades, currentFrom, currentTo);
+
+        Duration currentDuration = Duration.between(currentFrom, currentTo);
+        LocalDateTime previousTo = currentFrom.minusNanos(1);
+        LocalDateTime previousFrom = previousTo.minus(currentDuration);
+
+        List<Trade> previousTrades = filterTradesByRange(allTrades, previousFrom, previousTo);
+
+        TradeOverview currentOverview = buildOverview(currentTrades);
+        TradeOverview previousOverview = buildOverview(previousTrades);
+
+        return new PeriodComparison(
+                currentOverview,
+                previousOverview,
+                currentOverview.getTotalTrades() - previousOverview.getTotalTrades(),
+                round2(currentOverview.getWinRate() - previousOverview.getWinRate()),
+                round2(currentOverview.getTotalPnl() - previousOverview.getTotalPnl()),
+                round2(currentOverview.getAvgPnl() - previousOverview.getAvgPnl()),
+                round2(currentOverview.getTotalR() - previousOverview.getTotalR()),
+                round2(currentOverview.getAvgR() - previousOverview.getAvgR())
+        );
     }
 
     private TradeOverview buildOverview(List<Trade> trades) {
@@ -187,6 +229,165 @@ public class AnalyticsService {
         return points;
     }
 
+    private RiskMetrics buildRiskMetrics(List<Trade> trades) {
+        int totalTrades = trades.size();
+        int winTrades = 0;
+        int lossTrades = 0;
+        double grossProfit = 0.0;
+        double grossLossAbs = 0.0;
+
+        for (Trade trade : trades) {
+            double pnl = trade.getPnl();
+            if (pnl > 0) {
+                winTrades++;
+                grossProfit += pnl;
+            } else if (pnl < 0) {
+                lossTrades++;
+                grossLossAbs += Math.abs(pnl);
+            }
+        }
+
+        double avgWin = winTrades == 0 ? 0.0 : grossProfit / winTrades;
+        double avgLoss = lossTrades == 0 ? 0.0 : -(grossLossAbs / lossTrades);
+        double winRate = totalTrades == 0 ? 0.0 : (winTrades * 1.0) / totalTrades;
+        double lossRate = totalTrades == 0 ? 0.0 : (lossTrades * 1.0) / totalTrades;
+        double expectancy = (winRate * avgWin) + (lossRate * avgLoss);
+        double maxDrawdown = calculateMaxDrawdown(trades);
+        Double profitFactor = grossLossAbs == 0.0 ? null : grossProfit / grossLossAbs;
+
+        return new RiskMetrics(
+                profitFactor == null ? null : round2(profitFactor),
+                round2(maxDrawdown),
+                round2(expectancy),
+                round2(avgWin),
+                round2(avgLoss)
+        );
+    }
+
+    private ProcessMetrics buildProcessMetrics(List<Trade> trades) {
+        if (trades.isEmpty()) {
+            return new ProcessMetrics(0, 0, 0.0, 0.0, 0.0, 0, 0, 0, 0, 0, 0, 0, 0, List.of());
+        }
+
+        List<String> tradeIds = trades.stream().map(Trade::getId).toList();
+        List<TradeReview> reviews = tradeReviewRepository.findByTradeIdIn(tradeIds);
+        Map<String, TradeReview> reviewMap = new HashMap<>();
+        for (TradeReview review : reviews) {
+            if (review.getTrade() != null && review.getTrade().getId() != null) {
+                reviewMap.put(review.getTrade().getId(), review);
+            }
+        }
+
+        int reviewedTrades = 0;
+        int highQualityTrades = 0;
+        int highQualityWins = 0;
+        int followedPlanTrades = 0;
+        double followedPlanTotalR = 0.0;
+        int badProcessWins = 0;
+        int gradeA = 0;
+        int gradeB = 0;
+        int gradeC = 0;
+        int goodProcessGoodOutcome = 0;
+        int goodProcessBadOutcome = 0;
+        int badProcessGoodOutcome = 0;
+        int badProcessBadOutcome = 0;
+        List<ProcessTradeRow> badProcessWinTrades = new ArrayList<>();
+
+        for (Trade trade : trades) {
+            TradeReview review = reviewMap.get(trade.getId());
+            if (review == null || review.getQualityScore() == null) {
+                continue;
+            }
+
+            reviewedTrades++;
+            boolean highQuality = review.getQualityScore() >= 70;
+            boolean tradeWin = trade.getPnl() > 0;
+
+            if (review.getQualityScore() >= 85) {
+                gradeA++;
+            } else if (review.getQualityScore() >= 70) {
+                gradeB++;
+            } else {
+                gradeC++;
+            }
+
+            if (highQuality) {
+                highQualityTrades++;
+                if (tradeWin) {
+                    highQualityWins++;
+                    goodProcessGoodOutcome++;
+                } else {
+                    goodProcessBadOutcome++;
+                }
+            } else {
+                if (tradeWin) {
+                    badProcessWins++;
+                    badProcessGoodOutcome++;
+                    badProcessWinTrades.add(new ProcessTradeRow(
+                            trade.getId(),
+                            trade.getSymbol(),
+                            trade.getPnl(),
+                            review.getQualityScore(),
+                            trade.getEntryTime()
+                    ));
+                } else {
+                    badProcessBadOutcome++;
+                }
+            }
+
+            if (Boolean.TRUE.equals(review.getFollowedPlan())) {
+                followedPlanTrades++;
+                followedPlanTotalR += trade.getRMultiple();
+            }
+        }
+
+        double reviewedRate = trades.isEmpty() ? 0.0 : (reviewedTrades * 100.0) / trades.size();
+        double highQualityWinRate = highQualityTrades == 0 ? 0.0 : (highQualityWins * 100.0) / highQualityTrades;
+        double avgRFollowedPlan = followedPlanTrades == 0 ? 0.0 : followedPlanTotalR / followedPlanTrades;
+
+        return new ProcessMetrics(
+                reviewedTrades,
+                highQualityTrades,
+                round2(reviewedRate),
+                round2(highQualityWinRate),
+                round2(avgRFollowedPlan),
+                badProcessWins,
+                gradeA,
+                gradeB,
+                gradeC,
+                goodProcessGoodOutcome,
+                goodProcessBadOutcome,
+                badProcessGoodOutcome,
+                badProcessBadOutcome,
+                badProcessWinTrades
+        );
+    }
+
+    private double calculateMaxDrawdown(List<Trade> trades) {
+        List<Trade> sorted = new ArrayList<>(trades);
+        sorted.sort(Comparator
+                .comparing(Trade::getEntryTime, Comparator.nullsLast(LocalDateTime::compareTo))
+                .thenComparing(Trade::getCreatedAt, Comparator.nullsLast(LocalDateTime::compareTo))
+                .thenComparing(Trade::getId, Comparator.nullsLast(String::compareTo)));
+
+        double equity = 0.0;
+        double peak = 0.0;
+        double maxDrawdown = 0.0;
+
+        for (Trade trade : sorted) {
+            equity += trade.getPnl();
+            if (equity > peak) {
+                peak = equity;
+            }
+            double drawdown = peak - equity;
+            if (drawdown > maxDrawdown) {
+                maxDrawdown = drawdown;
+            }
+        }
+
+        return maxDrawdown;
+    }
+
     private String buildTradePointLabel(Trade trade) {
         LocalDateTime entry = trade.getEntryTime();
         if (entry == null) {
@@ -209,6 +410,8 @@ public class AnalyticsService {
 
     public static class AnalyticsReport {
         private final TradeOverview overview;
+        private final RiskMetrics riskMetrics;
+        private final ProcessMetrics processMetrics;
         private final List<BreakdownRow> bySetup;
         private final List<BreakdownRow> bySession;
         private final List<BreakdownRow> bySymbol;
@@ -216,12 +419,16 @@ public class AnalyticsService {
 
         public AnalyticsReport(
                 TradeOverview overview,
+                RiskMetrics riskMetrics,
+                ProcessMetrics processMetrics,
                 List<BreakdownRow> bySetup,
                 List<BreakdownRow> bySession,
                 List<BreakdownRow> bySymbol,
                 List<TrendPoint> equityCurve
         ) {
             this.overview = overview;
+            this.riskMetrics = riskMetrics;
+            this.processMetrics = processMetrics;
             this.bySetup = bySetup;
             this.bySession = bySession;
             this.bySymbol = bySymbol;
@@ -230,6 +437,14 @@ public class AnalyticsService {
 
         public TradeOverview getOverview() {
             return overview;
+        }
+
+        public RiskMetrics getRiskMetrics() {
+            return riskMetrics;
+        }
+
+        public ProcessMetrics getProcessMetrics() {
+            return processMetrics;
         }
 
         public List<BreakdownRow> getBySetup() {
@@ -246,6 +461,252 @@ public class AnalyticsService {
 
         public List<TrendPoint> getEquityCurve() {
             return equityCurve;
+        }
+    }
+
+    public static class PeriodComparison {
+        private final TradeOverview current;
+        private final TradeOverview previous;
+        private final int totalTradesDelta;
+        private final double winRateDelta;
+        private final double totalPnlDelta;
+        private final double avgPnlDelta;
+        private final double totalRDelta;
+        private final double avgRDelta;
+
+        public PeriodComparison(
+                TradeOverview current,
+                TradeOverview previous,
+                int totalTradesDelta,
+                double winRateDelta,
+                double totalPnlDelta,
+                double avgPnlDelta,
+                double totalRDelta,
+                double avgRDelta
+        ) {
+            this.current = current;
+            this.previous = previous;
+            this.totalTradesDelta = totalTradesDelta;
+            this.winRateDelta = winRateDelta;
+            this.totalPnlDelta = totalPnlDelta;
+            this.avgPnlDelta = avgPnlDelta;
+            this.totalRDelta = totalRDelta;
+            this.avgRDelta = avgRDelta;
+        }
+
+        public TradeOverview getCurrent() {
+            return current;
+        }
+
+        public TradeOverview getPrevious() {
+            return previous;
+        }
+
+        public int getTotalTradesDelta() {
+            return totalTradesDelta;
+        }
+
+        public double getWinRateDelta() {
+            return winRateDelta;
+        }
+
+        public double getTotalPnlDelta() {
+            return totalPnlDelta;
+        }
+
+        public double getAvgPnlDelta() {
+            return avgPnlDelta;
+        }
+
+        public double getTotalRDelta() {
+            return totalRDelta;
+        }
+
+        public double getAvgRDelta() {
+            return avgRDelta;
+        }
+    }
+
+    public static class RiskMetrics {
+        private final Double profitFactor;
+        private final double maxDrawdown;
+        private final double expectancy;
+        private final double avgWin;
+        private final double avgLoss;
+
+        public RiskMetrics(
+                Double profitFactor,
+                double maxDrawdown,
+                double expectancy,
+                double avgWin,
+                double avgLoss
+        ) {
+            this.profitFactor = profitFactor;
+            this.maxDrawdown = maxDrawdown;
+            this.expectancy = expectancy;
+            this.avgWin = avgWin;
+            this.avgLoss = avgLoss;
+        }
+
+        public Double getProfitFactor() {
+            return profitFactor;
+        }
+
+        public double getMaxDrawdown() {
+            return maxDrawdown;
+        }
+
+        public double getExpectancy() {
+            return expectancy;
+        }
+
+        public double getAvgWin() {
+            return avgWin;
+        }
+
+        public double getAvgLoss() {
+            return avgLoss;
+        }
+    }
+
+    public static class ProcessMetrics {
+        private final int reviewedTrades;
+        private final int highQualityTrades;
+        private final double reviewedRate;
+        private final double highQualityWinRate;
+        private final double avgRFollowedPlan;
+        private final int badProcessWins;
+        private final int gradeA;
+        private final int gradeB;
+        private final int gradeC;
+        private final int goodProcessGoodOutcome;
+        private final int goodProcessBadOutcome;
+        private final int badProcessGoodOutcome;
+        private final int badProcessBadOutcome;
+        private final List<ProcessTradeRow> badProcessWinTrades;
+
+        public ProcessMetrics(
+                int reviewedTrades,
+                int highQualityTrades,
+                double reviewedRate,
+                double highQualityWinRate,
+                double avgRFollowedPlan,
+                int badProcessWins,
+                int gradeA,
+                int gradeB,
+                int gradeC,
+                int goodProcessGoodOutcome,
+                int goodProcessBadOutcome,
+                int badProcessGoodOutcome,
+                int badProcessBadOutcome,
+                List<ProcessTradeRow> badProcessWinTrades
+        ) {
+            this.reviewedTrades = reviewedTrades;
+            this.highQualityTrades = highQualityTrades;
+            this.reviewedRate = reviewedRate;
+            this.highQualityWinRate = highQualityWinRate;
+            this.avgRFollowedPlan = avgRFollowedPlan;
+            this.badProcessWins = badProcessWins;
+            this.gradeA = gradeA;
+            this.gradeB = gradeB;
+            this.gradeC = gradeC;
+            this.goodProcessGoodOutcome = goodProcessGoodOutcome;
+            this.goodProcessBadOutcome = goodProcessBadOutcome;
+            this.badProcessGoodOutcome = badProcessGoodOutcome;
+            this.badProcessBadOutcome = badProcessBadOutcome;
+            this.badProcessWinTrades = badProcessWinTrades;
+        }
+
+        public int getReviewedTrades() {
+            return reviewedTrades;
+        }
+
+        public int getHighQualityTrades() {
+            return highQualityTrades;
+        }
+
+        public double getReviewedRate() {
+            return reviewedRate;
+        }
+
+        public double getHighQualityWinRate() {
+            return highQualityWinRate;
+        }
+
+        public double getAvgRFollowedPlan() {
+            return avgRFollowedPlan;
+        }
+
+        public int getBadProcessWins() {
+            return badProcessWins;
+        }
+
+        public int getGradeA() {
+            return gradeA;
+        }
+
+        public int getGradeB() {
+            return gradeB;
+        }
+
+        public int getGradeC() {
+            return gradeC;
+        }
+
+        public int getGoodProcessGoodOutcome() {
+            return goodProcessGoodOutcome;
+        }
+
+        public int getGoodProcessBadOutcome() {
+            return goodProcessBadOutcome;
+        }
+
+        public int getBadProcessGoodOutcome() {
+            return badProcessGoodOutcome;
+        }
+
+        public int getBadProcessBadOutcome() {
+            return badProcessBadOutcome;
+        }
+
+        public List<ProcessTradeRow> getBadProcessWinTrades() {
+            return badProcessWinTrades;
+        }
+    }
+
+    public static class ProcessTradeRow {
+        private final String tradeId;
+        private final String symbol;
+        private final double pnl;
+        private final int qualityScore;
+        private final LocalDateTime entryTime;
+
+        public ProcessTradeRow(String tradeId, String symbol, double pnl, int qualityScore, LocalDateTime entryTime) {
+            this.tradeId = tradeId;
+            this.symbol = symbol;
+            this.pnl = pnl;
+            this.qualityScore = qualityScore;
+            this.entryTime = entryTime;
+        }
+
+        public String getTradeId() {
+            return tradeId;
+        }
+
+        public String getSymbol() {
+            return symbol;
+        }
+
+        public double getPnl() {
+            return pnl;
+        }
+
+        public int getQualityScore() {
+            return qualityScore;
+        }
+
+        public LocalDateTime getEntryTime() {
+            return entryTime;
         }
     }
 

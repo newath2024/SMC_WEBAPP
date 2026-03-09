@@ -1,9 +1,13 @@
 package com.example.demo.controller;
 
+import com.example.demo.entity.Trade;
 import com.example.demo.entity.User;
 import com.example.demo.service.AnalyticsService;
 import com.example.demo.service.UserService;
 import jakarta.servlet.http.HttpSession;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -14,6 +18,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
 import java.util.Locale;
 
 @Controller
@@ -41,47 +47,64 @@ public class AnalyticsController {
             return "redirect:/login";
         }
 
-        String selectedPeriod = normalizePeriod(period);
-        LocalDate today = LocalDate.now();
-
-        if (!"CUSTOM".equals(selectedPeriod)) {
-            from = null;
-            to = null;
-            if ("7D".equals(selectedPeriod)) {
-                from = today.minusDays(6);
-                to = today;
-            } else if ("30D".equals(selectedPeriod)) {
-                from = today.minusDays(29);
-                to = today;
-            } else if ("90D".equals(selectedPeriod)) {
-                from = today.minusDays(89);
-                to = today;
-            }
-        }
-
-        if (from != null && to != null && from.isAfter(to)) {
-            LocalDate temp = from;
-            from = to;
-            to = temp;
-        }
-
-        LocalDateTime fromDateTime = from != null ? from.atStartOfDay() : null;
-        LocalDateTime toDateTime = to != null ? to.atTime(LocalTime.MAX) : null;
+        ResolvedRange range = resolveRange(period, from, to);
 
         AnalyticsService.AnalyticsReport report = analyticsService.buildReportForUser(
                 currentUser.getId(),
-                fromDateTime,
-                toDateTime
+                range.fromDateTime(),
+                range.toDateTime()
+        );
+        AnalyticsService.PeriodComparison comparison = analyticsService.buildPeriodComparisonForUser(
+                currentUser.getId(),
+                range.fromDateTime(),
+                range.toDateTime()
         );
 
         model.addAttribute("currentUser", currentUser);
         model.addAttribute("report", report);
         model.addAttribute("overview", report.getOverview());
-        model.addAttribute("period", selectedPeriod);
-        model.addAttribute("from", from);
-        model.addAttribute("to", to);
+        model.addAttribute("riskMetrics", report.getRiskMetrics());
+        model.addAttribute("processMetrics", report.getProcessMetrics());
+        model.addAttribute("comparison", comparison);
+        model.addAttribute("period", range.period());
+        model.addAttribute("from", range.fromDate());
+        model.addAttribute("to", range.toDate());
 
         return "analytics";
+    }
+
+    @GetMapping(value = "/export.csv", produces = "text/csv")
+    public ResponseEntity<byte[]> exportCsv(
+            @RequestParam(value = "period", required = false, defaultValue = "ALL") String period,
+            @RequestParam(value = "from", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam(value = "to", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
+            HttpSession session
+    ) {
+        User currentUser = userService.getCurrentUser(session);
+        if (currentUser == null) {
+            return ResponseEntity.status(401).build();
+        }
+
+        ResolvedRange range = resolveRange(period, from, to);
+        AnalyticsService.AnalyticsReport report = analyticsService.buildReportForUser(
+                currentUser.getId(),
+                range.fromDateTime(),
+                range.toDateTime()
+        );
+        List<Trade> trades = analyticsService.findTradesForUser(
+                currentUser.getId(),
+                range.fromDateTime(),
+                range.toDateTime()
+        );
+
+        String csv = buildAnalyticsCsv(currentUser, range, report, trades);
+        String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
+        String filename = "analytics_export_" + timestamp + ".csv";
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                .contentType(new MediaType("text", "csv"))
+                .body(csv.getBytes());
     }
 
     private String normalizePeriod(String period) {
@@ -93,5 +116,131 @@ public class AnalyticsController {
             case "7D", "30D", "90D", "CUSTOM", "ALL" -> normalized;
             default -> "ALL";
         };
+    }
+
+    private ResolvedRange resolveRange(String period, LocalDate from, LocalDate to) {
+        String selectedPeriod = normalizePeriod(period);
+        LocalDate resolvedFrom = from;
+        LocalDate resolvedTo = to;
+
+        LocalDate today = LocalDate.now();
+        if (!"CUSTOM".equals(selectedPeriod)) {
+            resolvedFrom = null;
+            resolvedTo = null;
+            if ("7D".equals(selectedPeriod)) {
+                resolvedFrom = today.minusDays(6);
+                resolvedTo = today;
+            } else if ("30D".equals(selectedPeriod)) {
+                resolvedFrom = today.minusDays(29);
+                resolvedTo = today;
+            } else if ("90D".equals(selectedPeriod)) {
+                resolvedFrom = today.minusDays(89);
+                resolvedTo = today;
+            }
+        }
+
+        if (resolvedFrom != null && resolvedTo != null && resolvedFrom.isAfter(resolvedTo)) {
+            LocalDate temp = resolvedFrom;
+            resolvedFrom = resolvedTo;
+            resolvedTo = temp;
+        }
+
+        LocalDateTime fromDateTime = resolvedFrom != null ? resolvedFrom.atStartOfDay() : null;
+        LocalDateTime toDateTime = resolvedTo != null ? resolvedTo.atTime(LocalTime.MAX) : null;
+        return new ResolvedRange(selectedPeriod, resolvedFrom, resolvedTo, fromDateTime, toDateTime);
+    }
+
+    private String buildAnalyticsCsv(
+            User currentUser,
+            ResolvedRange range,
+            AnalyticsService.AnalyticsReport report,
+            List<Trade> trades
+    ) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("Report,Value\n");
+        sb.append(csv("Username")).append(",").append(csv(currentUser.getUsername())).append("\n");
+        sb.append(csv("Period")).append(",").append(csv(range.period())).append("\n");
+        sb.append(csv("From")).append(",").append(csv(range.fromDate() == null ? "" : range.fromDate().toString())).append("\n");
+        sb.append(csv("To")).append(",").append(csv(range.toDate() == null ? "" : range.toDate().toString())).append("\n");
+        sb.append("\n");
+
+        AnalyticsService.TradeOverview overview = report.getOverview();
+        sb.append("Overview,Value\n");
+        sb.append(csv("Total Trades")).append(",").append(overview.getTotalTrades()).append("\n");
+        sb.append(csv("Win Trades")).append(",").append(overview.getWinTrades()).append("\n");
+        sb.append(csv("Loss Trades")).append(",").append(overview.getLossTrades()).append("\n");
+        sb.append(csv("BE Trades")).append(",").append(overview.getBeTrades()).append("\n");
+        sb.append(csv("Win Rate %")).append(",").append(overview.getWinRate()).append("\n");
+        sb.append(csv("Total PnL")).append(",").append(overview.getTotalPnl()).append("\n");
+        sb.append(csv("Avg PnL")).append(",").append(overview.getAvgPnl()).append("\n");
+        sb.append(csv("Total R")).append(",").append(overview.getTotalR()).append("\n");
+        sb.append(csv("Avg R")).append(",").append(overview.getAvgR()).append("\n");
+        sb.append("\n");
+
+        AnalyticsService.RiskMetrics risk = report.getRiskMetrics();
+        sb.append("Risk Metrics,Value\n");
+        sb.append(csv("Profit Factor")).append(",").append(csv(risk.getProfitFactor() == null ? "N/A" : String.valueOf(risk.getProfitFactor()))).append("\n");
+        sb.append(csv("Max Drawdown")).append(",").append(risk.getMaxDrawdown()).append("\n");
+        sb.append(csv("Expectancy")).append(",").append(risk.getExpectancy()).append("\n");
+        sb.append(csv("Avg Win")).append(",").append(risk.getAvgWin()).append("\n");
+        sb.append(csv("Avg Loss")).append(",").append(risk.getAvgLoss()).append("\n");
+        sb.append("\n");
+
+        AnalyticsService.ProcessMetrics process = report.getProcessMetrics();
+        sb.append("Process Metrics,Value\n");
+        sb.append(csv("Reviewed Trades")).append(",").append(process.getReviewedTrades()).append("\n");
+        sb.append(csv("Reviewed Rate %")).append(",").append(process.getReviewedRate()).append("\n");
+        sb.append(csv("High-Quality Trades")).append(",").append(process.getHighQualityTrades()).append("\n");
+        sb.append(csv("Winrate High-Quality %")).append(",").append(process.getHighQualityWinRate()).append("\n");
+        sb.append(csv("Avg R Followed Plan")).append(",").append(process.getAvgRFollowedPlan()).append("\n");
+        sb.append(csv("Bad Process Wins")).append(",").append(process.getBadProcessWins()).append("\n");
+        sb.append(csv("Grade A Trades")).append(",").append(process.getGradeA()).append("\n");
+        sb.append(csv("Grade B Trades")).append(",").append(process.getGradeB()).append("\n");
+        sb.append(csv("Grade C Trades")).append(",").append(process.getGradeC()).append("\n");
+        sb.append(csv("Good Process, Good Outcome")).append(",").append(process.getGoodProcessGoodOutcome()).append("\n");
+        sb.append(csv("Good Process, Bad Outcome")).append(",").append(process.getGoodProcessBadOutcome()).append("\n");
+        sb.append(csv("Bad Process, Good Outcome")).append(",").append(process.getBadProcessGoodOutcome()).append("\n");
+        sb.append(csv("Bad Process, Bad Outcome")).append(",").append(process.getBadProcessBadOutcome()).append("\n");
+        sb.append("\n");
+
+        sb.append("Trades\n");
+        sb.append("Id,Entry Time,Symbol,Direction,Setup,Session,Result,PnL,R Multiple,Account\n");
+        for (Trade trade : trades) {
+            sb.append(csv(trade.getId())).append(",")
+                    .append(csv(formatDateTime(trade.getEntryTime()))).append(",")
+                    .append(csv(trade.getSymbol())).append(",")
+                    .append(csv(trade.getDirection())).append(",")
+                    .append(csv(trade.getSetupName())).append(",")
+                    .append(csv(trade.getSession())).append(",")
+                    .append(csv(trade.getResult())).append(",")
+                    .append(trade.getPnl()).append(",")
+                    .append(trade.getRMultiple()).append(",")
+                    .append(csv(trade.getAccountLabel()))
+                    .append("\n");
+        }
+        return sb.toString();
+    }
+
+    private String formatDateTime(LocalDateTime value) {
+        if (value == null) {
+            return "";
+        }
+        return value.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
+    }
+
+    private String csv(String value) {
+        if (value == null) {
+            return "\"\"";
+        }
+        return "\"" + value.replace("\"", "\"\"") + "\"";
+    }
+
+    private record ResolvedRange(
+            String period,
+            LocalDate fromDate,
+            LocalDate toDate,
+            LocalDateTime fromDateTime,
+            LocalDateTime toDateTime
+    ) {
     }
 }

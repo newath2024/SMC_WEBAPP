@@ -1,20 +1,26 @@
 package com.example.demo.controller;
 
 import com.example.demo.entity.Trade;
+import com.example.demo.entity.TradeReview;
 import com.example.demo.entity.User;
 import com.example.demo.service.MistakeTagService;
 import com.example.demo.service.TradeImageService;
+import com.example.demo.service.TradeReviewService;
 import com.example.demo.service.SetupService;
 import com.example.demo.service.TradeService;
 import com.example.demo.service.UserService;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import org.springframework.dao.CannotAcquireLockException;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
 
 @Controller
@@ -26,19 +32,22 @@ public class TradeController {
     private final SetupService setupService;
     private final MistakeTagService mistakeTagService;
     private final TradeImageService tradeImageService;
+    private final TradeReviewService tradeReviewService;
 
     public TradeController(
             TradeService tradeService,
             UserService userService,
             SetupService setupService,
             MistakeTagService mistakeTagService,
-            TradeImageService tradeImageService
+            TradeImageService tradeImageService,
+            TradeReviewService tradeReviewService
     ) {
         this.tradeService = tradeService;
         this.userService = userService;
         this.setupService = setupService;
         this.mistakeTagService = mistakeTagService;
         this.tradeImageService = tradeImageService;
+        this.tradeReviewService = tradeReviewService;
     }
 
     private void fillTradeFormData(Model model, User currentUser) {
@@ -48,14 +57,43 @@ public class TradeController {
     }
 
     @GetMapping
-    public String list(Model model, HttpSession session) {
+    public String list(
+            @RequestParam(value = "view", required = false) String view,
+            @RequestParam(value = "setup", required = false) String setup,
+            @RequestParam(value = "session", required = false) String sessionFilter,
+            @RequestParam(value = "symbol", required = false) String symbol,
+            @RequestParam(value = "from", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam(value = "to", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
+            Model model,
+            HttpSession session
+    ) {
         User currentUser = userService.getCurrentUser(session);
         if (currentUser == null) {
             return "redirect:/login";
         }
 
-        model.addAttribute("trades", tradeService.findAllByUser(currentUser.getId()));
+        LocalDateTime fromDateTime = from != null ? from.atStartOfDay() : null;
+        LocalDateTime toDateTime = to != null ? to.atTime(LocalTime.MAX) : null;
+        if (fromDateTime != null && toDateTime != null && fromDateTime.isAfter(toDateTime)) {
+            LocalDateTime temp = fromDateTime;
+            fromDateTime = toDateTime;
+            toDateTime = temp;
+        }
+
+        List<Trade> trades = tradeService.findAllByUser(currentUser.getId());
+        trades = applyListFilters(trades, setup, sessionFilter, symbol, fromDateTime, toDateTime);
+        boolean tableOnlyView = "table".equalsIgnoreCase(view);
+        boolean filteredView = tableOnlyView || hasActiveFilter(setup, sessionFilter, symbol, from, to);
+
+        model.addAttribute("trades", trades);
         model.addAttribute("trade", new Trade());
+        model.addAttribute("filteredView", filteredView);
+        model.addAttribute("tableOnlyView", tableOnlyView);
+        model.addAttribute("selectedSetup", setup);
+        model.addAttribute("selectedSession", sessionFilter);
+        model.addAttribute("selectedSymbol", symbol);
+        model.addAttribute("selectedFrom", from);
+        model.addAttribute("selectedTo", to);
         fillTradeFormData(model, currentUser);
 
         return "trades";
@@ -113,9 +151,34 @@ public class TradeController {
                 ? tradeService.findByIdForAdmin(id)
                 : tradeService.findByIdForUser(id, currentUser.getId());
 
-        model.addAttribute("currentUser", currentUser);
-        model.addAttribute("trade", trade);
-        model.addAttribute("tradeImages", tradeImageService.findByTradeId(trade.getId()));
+        populateTradeDetailModel(model, currentUser, trade, null);
+        return "tradeDetail";
+    }
+
+    @PostMapping("/{id}/review")
+    public String saveReview(
+            @PathVariable String id,
+            @ModelAttribute("review") TradeReview reviewForm,
+            Model model,
+            HttpSession session
+    ) {
+        User currentUser = userService.getCurrentUser(session);
+        if (currentUser == null) {
+            return "redirect:/login";
+        }
+
+        Trade trade = userService.isAdmin(currentUser)
+                ? tradeService.findByIdForAdmin(id)
+                : tradeService.findByIdForUser(id, currentUser.getId());
+
+        try {
+            TradeReview saved = tradeReviewService.upsertForTrade(trade, reviewForm);
+            populateTradeDetailModel(model, currentUser, trade, saved);
+            model.addAttribute("reviewSuccess", "Review saved");
+        } catch (RuntimeException ex) {
+            populateTradeDetailModel(model, currentUser, trade, reviewForm);
+            model.addAttribute("reviewError", friendlyErrorMessage(ex));
+        }
 
         return "tradeDetail";
     }
@@ -229,5 +292,77 @@ public class TradeController {
             current = current.getCause();
         }
         return false;
+    }
+
+    private List<Trade> applyListFilters(
+            List<Trade> trades,
+            String setup,
+            String sessionFilter,
+            String symbol,
+            LocalDateTime from,
+            LocalDateTime to
+    ) {
+        return trades.stream()
+                .filter(trade -> matchesTextFilter(trade.getSetupName(), setup))
+                .filter(trade -> matchesTextFilter(trade.getSession(), sessionFilter))
+                .filter(trade -> matchesTextFilter(trade.getSymbol(), symbol))
+                .filter(trade -> matchesDateFilter(resolveTradeTimestamp(trade), from, to))
+                .toList();
+    }
+
+    private boolean matchesTextFilter(String value, String filter) {
+        if (filter == null || filter.isBlank() || "N/A".equalsIgnoreCase(filter)) {
+            return true;
+        }
+        if (value == null) {
+            return false;
+        }
+        return value.trim().equalsIgnoreCase(filter.trim());
+    }
+
+    private boolean matchesDateFilter(LocalDateTime timestamp, LocalDateTime from, LocalDateTime to) {
+        if (from == null && to == null) {
+            return true;
+        }
+        if (timestamp == null) {
+            return false;
+        }
+        if (from != null && timestamp.isBefore(from)) {
+            return false;
+        }
+        if (to != null && timestamp.isAfter(to)) {
+            return false;
+        }
+        return true;
+    }
+
+    private boolean hasActiveFilter(String setup, String sessionFilter, String symbol, LocalDate from, LocalDate to) {
+        return (setup != null && !setup.isBlank())
+                || (sessionFilter != null && !sessionFilter.isBlank())
+                || (symbol != null && !symbol.isBlank())
+                || from != null
+                || to != null;
+    }
+
+    private LocalDateTime resolveTradeTimestamp(Trade trade) {
+        if (trade.getEntryTime() != null) {
+            return trade.getEntryTime();
+        }
+        if (trade.getTradeDate() != null) {
+            return trade.getTradeDate();
+        }
+        return trade.getCreatedAt();
+    }
+
+    private void populateTradeDetailModel(Model model, User currentUser, Trade trade, TradeReview overrideReview) {
+        TradeReview review = overrideReview != null ? overrideReview : tradeReviewService.getOrInitByTrade(trade);
+
+        model.addAttribute("currentUser", currentUser);
+        model.addAttribute("trade", trade);
+        model.addAttribute("tradeImages", tradeImageService.findByTradeId(trade.getId()));
+        model.addAttribute("review", review);
+        model.addAttribute("qualityGrade", tradeReviewService.resolveScoreGrade(review.getQualityScore()));
+        model.addAttribute("qualityLabel", tradeReviewService.resolveScoreLabel(review.getQualityScore()));
+        model.addAttribute("processOutcomeLabel", tradeReviewService.resolveProcessOutcomeLabel(trade, review));
     }
 }

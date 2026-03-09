@@ -30,11 +30,12 @@ public class TradeImageService {
         return tradeImageRepository.findByTradeIdOrderByCreatedAtAsc(tradeId);
     }
 
-    public void saveSetupImages(Trade trade, MultipartFile[] files) {
+    public void saveSetupImages(Trade trade, MultipartFile[] files, String imageType) {
         if (trade == null || files == null || files.length == 0) {
             return;
         }
 
+        String resolvedImageType = normalizeImageType(imageType);
         ensureStorageDir();
 
         for (MultipartFile file : files) {
@@ -60,7 +61,7 @@ public class TradeImageService {
 
             TradeImage image = new TradeImage();
             image.setTrade(trade);
-            image.setImageType("SETUP");
+            image.setImageType(resolvedImageType);
             image.setImageUrl(IMAGE_URL_PREFIX + storedName);
             image.setCaption(originalName != null ? originalName.trim() : null);
             tradeImageRepository.save(image);
@@ -125,5 +126,16 @@ public class TradeImageService {
             return ".jpg";
         }
         return ext;
+    }
+
+    private String normalizeImageType(String imageType) {
+        if (imageType == null || imageType.isBlank()) {
+            return "SETUP";
+        }
+        String normalized = imageType.trim().toUpperCase();
+        return switch (normalized) {
+            case "BEFORE", "AFTER", "REVIEW", "SETUP" -> normalized;
+            default -> "SETUP";
+        };
     }
 }

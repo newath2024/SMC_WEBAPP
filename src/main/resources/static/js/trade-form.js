@@ -227,9 +227,12 @@ function setSubmitButtonState(disabled, textOverride) {
         : submitButton.dataset.originalText;
 }
 
-async function uploadSetupImages(tradeId, files) {
+async function uploadSetupImages(tradeId, files, imageType) {
     const formData = new FormData();
     files.forEach((file) => formData.append('files', file));
+    if (imageType) {
+        formData.append('imageType', imageType);
+    }
 
     const response = await fetch(`/api/trades/${tradeId}/images`, {
         method: 'POST',
@@ -290,6 +293,8 @@ async function handleTradeFormSubmit(event) {
     }
 
     const files = Array.from(setupImagesInput.files || []);
+    const imageTypeSelect = document.getElementById('setupImageType');
+    const imageType = imageTypeSelect ? imageTypeSelect.value : null;
     if (files.length === 0) {
         return;
     }
@@ -311,7 +316,7 @@ async function handleTradeFormSubmit(event) {
         isSubmittingTradeForm = true;
         setSubmitButtonState(true, 'Uploading images...');
         showSetupImageError('');
-        await uploadSetupImages(tradeId, files);
+        await uploadSetupImages(tradeId, files, imageType);
         setupImagesInput.value = '';
         showSetupImageInfo('Images uploaded successfully. Saving trade...');
         form.submit();
@@ -403,6 +408,10 @@ function initTradeFormPage() {
 
     if (form && setupImagesInput && !isEditTradePage(form)) {
         setupImagesInput.disabled = true;
+        const imageTypeSelect = document.getElementById('setupImageType');
+        if (imageTypeSelect) {
+            imageTypeSelect.disabled = true;
+        }
         showSetupImageInfo('Save trade first. You can upload setup images on the Edit Trade page.');
     }
 
