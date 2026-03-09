@@ -4,6 +4,7 @@ import com.example.demo.entity.Trade;
 import com.example.demo.entity.TradeImage;
 import com.example.demo.repository.TradeImageRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -73,6 +74,18 @@ public class TradeImageService {
         for (TradeImage image : images) {
             deletePhysicalFile(image.getImageUrl());
         }
+    }
+
+    @Transactional
+    public boolean deleteByTradeIdAndImageId(String tradeId, String imageId) {
+        TradeImage image = tradeImageRepository.findByIdAndTradeId(imageId, tradeId).orElse(null);
+        if (image == null) {
+            return false;
+        }
+
+        tradeImageRepository.delete(image);
+        deletePhysicalFile(image.getImageUrl());
+        return true;
     }
 
     private void ensureStorageDir() {

@@ -26,7 +26,7 @@
   <div class="card shadow-sm">
     <div class="card-body">
       <div class="alert alert-danger" th:if="${error != null}" th:text="${error}"></div>
-      <form th:action="@{/trades/{id}/edit(id=${trade.id})}" th:object="${trade}" method="post" enctype="multipart/form-data">
+      <form id="tradeForm" th:action="@{/trades/{id}/edit(id=${trade.id})}" th:object="${trade}" method="post">
         <div class="row g-3">
 
           <div class="col-md-3">
@@ -234,7 +234,40 @@
 
           <div class="col-12">
             <label class="form-label">Setup Images</label>
-            <input class="form-control" type="file" name="setupImages" accept="image/*" multiple>
+
+            <div class="border rounded p-3 bg-light mb-2"
+                 th:if="${editMode}">
+              <div class="small fw-semibold mb-2">Current Images</div>
+
+              <div id="existingTradeImages"
+                   class="row g-2"
+                   th:if="${tradeImages != null and !#lists.isEmpty(tradeImages)}">
+                <div class="col-md-3"
+                     th:each="img : ${tradeImages}"
+                     th:id="'tradeImageCard_' + ${img.id}">
+                  <div class="border rounded p-2 bg-white h-100">
+                    <img th:src="${img.imageUrl}" class="img-fluid rounded mb-2" alt="Setup image">
+                    <div class="small text-muted mb-2"
+                         th:text="${img.caption != null && !#strings.isEmpty(img.caption) ? img.caption : 'Setup image'}"></div>
+                    <button type="button"
+                            class="btn btn-sm btn-outline-danger js-delete-trade-image"
+                            th:attr="data-trade-id=${trade.id},data-image-id=${img.id}">
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div id="existingTradeImagesEmpty"
+                   class="text-muted small"
+                   th:if="${tradeImages == null or #lists.isEmpty(tradeImages)}">
+                No setup images yet.
+              </div>
+            </div>
+
+            <input id="setupImagesInput" class="form-control" type="file" name="setupImages" accept="image/*" multiple>
+            <div id="setupImagesInfo" class="form-text"></div>
+            <div id="setupImagesError" class="text-danger small mt-1 d-none"></div>
             <div class="form-text">Upload more setup screenshots to this trade.</div>
           </div>
 
@@ -249,163 +282,8 @@
   </div>
 </div>
 
-<script>
-function parseNum(value) {
-    if (value === null || value === undefined || value === '') return null;
-    const normalized = String(value).replace(',', '.').trim();
-    const num = Number(normalized);
-    return Number.isFinite(num) ? num : null;
-}
-
-function round2(value) {
-    return Math.round(value * 100) / 100;
-}
-
-function updateVolumeHint() {
-    const symbol = document.getElementById('symbol')?.value;
-    const hint = document.getElementById('volumeHint');
-    if (!hint) return;
-
-    switch (symbol) {
-        case 'BTCUSD':
-            hint.textContent = 'Unit: BTC';
-            break;
-        case 'ETHUSD':
-            hint.textContent = 'Unit: ETH';
-            break;
-        case 'XAUUSD':
-        case 'EURUSD':
-        case 'GBPUSD':
-        case 'USDJPY':
-            hint.textContent = 'Unit: lot';
-            break;
-        default:
-            hint.textContent = 'Unit: lot';
-            break;
-    }
-}
-
-function calculateRMultiple(direction, result, entry, sl, exit) {
-    if (!direction || entry === null || sl === null || exit === null) {
-        return null;
-    }
-
-    if (result === 'LOSS') {
-        return -1.00;
-    }
-
-    let risk = null;
-    let reward = null;
-
-    if (direction === 'BUY') {
-        risk = entry - sl;
-        reward = exit - entry;
-    } else if (direction === 'SELL') {
-        risk = sl - entry;
-        reward = entry - exit;
-    }
-
-    if (risk === null || risk <= 0) {
-        return null;
-    }
-
-    return round2(reward / risk);
-}
-
-function calculatePnLBySymbol(symbol, direction, entry, exit, size) {
-    if (!symbol || !direction || entry === null || exit === null || size === null || size <= 0) {
-        return null;
-    }
-
-    let priceDiff = null;
-
-    if (direction === 'BUY') {
-        priceDiff = exit - entry;
-    } else if (direction === 'SELL') {
-        priceDiff = entry - exit;
-    } else {
-        return null;
-    }
-
-    switch (symbol) {
-        case 'XAUUSD':
-            return round2((priceDiff / 0.01) * 1.0 * size);
-
-        case 'EURUSD':
-        case 'GBPUSD':
-            return round2((priceDiff / 0.0001) * 10.0 * size);
-
-        case 'USDJPY':
-            if (exit <= 0) return null;
-            return round2((priceDiff / 0.01) * (1000.0 / exit) * size);
-
-        case 'BTCUSD':
-        case 'ETHUSD':
-            return round2(priceDiff * size);
-
-        default:
-            return null;
-    }
-}
-
-function calculateLiveMetrics() {
-    const symbol = document.getElementById('symbol')?.value;
-    const direction = document.getElementById('direction')?.value;
-    const result = document.getElementById('result')?.value;
-
-    const entry = parseNum(document.getElementById('entryPrice')?.value);
-    const sl = parseNum(document.getElementById('stopLoss')?.value);
-    const exit = parseNum(document.getElementById('exitPrice')?.value);
-    const size = parseNum(document.getElementById('positionSize')?.value);
-
-    const pnlInput = document.getElementById('pnl');
-    const rInput = document.getElementById('rMultiple');
-
-    if (!pnlInput || !rInput) return;
-
-    pnlInput.value = '';
-    rInput.value = '';
-
-    const r = calculateRMultiple(direction, result, entry, sl, exit);
-    if (r !== null) {
-        rInput.value = r.toFixed(2);
-    }
-
-    const pnl = calculatePnLBySymbol(symbol, direction, entry, exit, size);
-    if (pnl !== null) {
-        pnlInput.value = pnl.toFixed(2);
-    }
-}
-
-document.addEventListener('DOMContentLoaded', function () {
-    const watchedIds = [
-        'symbol',
-        'direction',
-        'result',
-        'entryPrice',
-        'stopLoss',
-        'exitPrice',
-        'positionSize'
-    ];
-
-    watchedIds.forEach(id => {
-        const el = document.getElementById(id);
-        if (el) {
-            el.addEventListener('input', function () {
-                updateVolumeHint();
-                calculateLiveMetrics();
-            });
-            el.addEventListener('change', function () {
-                updateVolumeHint();
-                calculateLiveMetrics();
-            });
-        }
-    });
-
-    updateVolumeHint();
-    calculateLiveMetrics();
-});
-</script>
+<script th:src="@{/js/trade-form.js}" src="/js/trade-form.js"></script>
 
 </body>
 </html>
+

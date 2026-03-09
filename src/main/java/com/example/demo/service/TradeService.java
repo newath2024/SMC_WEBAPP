@@ -10,6 +10,7 @@ import com.example.demo.repository.SetupRepository;
 import com.example.demo.repository.TradeMistakeTagRepository;
 import com.example.demo.repository.TradeRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -40,6 +41,7 @@ public class TradeService {
         this.mistakeTagService = mistakeTagService;
     }
 
+    @Transactional
     public Trade saveForUser(Trade trade, User user, List<String> mistakeIds, String customMistakes) {
         if (trade == null) {
             throw new IllegalArgumentException("Trade must not be null");
@@ -98,6 +100,7 @@ public class TradeService {
         return trades;
     }
 
+    @Transactional
     public Trade updateForUser(String tradeId, Trade formTrade, User currentUser, List<String> mistakeIds, String customMistakes) {
         if (currentUser == null) {
             throw new IllegalArgumentException("Current user must not be null");
@@ -117,6 +120,7 @@ public class TradeService {
         return saved;
     }
 
+    @Transactional
     public Trade updateForAdmin(String tradeId, Trade formTrade, List<String> mistakeIds, String customMistakes) {
         Trade existing = findByIdForAdmin(tradeId);
 
@@ -132,12 +136,14 @@ public class TradeService {
         return saved;
     }
 
+    @Transactional
     public void deleteForUser(String tradeId, String userId) {
         Trade trade = findByIdForUser(tradeId, userId);
         tradeMistakeTagRepository.deleteByTradeId(trade.getId());
         repo.delete(trade);
     }
 
+    @Transactional
     public void deleteForAdmin(String tradeId) {
         Trade trade = findByIdForAdmin(tradeId);
         tradeMistakeTagRepository.deleteByTradeId(trade.getId());

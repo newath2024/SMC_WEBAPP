@@ -1,7 +1,13 @@
 server:
   port: 8081
+  tomcat:
+    max-http-form-post-size: 30MB
 
 spring:
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 30MB
   datasource:
     url: jdbc:sqlite:./data/trading_journal.db?busy_timeout=10000&journal_mode=WAL&synchronous=NORMAL
     driver-class-name: org.sqlite.JDBC

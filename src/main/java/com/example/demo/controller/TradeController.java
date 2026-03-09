@@ -14,7 +14,6 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -68,7 +67,6 @@ public class TradeController {
             BindingResult bindingResult,
             @RequestParam(value = "mistakeIds", required = false) List<String> mistakeIds,
             @RequestParam(value = "customMistakes", required = false) String customMistakes,
-            @RequestParam(value = "setupImages", required = false) MultipartFile[] setupImages,
             Model model,
             HttpSession session
     ) {
@@ -89,8 +87,7 @@ public class TradeController {
         }
 
         try {
-            Trade saved = tradeService.saveForUser(trade, currentUser, mistakeIds, customMistakes);
-            tradeImageService.saveSetupImages(saved, setupImages);
+            tradeService.saveForUser(trade, currentUser, mistakeIds, customMistakes);
             return "redirect:/trades";
         } catch (RuntimeException ex) {
             model.addAttribute("trades", tradeService.findAllByUser(currentUser.getId()));
@@ -140,6 +137,7 @@ public class TradeController {
 
         model.addAttribute("trade", trade);
         model.addAttribute("editMode", true);
+        model.addAttribute("tradeImages", tradeImageService.findByTradeId(trade.getId()));
         fillTradeFormData(model, currentUser);
 
         return "tradeForm";
@@ -152,7 +150,6 @@ public class TradeController {
             BindingResult bindingResult,
             @RequestParam(value = "mistakeIds", required = false) List<String> mistakeIds,
             @RequestParam(value = "customMistakes", required = false) String customMistakes,
-            @RequestParam(value = "setupImages", required = false) MultipartFile[] setupImages,
             Model model,
             HttpSession session
     ) {
@@ -168,6 +165,7 @@ public class TradeController {
         if (bindingResult.hasErrors()) {
             model.addAttribute("trade", trade);
             model.addAttribute("editMode", true);
+            model.addAttribute("tradeImages", tradeImageService.findByTradeId(id));
             fillTradeFormData(model, currentUser);
             return "tradeForm";
         }
@@ -179,11 +177,11 @@ public class TradeController {
             } else {
                 saved = tradeService.updateForUser(id, trade, currentUser, mistakeIds, customMistakes);
             }
-            tradeImageService.saveSetupImages(saved, setupImages);
             return "redirect:/trades/" + id;
         } catch (RuntimeException ex) {
             model.addAttribute("trade", trade);
             model.addAttribute("editMode", true);
+            model.addAttribute("tradeImages", tradeImageService.findByTradeId(id));
             fillTradeFormData(model, currentUser);
             model.addAttribute("error", friendlyErrorMessage(ex));
             return "tradeForm";
