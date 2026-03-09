@@ -171,11 +171,10 @@ public class TradeController {
         }
 
         try {
-            Trade saved;
             if (userService.isAdmin(currentUser)) {
-                saved = tradeService.updateForAdmin(id, trade, mistakeIds, customMistakes);
+                tradeService.updateForAdmin(id, trade, mistakeIds, customMistakes);
             } else {
-                saved = tradeService.updateForUser(id, trade, currentUser, mistakeIds, customMistakes);
+                tradeService.updateForUser(id, trade, currentUser, mistakeIds, customMistakes);
             }
             return "redirect:/trades/" + id;
         } catch (RuntimeException ex) {
