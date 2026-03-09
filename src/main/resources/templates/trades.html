@@ -24,33 +24,82 @@
     .sidebar-card {
       border: 0;
       border-radius: 16px;
+      overflow: hidden;
+      height: calc(100vh - 40px);
     }
     .sidebar-title {
       font-size: 12px;
-      text-transform: uppercase;
+      text-transform: none;
       letter-spacing: 0.08em;
       color: #6b7280;
       margin-bottom: 10px;
       font-weight: 700;
     }
+    .sidebar-nav {
+      flex: 1;
+    }
     .sidebar-link {
+      position: relative;
       display: flex;
       align-items: center;
       gap: 10px;
       border-radius: 10px;
       color: #334155;
-      font-weight: 500;
+      font-weight: 600;
       padding: 10px 12px;
       text-decoration: none;
+      border-left: 3px solid transparent;
     }
     .sidebar-link:hover {
-      background: #e2e8f0;
+      background: #f1f5f9;
       color: #0f172a;
     }
     .sidebar-link.active {
-      background: #dbeafe;
-      color: #1d4ed8;
+      background: #e8f1ff;
+      border-left-color: #2563eb;
+      color: #1e40af;
       font-weight: 600;
+    }
+    .sidebar-icon {
+      width: 16px;
+      text-align: center;
+      opacity: 0.9;
+    }
+    .sidebar-footer {
+      border-top: 1px solid #e2e8f0;
+      margin-top: 14px;
+      padding-top: 14px;
+    }
+    .sidebar-logout-btn {
+      border: 0;
+      background: transparent;
+      color: #dc2626;
+      font-weight: 600;
+      text-align: left;
+      padding: 8px 10px;
+      width: 100%;
+      border-radius: 10px;
+    }
+    .sidebar-logout-btn:hover {
+      background: #fef2f2;
+    }
+    .user-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: #334155;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 999px;
+      padding: 6px 10px;
+      max-width: 100%;
+    }
+    .user-pill-name {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: 140px;
     }
     @media (max-width: 991.98px) {
       .app-shell {
@@ -59,6 +108,9 @@
       .sidebar {
         width: 100%;
         position: static;
+      }
+      .sidebar-card {
+        height: auto;
       }
     }
   </style>
@@ -69,22 +121,25 @@
 <div class="app-shell">
   <aside class="sidebar">
     <div class="card shadow-sm sidebar-card">
-      <div class="card-body">
+      <div class="card-body d-flex flex-column">
         <div class="sidebar-title">Navigation</div>
-        <div class="d-grid gap-1">
-          <a th:href="@{/analytics}" class="sidebar-link"><i class="bi bi-speedometer2"></i> Dashboard</a>
-          <a th:href="@{/trades}" class="sidebar-link active"><i class="bi bi-journal-text"></i> Trades</a>
-          <a th:href="@{/analytics(period='ALL')}" class="sidebar-link"><i class="bi bi-graph-up-arrow"></i> Analytics</a>
-          <a th:href="@{/mistakes}" class="sidebar-link"><i class="bi bi-exclamation-triangle"></i> Mistakes</a>
-          <a th:href="@{/setups}" class="sidebar-link"><i class="bi bi-diagram-3"></i> Setups</a>
-          <a th:if="${currentUser != null and currentUser.role != null and #strings.equalsIgnoreCase(currentUser.role, 'ADMIN')}" th:href="@{/admin}" class="sidebar-link"><i class="bi bi-shield-lock"></i> Management</a>
-          <a th:if="${currentUser != null and currentUser.role != null and #strings.equalsIgnoreCase(currentUser.role, 'ADMIN')}" th:href="@{/analytics/export.csv(period='ALL')}" class="sidebar-link text-success"><i class="bi bi-download"></i> Export CSV</a>
-          <form method="post" action="/logout">
-            <button class="btn btn-outline-danger w-100 mt-2" type="submit">Logout</button>
-          </form>
+        <div class="d-grid gap-1 sidebar-nav">
+          <a th:href="@{/analytics}" class="sidebar-link"><i class="bi bi-speedometer2 sidebar-icon"></i> Dashboard</a>
+          <a th:href="@{/trades}" class="sidebar-link active"><i class="bi bi-journal-text sidebar-icon"></i> Trades</a>
+          <a th:href="@{/analytics(period='ALL')}" class="sidebar-link"><i class="bi bi-graph-up-arrow sidebar-icon"></i> Analytics</a>
+          <a th:href="@{/mistakes}" class="sidebar-link"><i class="bi bi-exclamation-triangle sidebar-icon"></i> Mistakes</a>
+          <a th:href="@{/setups}" class="sidebar-link"><i class="bi bi-diagram-3 sidebar-icon"></i> Setups</a>
+          <a th:if="${currentUser != null and currentUser.role != null and #strings.equalsIgnoreCase(currentUser.role, 'ADMIN')}" th:href="@{/admin}" class="sidebar-link"><i class="bi bi-shield-lock sidebar-icon"></i> Management</a>
+          <a th:href="@{/analytics/export.csv(period='ALL')}" class="sidebar-link"><i class="bi bi-download sidebar-icon"></i> Export CSV</a>
         </div>
-        <div class="text-muted small mt-3" th:if="${currentUser != null}">
-          Logged in as <strong th:text="${currentUser.username}"></strong>
+        <div class="sidebar-footer">
+          <div class="user-pill mb-2" th:if="${currentUser != null}">
+            <i class="bi bi-person-circle"></i>
+            <span class="user-pill-name" th:text="${currentUser.username}">username</span>
+          </div>
+          <form method="post" action="/logout">
+            <button class="sidebar-logout-btn" type="submit"><i class="bi bi-box-arrow-right me-1"></i>Logout</button>
+          </form>
         </div>
       </div>
     </div>

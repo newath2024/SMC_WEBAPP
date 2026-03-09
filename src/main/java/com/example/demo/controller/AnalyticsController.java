@@ -2,12 +2,14 @@ package com.example.demo.controller;
 
 import com.example.demo.entity.Trade;
 import com.example.demo.entity.User;
+import com.example.demo.repository.UserRepository;
 import com.example.demo.service.AnalyticsService;
 import com.example.demo.service.UserService;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -28,10 +30,12 @@ public class AnalyticsController {
 
     private final AnalyticsService analyticsService;
     private final UserService userService;
+    private final UserRepository userRepository;
 
-    public AnalyticsController(AnalyticsService analyticsService, UserService userService) {
+    public AnalyticsController(AnalyticsService analyticsService, UserService userService, UserRepository userRepository) {
         this.analyticsService = analyticsService;
         this.userService = userService;
+        this.userRepository = userRepository;
     }
 
     @GetMapping
@@ -39,6 +43,7 @@ public class AnalyticsController {
             @RequestParam(value = "period", required = false, defaultValue = "ALL") String period,
             @RequestParam(value = "from", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
             @RequestParam(value = "to", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
+            @RequestParam(value = "userId", required = false) String selectedUserId,
             Model model,
             HttpSession session
     ) {
@@ -47,20 +52,30 @@ public class AnalyticsController {
             return "redirect:/login";
         }
 
+        boolean adminView = userService.isAdmin(currentUser);
+        List<User> managedUsers = adminView
+                ? userRepository.findAll(Sort.by(Sort.Direction.ASC, "username"))
+                : List.of();
+        User targetUser = resolveTargetUser(currentUser, selectedUserId);
+
         ResolvedRange range = resolveRange(period, from, to);
 
         AnalyticsService.AnalyticsReport report = analyticsService.buildReportForUser(
-                currentUser.getId(),
+                targetUser.getId(),
                 range.fromDateTime(),
                 range.toDateTime()
         );
         AnalyticsService.PeriodComparison comparison = analyticsService.buildPeriodComparisonForUser(
-                currentUser.getId(),
+                targetUser.getId(),
                 range.fromDateTime(),
                 range.toDateTime()
         );
 
         model.addAttribute("currentUser", currentUser);
+        model.addAttribute("adminView", adminView);
+        model.addAttribute("managedUsers", managedUsers);
+        model.addAttribute("selectedUserId", targetUser.getId());
+        model.addAttribute("analyticsTargetUser", targetUser);
         model.addAttribute("report", report);
         model.addAttribute("overview", report.getOverview());
         model.addAttribute("riskMetrics", report.getRiskMetrics());
@@ -78,26 +93,28 @@ public class AnalyticsController {
             @RequestParam(value = "period", required = false, defaultValue = "ALL") String period,
             @RequestParam(value = "from", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
             @RequestParam(value = "to", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
+            @RequestParam(value = "userId", required = false) String selectedUserId,
             HttpSession session
     ) {
         User currentUser = userService.getCurrentUser(session);
         if (currentUser == null) {
             return ResponseEntity.status(401).build();
         }
+        User targetUser = resolveTargetUser(currentUser, selectedUserId);
 
         ResolvedRange range = resolveRange(period, from, to);
         AnalyticsService.AnalyticsReport report = analyticsService.buildReportForUser(
-                currentUser.getId(),
+                targetUser.getId(),
                 range.fromDateTime(),
                 range.toDateTime()
         );
         List<Trade> trades = analyticsService.findTradesForUser(
-                currentUser.getId(),
+                targetUser.getId(),
                 range.fromDateTime(),
                 range.toDateTime()
         );
 
-        String csv = buildAnalyticsCsv(currentUser, range, report, trades);
+        String csv = buildAnalyticsCsv(targetUser, range, report, trades);
         String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
         String filename = "analytics_export_" + timestamp + ".csv";
 
@@ -116,6 +133,16 @@ public class AnalyticsController {
             case "7D", "30D", "90D", "CUSTOM", "ALL" -> normalized;
             default -> "ALL";
         };
+    }
+
+    private User resolveTargetUser(User currentUser, String selectedUserId) {
+        if (!userService.isAdmin(currentUser)) {
+            return currentUser;
+        }
+        if (selectedUserId == null || selectedUserId.isBlank()) {
+            return currentUser;
+        }
+        return userRepository.findById(selectedUserId).orElse(currentUser);
     }
 
     private ResolvedRange resolveRange(String period, LocalDate from, LocalDate to) {
