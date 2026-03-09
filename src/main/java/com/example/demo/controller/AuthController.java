@@ -76,7 +76,7 @@ public class AuthController {
         try {
             User user = authService.register(username, email, password);
             session.setAttribute(SESSION_USER_ID, user.getId());
-            return "redirect:/trades";
+            return redirectAfterAuth(user);
         } catch (IllegalArgumentException e) {
             model.addAttribute("error", e.getMessage());
             model.addAttribute("username", username);
@@ -104,6 +104,6 @@ public class AuthController {
         if (userService.isAdmin(user)) {
             return "redirect:/admin";
         }
-        return "redirect:/trades";
+        return "redirect:/analytics";
     }
 }
