@@ -84,11 +84,13 @@ public class TradeController {
         trades = applyListFilters(trades, setup, sessionFilter, symbol, fromDateTime, toDateTime);
         boolean tableOnlyView = "table".equalsIgnoreCase(view);
         boolean filteredView = tableOnlyView || hasActiveFilter(setup, sessionFilter, symbol, from, to);
+        boolean adminView = userService.isAdmin(currentUser);
 
         model.addAttribute("trades", trades);
         model.addAttribute("trade", new Trade());
         model.addAttribute("filteredView", filteredView);
         model.addAttribute("tableOnlyView", tableOnlyView);
+        model.addAttribute("adminView", adminView);
         model.addAttribute("selectedSetup", setup);
         model.addAttribute("selectedSession", sessionFilter);
         model.addAttribute("selectedSymbol", symbol);
@@ -112,6 +114,9 @@ public class TradeController {
         if (currentUser == null) {
             return "redirect:/login";
         }
+        if (userService.isAdmin(currentUser)) {
+            return "redirect:/admin";
+        }
 
         if (trade.getSetup() == null || trade.getSetup().getId() == null || trade.getSetup().getId().isBlank()) {
             bindingResult.rejectValue("setup", "required", "Setup is required");
@@ -119,6 +124,7 @@ public class TradeController {
 
         if (bindingResult.hasErrors()) {
             model.addAttribute("trades", tradeService.findAllByUser(currentUser.getId()));
+            model.addAttribute("adminView", false);
             fillTradeFormData(model, currentUser);
             model.addAttribute("trade", trade);
             return "trades";
@@ -129,6 +135,7 @@ public class TradeController {
             return "redirect:/trades";
         } catch (RuntimeException ex) {
             model.addAttribute("trades", tradeService.findAllByUser(currentUser.getId()));
+            model.addAttribute("adminView", false);
             fillTradeFormData(model, currentUser);
             model.addAttribute("trade", trade);
             model.addAttribute("error", friendlyErrorMessage(ex));
