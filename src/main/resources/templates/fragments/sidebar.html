@@ -5,7 +5,8 @@
          th:fragment="appSidebar(activePage, exportHref)">
     <div class="card shadow-sm sidebar-card sidebar-panel">
       <div class="card-body d-flex flex-column">
-      <a class="sidebar-brand" th:href="@{/dashboard(period='ALL')}">
+      <a class="sidebar-brand"
+         th:href="${currentUser != null and currentUser.role != null and #strings.equalsIgnoreCase(currentUser.role, 'ADMIN')} ? @{/admin} : @{/dashboard(period='ALL')}">
         <img class="sidebar-brand-logo-full logo-text"
              th:src="@{/img/tradejournal-logo-full.svg}"
              src="/img/tradejournal-logo-full.svg"
@@ -14,7 +15,7 @@
 
       <nav class="sidebar-nav-group">
         <div class="sidebar-group-title sidebar-title">MAIN</div>
-        <a th:href="@{/dashboard(period='ALL')}"
+        <a th:href="${currentUser != null and currentUser.role != null and #strings.equalsIgnoreCase(currentUser.role, 'ADMIN')} ? @{/admin} : @{/dashboard(period='ALL')}"
            class="sidebar-link nav-item"
            th:classappend="${activePage == 'dashboard'} ? ' active' : ''">
           <i class="bi bi-bar-chart-line sidebar-icon nav-icon"></i>
@@ -74,7 +75,8 @@
         </a>
       </nav>
 
-      <div class="sidebar-plan">
+      <div class="sidebar-plan"
+           th:if="${currentUser == null or currentUser.role == null or !#strings.equalsIgnoreCase(currentUser.role, 'ADMIN')}">
         <div class="sidebar-plan-name">Free Plan</div>
         <div class="sidebar-plan-usage">
           <span th:text="${tradeUsage != null ? tradeUsage : 0}">0</span>
