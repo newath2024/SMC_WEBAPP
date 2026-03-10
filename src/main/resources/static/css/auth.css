@@ -1,0 +1,238 @@
+:root {
+  --panel-bg: rgba(255, 255, 255, 0.9);
+  --text-soft: #64748b;
+}
+
+.auth-page {
+  min-height: 100vh;
+  background: radial-gradient(circle at 12% 14%, rgba(14, 165, 233, 0.2) 0%, transparent 34%),
+              radial-gradient(circle at 82% 20%, rgba(56, 189, 248, 0.18) 0%, transparent 36%),
+              linear-gradient(135deg, #0f172a 0%, #1e293b 58%, #0ea5e9 140%);
+}
+
+.auth-shell {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1rem;
+}
+
+.auth-frame {
+  width: 100%;
+  max-width: 1080px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 1.5rem;
+  overflow: hidden;
+  background: rgba(15, 23, 42, 0.18);
+  box-shadow: 0 20px 48px rgba(2, 6, 23, 0.36);
+  backdrop-filter: blur(6px);
+  transition: transform .2s ease, box-shadow .2s ease;
+}
+
+.auth-frame:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 26px 58px rgba(2, 6, 23, 0.42);
+}
+
+.branding-pane {
+  background: linear-gradient(160deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.92) 65%, rgba(14, 165, 233, 0.78) 150%);
+  color: #f8fafc;
+  padding: 3.25rem 2.25rem;
+  height: 100%;
+}
+
+.logo-badge {
+  width: 54px;
+  height: 54px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.brand-kicker {
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  font-size: .73rem;
+  font-weight: 600;
+  color: rgba(248, 250, 252, 0.75);
+  margin-top: 1rem;
+  margin-bottom: .5rem;
+}
+
+.brand-title {
+  font-size: clamp(1.8rem, 2vw, 2.2rem);
+  line-height: 1.25;
+  margin-bottom: .65rem;
+  font-weight: 700;
+}
+
+.brand-note {
+  color: rgba(248, 250, 252, 0.78);
+  margin-bottom: 1rem;
+}
+
+.brand-copy {
+  color: rgba(248, 250, 252, 0.82);
+  max-width: 36ch;
+  line-height: 1.55;
+  margin-bottom: 1rem;
+}
+
+.brand-points {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.brand-points li {
+  color: rgba(248, 250, 252, 0.86);
+  display: flex;
+  align-items: center;
+  gap: .55rem;
+  margin-bottom: .55rem;
+  font-size: 1.03rem;
+}
+
+.brand-check {
+  color: #7dd3fc;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.form-pane {
+  background: var(--panel-bg);
+  padding: 2rem 1.5rem;
+  border-left: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.login-card,
+.register-card {
+  width: 100%;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  border-radius: 1rem;
+  background: #fff;
+  box-shadow: 0 10px 35px rgba(15, 23, 42, 0.08);
+  padding: 2rem;
+  margin: 0 auto;
+  transition: transform .2s ease, box-shadow .2s ease;
+}
+
+.login-card {
+  max-width: 420px;
+}
+
+.register-card {
+  max-width: 460px;
+}
+
+.login-card:hover,
+.register-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 42px rgba(15, 23, 42, 0.12);
+}
+
+.form-title {
+  font-weight: 700;
+  font-size: 1.7rem;
+  margin-bottom: .35rem;
+  color: #0f172a;
+}
+
+.form-subtitle {
+  color: var(--text-soft);
+  margin-bottom: 1.5rem;
+}
+
+.input-wrap {
+  position: relative;
+}
+
+.field-icon {
+  position: absolute;
+  left: .95rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #64748b;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.form-control.form-control-lg.input-with-icon {
+  padding-left: 2.7rem;
+  min-height: 3rem;
+  border-radius: .75rem;
+}
+
+.password-toggle {
+  position: absolute;
+  right: .6rem;
+  top: 50%;
+  transform: translateY(-50%);
+  border: 0;
+  background: transparent;
+  color: #64748b;
+  padding: .35rem;
+  z-index: 6;
+}
+
+.password-toggle:hover {
+  color: #0f172a;
+}
+
+.input-group .input-group-text {
+  background: #fff;
+  color: #64748b;
+  border-top-left-radius: .75rem;
+  border-bottom-left-radius: .75rem;
+  border-right: 0;
+  padding-left: .85rem;
+  padding-right: .75rem;
+}
+
+.input-group .form-control {
+  border-left: 0;
+  border-right: 0;
+  padding-left: .35rem;
+}
+
+.input-group .toggle-btn {
+  background: #fff;
+  border: 1px solid #dee2e6;
+  border-left: 0;
+  color: #64748b;
+  border-top-right-radius: .75rem;
+  border-bottom-right-radius: .75rem;
+  min-width: 2.8rem;
+}
+
+.input-group .toggle-btn:hover {
+  color: #0f172a;
+}
+
+.btn-signin,
+.btn-create {
+  min-height: 3rem;
+  border-radius: .8rem;
+  font-weight: 600;
+  letter-spacing: .01em;
+}
+
+@media (max-width: 991.98px) {
+  .branding-pane {
+    padding: 2rem 1.5rem;
+  }
+
+  .form-pane {
+    border-left: 0;
+  }
+
+  .login-card,
+  .register-card {
+    max-width: 100%;
+    padding: 1.5rem;
+  }
+}
