@@ -3,1148 +3,129 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Analytics Overview</title>
+  <title>Analytics</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
-  <link href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" rel="stylesheet">
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+  <link th:href="@{/css/sidebar-toggle.css}" href="/css/sidebar-toggle.css" rel="stylesheet">
+  <link th:href="@{/css/analytics-dashboard.css}" href="/css/analytics-dashboard.css" rel="stylesheet">
+  <link th:href="@{/css/app-page.css}" href="/css/app-page.css" rel="stylesheet">
   <style>
-    .app-shell {
-      --sidebar-width: 76px;
-      display: flex;
-      gap: 14px;
-      align-items: flex-start;
+    .analytics-placeholder-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 18px;
     }
-    .app-shell.expanded {
-      --sidebar-width: 232px;
-    }
-    .sidebar {
-      width: var(--sidebar-width);
-      position: sticky;
-      top: 12px;
-      transition: width 0.25s ease;
-    }
-    .main-content {
-      flex: 1;
-      min-width: 0;
-    }
-    .card {
-      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
-      transition: transform 0.2s ease, box-shadow 0.2s ease;
-    }
-    .card:hover {
-      transform: translateY(-3px);
-      box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
-    }
-    .topbar {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
+
+    .analytics-placeholder {
+      min-height: 220px;
+      border: 1px dashed #cbd5e1;
+      border-radius: 18px;
+      padding: 18px;
+      background: #fbfdff;
+      display: grid;
+      align-content: start;
       gap: 12px;
-      margin-bottom: 14px;
     }
-    .page-subtitle {
-      color: #64748b;
-      font-size: 13px;
-      margin-top: 2px;
-    }
-    .sidebar-toggle {
-      border: 1px solid #dbe4ef;
-      background: #fff;
-      color: #334155;
-      border-radius: 10px;
-      width: 36px;
-      height: 36px;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .sidebar-toggle:hover {
-      background: #f8fafc;
-    }
-    .filters-panel {
-      margin-bottom: 2.4rem;
-    }
-    .section-title {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 16px;
-      letter-spacing: 0.02em;
-      color: #1e293b;
+
+    .analytics-placeholder-title {
       font-weight: 800;
-      margin-bottom: 12px;
-    }
-    .section-divider {
-      border-top: 1px solid #e2e8f0;
-      margin-top: 34px;
-      padding-top: 22px;
-    }
-    .sidebar-card {
-      border: 0;
-      border-radius: 16px;
-      overflow: hidden;
-      height: calc(100vh - 40px);
-    }
-    .sidebar-title {
-      font-size: 12px;
-      text-transform: none;
-      letter-spacing: 0.04em;
-      color: #6b7280;
-      margin-bottom: 10px;
-      font-weight: 700;
-      white-space: nowrap;
-      opacity: 0;
-      transition: opacity 0.2s ease;
-    }
-    .app-shell.expanded .sidebar-title {
-      opacity: 1;
-    }
-    .sidebar-nav {
-      flex: 1;
-    }
-    .sidebar-link {
-      position: relative;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      border-radius: 10px;
-      color: #334155;
-      font-weight: 600;
-      padding: 10px 12px;
-      text-decoration: none;
-      border-left: 3px solid transparent;
-      white-space: nowrap;
-      overflow: hidden;
-    }
-    .sidebar-link:hover {
-      background: #f1f5f9;
+      font-size: 1rem;
       color: #0f172a;
+      margin: 0;
     }
-    .sidebar-link.active {
-      background: #e8f1ff;
-      border-left-color: #2563eb;
-      color: #1e40af;
-      font-weight: 600;
+
+    .analytics-placeholder-copy {
+      color: #64748b;
+      margin: 0;
+      font-size: 0.92rem;
     }
-    .sidebar-icon {
-      width: 16px;
-      text-align: center;
-      opacity: 0.9;
-      flex-shrink: 0;
-    }
-    .nav-label {
-      opacity: 0;
-      transform: translateX(-4px);
-      transition: opacity 0.2s ease, transform 0.2s ease;
-      pointer-events: none;
-    }
-    .app-shell.expanded .nav-label {
-      opacity: 1;
-      transform: translateX(0);
-      pointer-events: auto;
-    }
-    .sidebar-footer {
-      border-top: 1px solid #e2e8f0;
-      margin-top: 14px;
-      padding-top: 14px;
-    }
-    .sidebar-logout-btn {
-      border: 0;
-      background: transparent;
-      color: #dc2626;
-      font-weight: 600;
-      text-align: left;
-      padding: 8px 10px;
-      width: 100%;
-      border-radius: 10px;
-    }
-    .sidebar-logout-btn:hover {
-      background: #fef2f2;
-    }
-    .user-pill {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 12px;
-      color: #334155;
-      background: #f8fafc;
-      border: 1px solid #e2e8f0;
-      border-radius: 999px;
-      padding: 6px 10px;
-      max-width: 100%;
-      opacity: 0;
-      transition: opacity 0.2s ease;
-      white-space: nowrap;
-      overflow: hidden;
-    }
-    .app-shell.expanded .user-pill {
-      opacity: 1;
-    }
-    .user-pill-name {
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-      max-width: 140px;
-    }
-    .period-row {
-      align-items: end;
-      margin-bottom: 8px;
-    }
-    .period-segment {
-      display: inline-flex;
-      border: 1px solid #dbe4ef;
-      border-radius: 12px;
-      overflow: hidden;
-      background: #f8fafc;
-    }
-    .period-btn {
-      padding: 7px 12px;
-      font-size: 12px;
-      color: #475569;
-      text-decoration: none;
-      border-right: 1px solid #e2e8f0;
-      line-height: 1;
-      font-weight: 600;
-    }
-    .period-btn:last-child {
-      border-right: 0;
-    }
-    .period-btn:hover {
-      background: #eef2ff;
-      color: #1e40af;
-    }
-    .period-btn.active {
-      background: #2563eb;
-      color: #fff;
-    }
-    .viewing-badge {
-      font-size: 12px;
-      color: #334155;
-      background: #eef2ff;
-      border-radius: 999px;
-      padding: 4px 10px;
+
+    .analytics-pill {
       display: inline-flex;
       align-items: center;
       gap: 6px;
-    }
-    .range-input-wrap {
-      position: relative;
-    }
-    .range-input-icon {
-      position: absolute;
-      left: 10px;
-      top: 50%;
-      transform: translateY(-50%);
-      color: #64748b;
-      pointer-events: none;
-    }
-    .range-input {
-      padding-left: 32px;
-    }
-    .stat-title {
-      font-size: 12px;
-      text-transform: uppercase;
-      letter-spacing: 0.07em;
-      color: #6b7280;
-      margin-bottom: 8px;
-      font-weight: 700;
-    }
-    .stat-title i {
-      margin-right: 6px;
-    }
-    .stat-value {
-      font-size: 28px;
-      font-weight: 600;
-      line-height: 1.1;
-    }
-    .stat-value-sm {
-      font-size: 22px;
-      font-weight: 600;
-      line-height: 1.15;
-    }
-    .metric-card {
-      border-radius: 14px;
-      border: 1px solid #e2e8f0;
+      border: 1px solid #dbe4ef;
       background: #fff;
+      border-radius: 999px;
+      padding: 7px 10px;
+      font-size: 12px;
+      font-weight: 700;
+      color: #475569;
+      width: fit-content;
     }
-    .card-positive {
-      border-left: 4px solid #22c55e;
-      background: linear-gradient(90deg, rgba(34, 197, 94, 0.08), rgba(255, 255, 255, 0) 40%);
-    }
-    .card-negative {
-      border-left: 4px solid #ef4444;
-      background: linear-gradient(90deg, rgba(239, 68, 68, 0.08), rgba(255, 255, 255, 0) 40%);
-    }
-    .card-neutral {
-      border-left: 4px solid #3b82f6;
-      background: linear-gradient(90deg, rgba(59, 130, 246, 0.08), rgba(255, 255, 255, 0) 40%);
-    }
-    .card-key .card-body {
-      padding: 1.25rem;
-    }
-    .metric-main {
-      min-height: 124px;
-    }
-    .metric-secondary {
-      min-height: 104px;
-    }
-    .metric-process {
-      min-height: 108px;
-    }
-    .metric-secondary .card-body,
-    .metric-process .card-body {
-      padding-top: 0.9rem;
-      padding-bottom: 0.9rem;
-    }
-    .cards-tight {
-      --bs-gutter-x: 0.75rem;
-      --bs-gutter-y: 0.75rem;
-    }
-    .chart-panel {
-      position: relative;
-      height: 280px;
-      width: 100%;
-    }
-    .chart-note {
-      margin-top: 10px;
-      color: #64748b;
-      font-size: 13px;
-    }
-    .empty-state {
-      border: 1px dashed #cbd5e1;
-      border-radius: 12px;
-      background: #f8fafc;
-      color: #64748b;
-      padding: 14px;
-      font-size: 14px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .table-dashboard thead th {
-      position: sticky;
-      top: 0;
-      background: #f8fafc;
-      z-index: 2;
-    }
-    .table-dashboard tbody tr:hover {
-      background: #f1f5f9;
-    }
-    .table-wrap {
-      max-height: 320px;
-      overflow: auto;
-      border-radius: 8px;
-      border: 1px solid #e2e8f0;
-    }
+
     @media (max-width: 991.98px) {
-      .app-shell {
-        flex-direction: column;
-        --sidebar-width: 100%;
-      }
-      .sidebar {
-        width: 100%;
-        position: static;
-      }
-      .sidebar-card {
-        height: auto;
-      }
-      .sidebar-title,
-      .nav-label,
-      .user-pill {
-        opacity: 1;
-        transform: none;
-        pointer-events: auto;
-      }
-      .topbar {
-        flex-direction: column;
-        align-items: flex-start;
+      .analytics-placeholder-grid {
+        grid-template-columns: 1fr;
       }
     }
   </style>
 </head>
-<body class="bg-light">
-
+<body class="dashboard-body app-page-body">
 <div class="container-fluid py-3 px-3 px-lg-4">
-  <div class="app-shell">
-    <aside class="sidebar">
-      <div class="card shadow-sm sidebar-card">
-        <div class="card-body d-flex flex-column">
-          <div class="sidebar-title">Navigation</div>
-          <div class="d-grid gap-1 sidebar-nav">
-            <a th:if="${currentUser != null and currentUser.role != null and #strings.equalsIgnoreCase(currentUser.role, 'ADMIN')}" th:href="@{/admin}" class="sidebar-link"><i class="bi bi-speedometer2 sidebar-icon"></i><span class="nav-label">Dashboard</span></a>
-            <a th:href="@{/analytics(period='ALL')}" class="sidebar-link active"><i class="bi bi-graph-up-arrow sidebar-icon"></i><span class="nav-label">Analytics</span></a>
-            <a th:if="${currentUser == null or currentUser.role == null or !#strings.equalsIgnoreCase(currentUser.role, 'ADMIN')}" th:href="@{/trades}" class="sidebar-link"><i class="bi bi-journal-text sidebar-icon"></i><span class="nav-label">Trades</span></a>
-            <a th:href="@{/mistakes}" class="sidebar-link"><i class="bi bi-exclamation-triangle sidebar-icon"></i><span class="nav-label">Mistakes</span></a>
-            <a th:href="@{/setups}" class="sidebar-link"><i class="bi bi-diagram-3 sidebar-icon"></i><span class="nav-label">Setups</span></a>
-            <a th:if="${currentUser != null and currentUser.role != null and #strings.equalsIgnoreCase(currentUser.role, 'ADMIN')}" th:href="@{/admin}" class="sidebar-link"><i class="bi bi-shield-lock sidebar-icon"></i><span class="nav-label">Management</span></a>
-            <a th:href="@{/analytics/export.csv(period=${period},from=${from},to=${to},userId=${selectedUserId})}" class="sidebar-link"><i class="bi bi-download sidebar-icon"></i><span class="nav-label">Export CSV</span></a>
-          </div>
-          <div class="sidebar-footer">
-            <div class="user-pill mb-2" th:if="${currentUser != null}">
-              <i class="bi bi-person-circle"></i>
-              <span class="user-pill-name" th:text="${currentUser.username}">username</span>
-            </div>
-            <form method="post" action="/logout">
-              <button class="sidebar-logout-btn" type="submit"><i class="bi bi-box-arrow-right me-1"></i>Logout</button>
-            </form>
-          </div>
-        </div>
-      </div>
-    </aside>
+  <div class="app-shell collapsible-shell expanded">
+    <aside th:replace="~{fragments/sidebar :: appSidebar('analytics', @{/dashboard/export.csv(period='ALL')})}"></aside>
 
     <main class="main-content">
-      <div class="topbar">
-        <div class="d-flex align-items-start gap-2">
+      <header class="dashboard-header">
+        <div class="header-title-row">
           <button id="sidebarToggle" class="sidebar-toggle" type="button" aria-label="Toggle navigation">
             <i class="bi bi-layout-sidebar-inset"></i>
           </button>
           <div>
-            <h2 class="m-0">Analytics Overview</h2>
-            <div class="page-subtitle">Track performance, process quality, and execution consistency.</div>
+            <h1 class="page-title">Analytics</h1>
+            <p class="page-subtitle">Deep-dive performance analysis workspace (placeholder structure).</p>
           </div>
         </div>
-        <a th:href="@{/analytics/export.csv(period=${period},from=${from},to=${to},userId=${selectedUserId})}" class="btn btn-sm btn-outline-secondary">
-          <i class="bi bi-download me-1"></i> Export CSV
-        </a>
-      </div>
+      </header>
 
-      <div class="card shadow-sm mb-3 filters-panel">
-        <div class="card-body">
-          <div class="row period-row g-3">
-            <div class="col-lg-7 col-md-12">
-              <label class="form-label small mb-1">Period</label>
-              <div class="period-segment">
-                <a th:href="@{/analytics(period='ALL',userId=${selectedUserId})}" class="period-btn" th:classappend="${period == 'ALL'} ? ' active' : ''">All</a>
-                <a th:href="@{/analytics(period='7D',userId=${selectedUserId})}" class="period-btn" th:classappend="${period == '7D'} ? ' active' : ''">7D</a>
-                <a th:href="@{/analytics(period='30D',userId=${selectedUserId})}" class="period-btn" th:classappend="${period == '30D'} ? ' active' : ''">30D</a>
-                <a th:href="@{/analytics(period='90D',userId=${selectedUserId})}" class="period-btn" th:classappend="${period == '90D'} ? ' active' : ''">90D</a>
-              </div>
-            </div>
-            <div class="col-lg-5 col-md-12" th:if="${adminView}">
-              <form method="get" th:action="@{/analytics}" class="d-flex flex-column gap-1">
-                <input type="hidden" name="period" th:value="${period}">
-                <input type="hidden" name="from" th:value="${from}">
-                <input type="hidden" name="to" th:value="${to}">
-                <label class="form-label small mb-0">User</label>
-                <div class="d-flex align-items-center gap-2">
-                  <select class="form-select form-select-sm" name="userId" onchange="this.form.submit()">
-                    <option th:each="u : ${managedUsers}"
-                            th:value="${u.id}"
-                            th:selected="${selectedUserId == u.id}"
-                            th:text="${u.username + (u.active ? '' : ' (inactive)')}">username</option>
-                  </select>
-                  <span class="viewing-badge"><i class="bi bi-person"></i><span th:text="${analyticsTargetUser != null ? analyticsTargetUser.username : ''}">user</span></span>
-                </div>
-              </form>
-            </div>
-          </div>
-
-          <form class="row g-2 align-items-end mt-1" method="get" th:action="@{/analytics}">
-            <input type="hidden" name="period" value="CUSTOM">
-            <input type="hidden" name="userId" th:value="${selectedUserId}">
-            <input type="hidden" name="from" id="fromDateInput" th:value="${from}">
-            <input type="hidden" name="to" id="toDateInput" th:value="${to}">
-            <div class="col-md-8">
-              <label class="form-label small mb-1">Date range</label>
-              <div class="range-input-wrap">
-                <i class="bi bi-calendar3 range-input-icon"></i>
-                <input id="dateRangeInput"
-                       class="form-control form-control-sm range-input"
-                       type="text"
-                       placeholder="From - To">
-              </div>
-            </div>
-            <div class="col-md-4 d-flex gap-2">
-              <button type="submit" class="btn btn-sm btn-dark">Apply custom range</button>
-              <a th:href="@{/analytics(period='ALL',userId=${selectedUserId})}" class="btn btn-sm btn-outline-secondary">Clear</a>
-            </div>
-          </form>
-        </div>
-      </div>
-
-  <div class="card shadow-sm mb-3" th:if="${comparison != null}">
-    <div class="card-body">
-      <h5 class="card-title mb-3">Period Comparison</h5>
-      <div class="table-responsive">
-        <table class="table table-sm align-middle mb-0">
-          <thead>
-          <tr>
-            <th>Metric</th>
-            <th>Current</th>
-            <th>Previous</th>
-            <th>Delta</th>
-          </tr>
-          </thead>
-          <tbody>
-          <tr>
-            <td>Total Trades</td>
-            <td th:text="${comparison.current.totalTrades}">0</td>
-            <td th:text="${comparison.previous.totalTrades}">0</td>
-            <td th:text="${comparison.totalTradesDelta > 0 ? '+' + comparison.totalTradesDelta : comparison.totalTradesDelta}">0</td>
-          </tr>
-          <tr>
-            <td>Win Rate</td>
-            <td th:text="${#numbers.formatDecimal(comparison.current.winRate,1,2) + '%'}">0.00%</td>
-            <td th:text="${#numbers.formatDecimal(comparison.previous.winRate,1,2) + '%'}">0.00%</td>
-            <td th:text="${(comparison.winRateDelta > 0 ? '+' : '') + #numbers.formatDecimal(comparison.winRateDelta,1,2) + '%'}">0.00%</td>
-          </tr>
-          <tr>
-            <td>Total PnL</td>
-            <td th:text="${#numbers.formatDecimal(comparison.current.totalPnl,1,2)}">0.00</td>
-            <td th:text="${#numbers.formatDecimal(comparison.previous.totalPnl,1,2)}">0.00</td>
-            <td th:text="${(comparison.totalPnlDelta > 0 ? '+' : '') + #numbers.formatDecimal(comparison.totalPnlDelta,1,2)}">0.00</td>
-          </tr>
-          <tr>
-            <td>Average PnL</td>
-            <td th:text="${#numbers.formatDecimal(comparison.current.avgPnl,1,2)}">0.00</td>
-            <td th:text="${#numbers.formatDecimal(comparison.previous.avgPnl,1,2)}">0.00</td>
-            <td th:text="${(comparison.avgPnlDelta > 0 ? '+' : '') + #numbers.formatDecimal(comparison.avgPnlDelta,1,2)}">0.00</td>
-          </tr>
-          <tr>
-            <td>Total R</td>
-            <td th:text="${#numbers.formatDecimal(comparison.current.totalR,1,2)}">0.00</td>
-            <td th:text="${#numbers.formatDecimal(comparison.previous.totalR,1,2)}">0.00</td>
-            <td th:text="${(comparison.totalRDelta > 0 ? '+' : '') + #numbers.formatDecimal(comparison.totalRDelta,1,2)}">0.00</td>
-          </tr>
-          <tr>
-            <td>Average R</td>
-            <td th:text="${#numbers.formatDecimal(comparison.current.avgR,1,2)}">0.00</td>
-            <td th:text="${#numbers.formatDecimal(comparison.previous.avgR,1,2)}">0.00</td>
-            <td th:text="${(comparison.avgRDelta > 0 ? '+' : '') + #numbers.formatDecimal(comparison.avgRDelta,1,2)}">0.00</td>
-          </tr>
-          </tbody>
-        </table>
-      </div>
-      <div class="text-muted small mt-2">
-        Previous period is the immediate window before the current selected date range, with the same duration.
-      </div>
-    </div>
-  </div>
-  <div class="alert alert-light border mb-3" th:if="${comparison == null}">
-    Select a preset period (7D/30D/90D) or a custom date range to see period-vs-period comparison.
-  </div>
-
-  <div class="section-title mt-4"><i class="bi bi-stars text-primary"></i>Performance Snapshot</div>
-  <div class="row cards-tight">
-    <div class="col-lg-3 col-md-6">
-      <div class="card shadow-sm metric-card card-key metric-main h-100"
-           th:classappend="${overview.totalPnl > 0 ? ' card-positive' : (overview.totalPnl < 0 ? ' card-negative' : ' card-neutral')}">
-        <div class="card-body">
-          <div class="stat-title"><i class="bi bi-currency-dollar"></i>Total PnL</div>
-          <div class="stat-value"
-               th:classappend="${overview.totalPnl > 0 ? ' text-success' : (overview.totalPnl < 0 ? ' text-danger' : ' text-primary')}"
-               th:text="${(overview.totalPnl > 0 ? '+' : '') + '$' + #numbers.formatDecimal(overview.totalPnl,1,0)}">0</div>
-        </div>
-      </div>
-    </div>
-    <div class="col-lg-3 col-md-6">
-      <div class="card shadow-sm metric-card card-key metric-main card-positive h-100">
-        <div class="card-body">
-          <div class="stat-title"><i class="bi bi-trophy"></i>Win Rate</div>
-          <div class="stat-value text-success" th:text="${#numbers.formatDecimal(overview.winRate,1,1) + '%'}">0.0%</div>
-        </div>
-      </div>
-    </div>
-    <div class="col-lg-3 col-md-6">
-      <div class="card shadow-sm metric-card card-key metric-main h-100"
-           th:classappend="${riskMetrics.expectancy > 0 ? ' card-positive' : (riskMetrics.expectancy < 0 ? ' card-negative' : ' card-neutral')}">
-        <div class="card-body">
-          <div class="stat-title"><i class="bi bi-arrow-up-right-circle"></i>Expectancy</div>
-          <div class="stat-value"
-               th:classappend="${riskMetrics.expectancy > 0 ? ' text-success' : (riskMetrics.expectancy < 0 ? ' text-danger' : ' text-primary')}"
-               th:text="${(riskMetrics.expectancy > 0 ? '+' : '') + '$' + #numbers.formatDecimal(riskMetrics.expectancy,1,2)}">0.00</div>
-        </div>
-      </div>
-    </div>
-    <div class="col-lg-3 col-md-6">
-      <div class="card shadow-sm metric-card card-key metric-main h-100"
-           th:classappend="${riskMetrics.profitFactor != null and riskMetrics.profitFactor >= 1 ? ' card-positive' : ' card-negative'}">
-        <div class="card-body">
-          <div class="stat-title"><i class="bi bi-graph-up-arrow"></i>Profit Factor</div>
-          <div class="stat-value"
-               th:classappend="${riskMetrics.profitFactor != null and riskMetrics.profitFactor >= 1 ? ' text-success' : ' text-danger'}"
-               th:text="${riskMetrics.profitFactor == null ? 'N/A' : #numbers.formatDecimal(riskMetrics.profitFactor,1,2)}">N/A</div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div class="section-divider">
-    <div class="section-title"><i class="bi bi-grid-1x2 text-primary"></i>Secondary Metrics</div>
-  </div>
-  <div class="row cards-tight">
-    <div class="col-lg-3 col-md-6">
-      <div class="card shadow-sm metric-card metric-secondary card-neutral h-100">
-        <div class="card-body">
-          <div class="stat-title"><i class="bi bi-123"></i>Total Trades</div>
-          <div class="stat-value-sm text-primary" th:text="${overview.totalTrades}">0</div>
-        </div>
-      </div>
-    </div>
-    <div class="col-lg-3 col-md-6">
-      <div class="card shadow-sm metric-card metric-secondary h-100"
-           th:classappend="${overview.avgPnl > 0 ? ' card-positive' : (overview.avgPnl < 0 ? ' card-negative' : ' card-neutral')}">
-        <div class="card-body">
-          <div class="stat-title"><i class="bi bi-bar-chart-line"></i>Average PnL</div>
-          <div class="stat-value-sm"
-               th:classappend="${overview.avgPnl > 0 ? ' text-success' : (overview.avgPnl < 0 ? ' text-danger' : ' text-primary')}"
-               th:text="${(overview.avgPnl > 0 ? '+' : '') + '$' + #numbers.formatDecimal(overview.avgPnl,1,2)}">0.00</div>
-        </div>
-      </div>
-    </div>
-    <div class="col-lg-3 col-md-6">
-      <div class="card shadow-sm metric-card metric-secondary card-negative h-100">
-        <div class="card-body">
-          <div class="stat-title"><i class="bi bi-arrow-down"></i>Avg Loss</div>
-          <div class="stat-value-sm text-danger" th:text="${'$' + #numbers.formatDecimal(riskMetrics.avgLoss,1,2)}">$0.00</div>
-        </div>
-      </div>
-    </div>
-    <div class="col-lg-3 col-md-6">
-      <div class="card shadow-sm metric-card metric-secondary card-neutral h-100">
-        <div class="card-body">
-          <div class="stat-title"><i class="bi bi-shield-exclamation"></i>Max Drawdown</div>
-          <div class="stat-value-sm text-primary" th:text="${'$' + #numbers.formatDecimal(riskMetrics.maxDrawdown,1,2)}">$0.00</div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div class="section-divider">
-    <div class="section-title"><i class="bi bi-shield-check text-primary"></i>Process Quality</div>
-  </div>
-  <div class="row cards-tight">
-    <div class="col-lg col-md-6">
-      <div class="card shadow-sm metric-card metric-process card-neutral h-100">
-        <div class="card-body">
-          <div class="stat-title"><i class="bi bi-clipboard-check"></i>Reviewed</div>
-          <div class="stat-value-sm text-primary" th:text="${processMetrics.reviewedTrades + ' / ' + overview.totalTrades}">0 / 0</div>
-          <div class="text-muted small" th:text="${#numbers.formatDecimal(processMetrics.reviewedRate,1,1) + '% reviewed'}">0.0% reviewed</div>
-        </div>
-      </div>
-    </div>
-    <div class="col-lg col-md-6">
-      <div class="card shadow-sm metric-card metric-process card-neutral h-100">
-        <div class="card-body">
-          <div class="stat-title"><i class="bi bi-award"></i>HQ Trades</div>
-          <div class="stat-value-sm text-primary" th:text="${processMetrics.highQualityTrades}">0</div>
-        </div>
-      </div>
-    </div>
-    <div class="col-lg col-md-6">
-      <div class="card shadow-sm metric-card metric-process card-positive h-100">
-        <div class="card-body">
-          <div class="stat-title"><i class="bi bi-graph-up"></i>Winrate HQ</div>
-          <div class="stat-value-sm text-success" th:text="${#numbers.formatDecimal(processMetrics.highQualityWinRate,1,1) + '%'}">0.0%</div>
-        </div>
-      </div>
-    </div>
-    <div class="col-lg col-md-6">
-      <div class="card shadow-sm metric-card metric-process h-100"
-           th:classappend="${processMetrics.avgRFollowedPlan > 0 ? ' card-positive' : (processMetrics.avgRFollowedPlan < 0 ? ' card-negative' : ' card-neutral')}">
-        <div class="card-body">
-          <div class="stat-title"><i class="bi bi-signpost-split"></i>Avg R Plan</div>
-          <div class="stat-value-sm"
-               th:classappend="${processMetrics.avgRFollowedPlan > 0 ? ' text-success' : (processMetrics.avgRFollowedPlan < 0 ? ' text-danger' : ' text-primary')}"
-               th:text="${#numbers.formatDecimal(processMetrics.avgRFollowedPlan,1,2) + 'R'}">0.00R</div>
-        </div>
-      </div>
-    </div>
-    <div class="col-lg col-md-6">
-      <div class="card shadow-sm metric-card metric-process card-negative h-100">
-        <div class="card-body">
-          <div class="stat-title"><i class="bi bi-exclamation-circle"></i>Bad Wins</div>
-          <div class="stat-value-sm text-danger" th:text="${processMetrics.badProcessWins}">0</div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div class="section-divider">
-    <div class="section-title"><i class="bi bi-activity text-primary"></i>Equity Curve</div>
-  </div>
-  <div class="card shadow-sm">
-    <div class="card-body">
-      <h5 class="card-title mb-3"><i class="bi bi-activity me-1 text-success"></i>Equity Curve (Cumulative PnL)</h5>
-      <div class="chart-panel">
-        <canvas id="equityCurveChart"></canvas>
-      </div>
-      <div id="equityCurveNote" class="chart-note d-none">
-        Need at least 2 closed trades to visualize curve clearly.
-      </div>
-    </div>
-  </div>
-
-  <div class="section-divider">
-    <div class="section-title"><i class="bi bi-bar-chart-line text-primary"></i>Performance Breakdown</div>
-  </div>
-  <div class="row cards-tight">
-    <div class="col-lg-6">
-      <div class="card shadow-sm h-100">
-        <div class="card-body">
-          <h5 class="card-title mb-3">Win Rate by Setup</h5>
-          <div class="chart-panel" th:if="${#lists.size(report.bySetup) >= 2}">
-            <canvas id="setupWinRateChart"></canvas>
-          </div>
-          <div class="empty-state" th:if="${#lists.size(report.bySetup) < 2}">
-            <i class="bi bi-list-ul"></i>
-            <span th:if="${!#lists.isEmpty(report.bySetup)}">Need at least 2 setups to render a comparative chart.</span>
-            <span th:if="${#lists.isEmpty(report.bySetup)}">No setup data yet.</span>
+      <section class="dashboard-card">
+        <div class="section-head">
+          <div>
+            <div class="section-title">Analytics Modules</div>
+            <p class="section-copy">Structure only for now. Metrics and charts will be wired later.</p>
           </div>
         </div>
-      </div>
-    </div>
-    <div class="col-lg-6">
-      <div class="card shadow-sm h-100">
-        <div class="card-body">
-          <h5 class="card-title mb-3">Result Breakdown</h5>
-          <div class="chart-panel">
-            <canvas id="resultBreakdownChart"></canvas>
-          </div>
-          <div class="d-flex gap-2 mt-2">
-            <span class="badge text-bg-secondary" th:text="'Total R: ' + ${#numbers.formatDecimal(overview.totalR,1,2)} + 'R'">Total R: 0.00R</span>
-            <span class="badge text-bg-secondary" th:text="'Avg R: ' + ${#numbers.formatDecimal(overview.avgR,1,2)} + 'R'">Avg R: 0.00R</span>
-          </div>
+
+        <div class="analytics-placeholder-grid">
+          <article class="analytics-placeholder">
+            <h3 class="analytics-placeholder-title">Setup Performance</h3>
+            <p class="analytics-placeholder-copy">Compare setup quality, win-rate and expectancy by setup type.</p>
+            <span class="analytics-pill"><i class="bi bi-diagram-3"></i> Placeholder component</span>
+          </article>
+
+          <article class="analytics-placeholder">
+            <h3 class="analytics-placeholder-title">Session Performance</h3>
+            <p class="analytics-placeholder-copy">Evaluate London, New York, and Asia session outcomes.</p>
+            <span class="analytics-pill"><i class="bi bi-clock-history"></i> Placeholder component</span>
+          </article>
+
+          <article class="analytics-placeholder">
+            <h3 class="analytics-placeholder-title">Mistake Analysis</h3>
+            <p class="analytics-placeholder-copy">Break down repeat mistakes and their impact on returns.</p>
+            <span class="analytics-pill"><i class="bi bi-exclamation-triangle"></i> Placeholder component</span>
+          </article>
+
+          <article class="analytics-placeholder">
+            <h3 class="analytics-placeholder-title">R Multiple Distribution</h3>
+            <p class="analytics-placeholder-copy">Visualize spread, skew, and concentration of trade outcomes.</p>
+            <span class="analytics-pill"><i class="bi bi-bar-chart"></i> Placeholder component</span>
+          </article>
+
+          <article class="analytics-placeholder">
+            <h3 class="analytics-placeholder-title">Holding Time Analysis</h3>
+            <p class="analytics-placeholder-copy">Inspect holding duration patterns and efficiency by timeframe.</p>
+            <span class="analytics-pill"><i class="bi bi-hourglass-split"></i> Placeholder component</span>
+          </article>
         </div>
-      </div>
-    </div>
-  </div>
-
-  <div class="section-divider">
-    <div class="section-title"><i class="bi bi-diagram-2 text-primary"></i>Process Analysis</div>
-  </div>
-  <div class="row cards-tight">
-    <div class="col-md-4">
-      <div class="card shadow-sm h-100">
-        <div class="card-body">
-          <div class="text-muted small mb-2">Quality Grade Distribution</div>
-          <div class="d-flex gap-2 flex-wrap" th:if="${processMetrics.reviewedTrades > 0}">
-            <span class="badge text-bg-success">A: <span th:text="${processMetrics.gradeA}">0</span></span>
-            <span class="badge text-bg-primary">B: <span th:text="${processMetrics.gradeB}">0</span></span>
-            <span class="badge text-bg-secondary">C: <span th:text="${processMetrics.gradeC}">0</span></span>
-          </div>
-          <div class="empty-state" th:if="${processMetrics.reviewedTrades == 0}">
-            <i class="bi bi-inbox"></i>
-            <span>No reviewed trades yet. Complete post-trade reviews to unlock this insight.</span>
-          </div>
-        </div>
-      </div>
-    </div>
-    <div class="col-md-8">
-      <div class="card shadow-sm h-100">
-        <div class="card-body">
-          <div class="text-muted small mb-2">Outcome vs Process</div>
-          <div class="table-responsive" th:if="${processMetrics.reviewedTrades > 0}">
-            <table class="table table-sm align-middle mb-0">
-              <thead>
-              <tr>
-                <th>Process/Outcome</th>
-                <th>Count</th>
-              </tr>
-              </thead>
-              <tbody>
-              <tr>
-                <td>Good process, good outcome</td>
-                <td th:text="${processMetrics.goodProcessGoodOutcome}">0</td>
-              </tr>
-              <tr>
-                <td>Good process, bad outcome</td>
-                <td th:text="${processMetrics.goodProcessBadOutcome}">0</td>
-              </tr>
-              <tr>
-                <td>Bad process, good outcome</td>
-                <td th:text="${processMetrics.badProcessGoodOutcome}">0</td>
-              </tr>
-              <tr>
-                <td>Bad process, bad outcome</td>
-                <td th:text="${processMetrics.badProcessBadOutcome}">0</td>
-              </tr>
-              </tbody>
-            </table>
-          </div>
-          <div class="empty-state" th:if="${processMetrics.reviewedTrades == 0}">
-            <i class="bi bi-inbox"></i>
-            <span>No reviewed trades yet. Process/outcome matrix will appear here.</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div class="section-divider">
-    <div class="section-title"><i class="bi bi-table text-primary"></i>Detail Tables</div>
-  </div>
-  <div class="card shadow-sm mt-2">
-    <div class="card-body">
-      <h5 class="card-title mb-3">Bad Process Wins</h5>
-      <div class="table-wrap" th:if="${!#lists.isEmpty(processMetrics.badProcessWinTrades)}">
-        <table class="table table-sm table-striped table-dashboard align-middle mb-0">
-          <thead>
-          <tr>
-            <th>Trade</th>
-            <th>Entry Time</th>
-            <th>Symbol</th>
-            <th>Quality Score</th>
-            <th>PnL</th>
-          </tr>
-          </thead>
-          <tbody>
-          <tr th:each="row : ${processMetrics.badProcessWinTrades}">
-            <td>
-              <a th:href="@{/trades/{id}(id=${row.tradeId})}" th:text="${row.tradeId}">trade-id</a>
-            </td>
-            <td th:text="${row.entryTime != null ? #temporals.format(row.entryTime, 'yyyy-MM-dd HH:mm') : '-'}">-</td>
-            <td th:text="${row.symbol}">-</td>
-            <td th:text="${row.qualityScore}">0</td>
-            <td th:text="${#numbers.formatDecimal(row.pnl,1,2)}">0.00</td>
-          </tr>
-          </tbody>
-        </table>
-      </div>
-      <div class="empty-state" th:if="${#lists.isEmpty(processMetrics.badProcessWinTrades)}">
-        <i class="bi bi-check-circle"></i>
-        <span>No bad-process wins yet. Keep following your trading plan.</span>
-      </div>
-    </div>
-  </div>
-
-  <div class="card shadow-sm mt-4">
-    <div class="card-body">
-      <h5 class="card-title mb-3">By Setup</h5>
-      <div class="table-wrap">
-        <table class="table table-striped table-dashboard align-middle mb-0">
-          <thead>
-          <tr>
-            <th>Setup</th>
-            <th>Trades</th>
-            <th>Win Rate</th>
-            <th>Total PnL</th>
-            <th>Avg PnL</th>
-          </tr>
-          </thead>
-          <tbody>
-          <tr th:each="row : ${report.bySetup}">
-            <td>
-              <span th:if="${row.label == 'N/A'}" th:text="${row.label}">N/A</span>
-              <a th:if="${row.label != 'N/A'}"
-                 th:href="@{/trades(setup=${row.label},from=${from},to=${to})}"
-                 th:text="${row.label}">Setup</a>
-            </td>
-            <td th:text="${row.totalTrades}">0</td>
-            <td th:text="${#numbers.formatDecimal(row.winRate,1,1) + '%'}">0.0%</td>
-            <td th:text="${(row.totalPnl > 0 ? '+' : '') + '$' + #numbers.formatDecimal(row.totalPnl,1,2)}">0.00</td>
-            <td th:text="${(row.avgPnl > 0 ? '+' : '') + '$' + #numbers.formatDecimal(row.avgPnl,1,2)}">0.00</td>
-          </tr>
-          <tr th:if="${#lists.isEmpty(report.bySetup)}">
-            <td colspan="5" class="text-muted text-center">No data yet.</td>
-          </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-
-  <div class="card shadow-sm mt-4">
-    <div class="card-body">
-      <h5 class="card-title mb-3">By Session</h5>
-      <div class="table-wrap">
-        <table class="table table-striped table-dashboard align-middle mb-0">
-          <thead>
-          <tr>
-            <th>Session</th>
-            <th>Trades</th>
-            <th>Win Rate</th>
-            <th>Total PnL</th>
-            <th>Avg PnL</th>
-          </tr>
-          </thead>
-          <tbody>
-          <tr th:each="row : ${report.bySession}">
-            <td>
-              <span th:if="${row.label == 'N/A'}" th:text="${row.label}">N/A</span>
-              <a th:if="${row.label != 'N/A'}"
-                 th:href="@{/trades(session=${row.label},from=${from},to=${to})}"
-                 th:text="${row.label}">Session</a>
-            </td>
-            <td th:text="${row.totalTrades}">0</td>
-            <td th:text="${#numbers.formatDecimal(row.winRate,1,1) + '%'}">0.0%</td>
-            <td th:text="${(row.totalPnl > 0 ? '+' : '') + '$' + #numbers.formatDecimal(row.totalPnl,1,2)}">0.00</td>
-            <td th:text="${(row.avgPnl > 0 ? '+' : '') + '$' + #numbers.formatDecimal(row.avgPnl,1,2)}">0.00</td>
-          </tr>
-          <tr th:if="${#lists.isEmpty(report.bySession)}">
-            <td colspan="5" class="text-muted text-center">No data yet.</td>
-          </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-
-  <div class="card shadow-sm mt-4">
-    <div class="card-body">
-      <h5 class="card-title mb-3">By Symbol</h5>
-      <div class="table-wrap">
-        <table class="table table-striped table-dashboard align-middle mb-0">
-          <thead>
-          <tr>
-            <th>Symbol</th>
-            <th>Trades</th>
-            <th>Win Rate</th>
-            <th>Total PnL</th>
-            <th>Avg PnL</th>
-          </tr>
-          </thead>
-          <tbody>
-          <tr th:each="row : ${report.bySymbol}">
-            <td>
-              <span th:if="${row.label == 'N/A'}" th:text="${row.label}">N/A</span>
-              <a th:if="${row.label != 'N/A'}"
-                 th:href="@{/trades(symbol=${row.label},from=${from},to=${to})}"
-                 th:text="${row.label}">Symbol</a>
-            </td>
-            <td th:text="${row.totalTrades}">0</td>
-            <td th:text="${#numbers.formatDecimal(row.winRate,1,1) + '%'}">0.0%</td>
-            <td th:text="${(row.totalPnl > 0 ? '+' : '') + '$' + #numbers.formatDecimal(row.totalPnl,1,2)}">0.00</td>
-            <td th:text="${(row.avgPnl > 0 ? '+' : '') + '$' + #numbers.formatDecimal(row.avgPnl,1,2)}">0.00</td>
-          </tr>
-          <tr th:if="${#lists.isEmpty(report.bySymbol)}">
-            <td colspan="5" class="text-muted text-center">No data yet.</td>
-          </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </div>
+      </section>
     </main>
   </div>
 </div>
 
-<script th:inline="javascript">
-  const tradesBaseUrl = /*[[@{/trades}]]*/ "/trades";
-  const currentFrom = /*[[${from}]]*/ null;
-  const currentTo = /*[[${to}]]*/ null;
-  const fromDateInput = document.getElementById("fromDateInput");
-  const toDateInput = document.getElementById("toDateInput");
-  const dateRangeInput = document.getElementById("dateRangeInput");
-  const shell = document.querySelector(".app-shell");
-  const sidebarToggle = document.getElementById("sidebarToggle");
-  const sidebarStateKey = "analytics_sidebar_expanded";
-
-  function applySidebarState(expanded) {
-    if (!shell) return;
-    shell.classList.toggle("expanded", expanded);
-    if (sidebarToggle) {
-      sidebarToggle.setAttribute("aria-expanded", expanded ? "true" : "false");
-    }
-  }
-
-  const desktop = window.matchMedia("(min-width: 992px)");
-  const savedSidebarState = localStorage.getItem(sidebarStateKey);
-  const initialExpanded = desktop.matches ? savedSidebarState === "1" : true;
-  applySidebarState(initialExpanded);
-
-  if (sidebarToggle) {
-    sidebarToggle.addEventListener("click", () => {
-      const expanded = !shell.classList.contains("expanded");
-      applySidebarState(expanded);
-      if (desktop.matches) {
-        localStorage.setItem(sidebarStateKey, expanded ? "1" : "0");
-      }
-    });
-  }
-
-  desktop.addEventListener("change", (event) => {
-    if (!event.matches) {
-      applySidebarState(true);
-      return;
-    }
-    applySidebarState(localStorage.getItem(sidebarStateKey) === "1");
-  });
-
-  if (dateRangeInput && fromDateInput && toDateInput && window.flatpickr) {
-    const initialRange = [];
-    if (currentFrom) initialRange.push(currentFrom);
-    if (currentTo) initialRange.push(currentTo);
-
-    flatpickr(dateRangeInput, {
-      mode: "range",
-      dateFormat: "Y-m-d",
-      defaultDate: initialRange,
-      onChange: (selectedDates, dateStr) => {
-        if (!selectedDates || selectedDates.length === 0) {
-          fromDateInput.value = "";
-          toDateInput.value = "";
-          return;
-        }
-        const formatIso = (d) => d.toISOString().slice(0, 10);
-        fromDateInput.value = formatIso(selectedDates[0]);
-        toDateInput.value = selectedDates[1] ? formatIso(selectedDates[1]) : formatIso(selectedDates[0]);
-      }
-    });
-  }
-
-  const equityLabels = /*[[${report.equityCurve.![label]}]]*/ [];
-  const equityValues = /*[[${report.equityCurve.![value]}]]*/ [];
-
-  const setupLabels = /*[[${report.bySetup.![label]}]]*/ [];
-  const setupWinRate = /*[[${report.bySetup.![winRate]}]]*/ [];
-  const resultLabels = ["Win", "Loss", "BE"];
-  const resultValues = [
-    /*[[${overview.winTrades}]]*/ 0,
-    /*[[${overview.lossTrades}]]*/ 0,
-    /*[[${overview.beTrades}]]*/ 0
-  ];
-
-  function buildLineChart(canvasId, labels, values, label) {
-    const note = document.getElementById("equityCurveNote");
-    if (!labels || labels.length < 2) {
-      if (note) {
-        note.classList.remove("d-none");
-      }
-      return;
-    }
-    if (note) {
-      note.classList.add("d-none");
-    }
-    const canvas = document.getElementById(canvasId);
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    const positiveCurve = values[values.length - 1] >= 0;
-    const baseColor = positiveCurve ? "34,197,94" : "239,68,68";
-    const borderColor = positiveCurve ? "#22c55e" : "#ef4444";
-    const gradient = ctx.createLinearGradient(0, 0, 0, 320);
-    gradient.addColorStop(0, `rgba(${baseColor},0.4)`);
-    gradient.addColorStop(1, `rgba(${baseColor},0)`);
-
-    new Chart(canvas, {
-      type: "line",
-      data: {
-        labels: labels,
-        datasets: [{
-          label: label,
-          data: values,
-          borderColor: borderColor,
-          backgroundColor: gradient,
-          tension: 0.3,
-          fill: true,
-          pointRadius: 0,
-          pointHoverRadius: 4,
-          borderWidth: 2.4
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        scales: {
-          y: {
-            beginAtZero: false,
-            grid: {
-              color: "rgba(148, 163, 184, 0.18)"
-            }
-          },
-          x: {
-            grid: {
-              display: false
-            }
-          }
-        },
-        plugins: {
-          legend: {
-            display: false
-          },
-          tooltip: {
-            backgroundColor: "#0f172a",
-            titleColor: "#e2e8f0",
-            bodyColor: "#f8fafc",
-            padding: 10,
-            cornerRadius: 8,
-            displayColors: false,
-            callbacks: {
-              label: (context) => {
-                const value = context.parsed.y;
-                return `${value > 0 ? "+" : ""}$${Number(value).toFixed(2)}`;
-              }
-            }
-          }
-        }
-      }
-    });
-  }
-
-  function redirectToTradesByFilter(filterKey, filterValue) {
-    if (!filterValue || filterValue === "N/A") {
-      return;
-    }
-    const params = new URLSearchParams();
-    params.set(filterKey, filterValue);
-    if (currentFrom) params.set("from", currentFrom);
-    if (currentTo) params.set("to", currentTo);
-    window.location.href = tradesBaseUrl + "?" + params.toString();
-  }
-
-  function buildBarChart(canvasId, labels, values, label, color, drilldownKey) {
-    const canvas = document.getElementById(canvasId);
-    if (!canvas || !labels || labels.length < 2) return;
-    new Chart(canvas, {
-      type: "bar",
-      data: {
-        labels: labels,
-        datasets: [{
-          label: label,
-          data: values,
-          backgroundColor: color
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        onHover: (event, elements) => {
-          if (event?.native?.target) {
-            event.native.target.style.cursor = elements.length ? "pointer" : "default";
-          }
-        },
-        onClick: (event, elements, chart) => {
-          if (!elements.length || !drilldownKey) {
-            return;
-          }
-          const index = elements[0].index;
-          const clickedLabel = chart.data.labels[index];
-          redirectToTradesByFilter(drilldownKey, clickedLabel);
-        }
-      }
-    });
-  }
-
-  function buildResultBreakdownChart(canvasId, labels, values) {
-    if (!values || values.length === 0) return;
-    new Chart(document.getElementById(canvasId), {
-      type: "doughnut",
-      data: {
-        labels: labels,
-        datasets: [{
-          data: values,
-          backgroundColor: ["#22c55e", "#ef4444", "#3b82f6"],
-          borderWidth: 0
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: {
-            position: "bottom"
-          }
-        }
-      }
-    });
-  }
-
-  buildLineChart("equityCurveChart", equityLabels, equityValues, "Cumulative PnL");
-  buildBarChart("setupWinRateChart", setupLabels, setupWinRate, "Win Rate (%)", "#198754", "setup");
-  buildResultBreakdownChart("resultBreakdownChart", resultLabels, resultValues);
-</script>
-
+<script th:src="@{/js/sidebar-toggle.js}" src="/js/sidebar-toggle.js"></script>
 </body>
 </html>

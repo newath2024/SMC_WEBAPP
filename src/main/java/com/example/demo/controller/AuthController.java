@@ -104,6 +104,6 @@ public class AuthController {
         if (userService.isAdmin(user)) {
             return "redirect:/admin";
         }
-        return "redirect:/analytics";
+        return "redirect:/dashboard";
     }
 }

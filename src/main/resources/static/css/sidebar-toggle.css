@@ -1,0 +1,90 @@
+.app-shell.collapsible-shell {
+  --sidebar-width: 76px;
+}
+
+.app-shell.collapsible-shell.expanded {
+  --sidebar-width: 240px;
+}
+
+.app-shell.collapsible-shell .sidebar {
+  width: var(--sidebar-width);
+  transition: width 0.25s ease;
+}
+
+.app-shell.collapsible-shell .sidebar-toggle {
+  border: 1px solid #dbe4ef;
+  background: #fff;
+  color: #334155;
+  border-radius: 10px;
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.app-shell.collapsible-shell .sidebar-toggle:hover {
+  background: #f8fafc;
+}
+
+.app-shell.collapsible-shell .sidebar-title,
+.app-shell.collapsible-shell .nav-label {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.app-shell.collapsible-shell:not(.expanded) .sidebar-title {
+  display: none;
+}
+
+.app-shell.collapsible-shell:not(.expanded) .nav-label {
+  display: none;
+}
+
+.app-shell.collapsible-shell:not(.expanded) .sidebar-nav-group {
+  display: grid;
+  gap: 6px;
+}
+
+.app-shell.collapsible-shell:not(.expanded) .sidebar-link {
+  justify-content: center;
+}
+
+.app-shell.collapsible-shell:not(.expanded) .sidebar-nav-group + .sidebar-nav-group {
+  margin-top: 10px;
+}
+
+.app-shell.collapsible-shell .nav-label {
+  transform: translateX(-4px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.app-shell.collapsible-shell.expanded .sidebar-title,
+.app-shell.collapsible-shell.expanded .nav-label {
+  display: inline;
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.app-shell.collapsible-shell.expanded .nav-label {
+  transform: translateX(0);
+}
+
+@media (max-width: 991.98px) {
+  .app-shell.collapsible-shell {
+    --sidebar-width: 100%;
+  }
+
+  .app-shell.collapsible-shell .sidebar {
+    width: 100%;
+    position: static;
+  }
+
+  .app-shell.collapsible-shell .sidebar-title,
+  .app-shell.collapsible-shell .nav-label {
+    display: inline;
+    opacity: 1;
+    transform: none;
+    pointer-events: auto;
+  }
+}

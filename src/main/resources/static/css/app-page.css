@@ -1,0 +1,70 @@
+:root {
+  --app-page-gap: 24px;
+}
+
+body.app-page-body {
+  margin: 0;
+  background: linear-gradient(180deg, #f9fbff 0%, var(--bg) 180px);
+  color: var(--text-main);
+  font-family: "Inter", sans-serif;
+}
+
+body.app-page-body .container-fluid {
+  max-width: none;
+  padding: 20px !important;
+}
+
+.app-page-shell,
+body.app-page-body .app-shell {
+  display: flex;
+  gap: var(--app-page-gap);
+  align-items: flex-start;
+}
+
+.app-page-shell .sidebar,
+body.app-page-body .app-shell .sidebar {
+  width: var(--sidebar-width);
+  flex: 0 0 var(--sidebar-width);
+  position: sticky;
+  top: 20px;
+}
+
+.app-page-main,
+body.app-page-body .main-content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+body.app-page-body h1,
+body.app-page-body h2 {
+  margin: 0;
+  font-size: clamp(2rem, 2.8vw, 2.4rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--text-main);
+}
+
+body.app-page-body .table {
+  background: #fff;
+}
+
+@media (max-width: 991.98px) {
+  .app-page-shell,
+  body.app-page-body .app-shell {
+    flex-direction: column;
+  }
+
+  body.app-page-body .container-fluid {
+    padding: 16px !important;
+  }
+
+  .app-page-shell .sidebar,
+  body.app-page-body .app-shell .sidebar {
+    width: 100%;
+    flex-basis: auto;
+    position: static;
+  }
+}

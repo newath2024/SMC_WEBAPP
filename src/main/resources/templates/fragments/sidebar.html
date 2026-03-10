@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<body>
+  <aside class="app-sidebar sidebar"
+         th:fragment="appSidebar(activePage, exportHref)">
+    <div class="card shadow-sm sidebar-card sidebar-panel">
+      <div class="card-body d-flex flex-column">
+      <div class="sidebar-brand">
+        <div class="sidebar-brand-mark">
+          <i class="bi bi-candlestick"></i>
+        </div>
+        <div class="sidebar-brand-copy">
+          <div class="sidebar-brand-title">TradeJournal</div>
+          <div class="sidebar-brand-subtitle">SaaS trading journal</div>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav-group">
+        <div class="sidebar-group-title sidebar-title">MAIN</div>
+        <a th:href="@{/dashboard(period='ALL')}"
+           class="sidebar-link"
+           th:classappend="${activePage == 'dashboard'} ? ' active' : ''">
+          <i class="bi bi-grid-1x2 sidebar-icon"></i>
+          <span class="nav-label">Dashboard</span>
+        </a>
+        <a th:if="${currentUser == null or currentUser.role == null or !#strings.equalsIgnoreCase(currentUser.role, 'ADMIN')}"
+           th:href="@{/trades}"
+           class="sidebar-link"
+           th:classappend="${activePage == 'trades'} ? ' active' : ''">
+          <i class="bi bi-journal-text sidebar-icon"></i>
+          <span class="nav-label">Trades</span>
+        </a>
+        <a th:href="@{/analytics}"
+           class="sidebar-link"
+           th:classappend="${activePage == 'analytics'} ? ' active' : ''">
+          <i class="bi bi-bar-chart sidebar-icon"></i>
+          <span class="nav-label">Analytics</span>
+        </a>
+        <a th:href="@{/setups}"
+           class="sidebar-link"
+           th:classappend="${activePage == 'setups'} ? ' active' : ''">
+          <i class="bi bi-diagram-3 sidebar-icon"></i>
+          <span class="nav-label">Setups</span>
+        </a>
+        <a th:href="@{/mistakes}"
+           class="sidebar-link"
+           th:classappend="${activePage == 'mistakes'} ? ' active' : ''">
+          <i class="bi bi-exclamation-circle sidebar-icon"></i>
+          <span class="nav-label">Mistakes</span>
+        </a>
+      </nav>
+
+      <nav class="sidebar-nav-group">
+        <div class="sidebar-group-title sidebar-title">REPORTING</div>
+        <a th:href="@{/dashboard(period=${period != null ? period : 'ALL'}, from=${from}, to=${to}, userId=${selectedUserId})}"
+           class="sidebar-link">
+          <i class="bi bi-file-earmark-bar-graph sidebar-icon"></i>
+          <span class="nav-label">Reports</span>
+        </a>
+        <a th:href="${exportHref}" class="sidebar-link">
+          <i class="bi bi-download sidebar-icon"></i>
+          <span class="nav-label">Export CSV</span>
+        </a>
+      </nav>
+
+      <nav class="sidebar-nav-group">
+        <div class="sidebar-group-title sidebar-title">ACCOUNT</div>
+        <a th:href="@{/dashboard(period=${period != null ? period : 'ALL'}, from=${from}, to=${to}, userId=${selectedUserId})}"
+           class="sidebar-link">
+          <i class="bi bi-credit-card sidebar-icon"></i>
+          <span class="nav-label">Billing</span>
+        </a>
+        <a th:href="@{/dashboard(period=${period != null ? period : 'ALL'}, from=${from}, to=${to}, userId=${selectedUserId})}"
+           class="sidebar-link">
+          <i class="bi bi-gear sidebar-icon"></i>
+          <span class="nav-label">Settings</span>
+        </a>
+      </nav>
+
+      <div class="sidebar-plan">
+        <div class="sidebar-plan-name">Free Plan</div>
+        <div class="sidebar-plan-usage">
+          <span th:text="${tradeUsage != null ? tradeUsage : 0}">0</span>
+          <span>/</span>
+          <span th:text="${tradeUsageLimit != null ? tradeUsageLimit : 100}">100</span>
+          <span>trades used</span>
+        </div>
+        <div class="sidebar-plan-bar">
+          <span th:style="'width:' + ${(tradeUsageLimit != null and tradeUsageLimit > 0) ? T(java.lang.Math).min(100, (tradeUsage != null ? tradeUsage : 0) * 100 / tradeUsageLimit) : 0} + '%'"></span>
+        </div>
+        <a class="sidebar-upgrade"
+           th:href="@{/dashboard(period=${period != null ? period : 'ALL'}, from=${from}, to=${to}, userId=${selectedUserId})}">
+          Upgrade to Pro
+        </a>
+      </div>
+
+      <div class="sidebar-footer">
+        <div class="sidebar-user user-pill" th:if="${currentUser != null}">
+          <div class="sidebar-avatar" th:text="${#strings.substring(currentUser.username, 0, 1).toUpperCase()}">U</div>
+          <div class="sidebar-user-copy">
+            <div class="sidebar-user-name" th:text="${currentUser.username}">username</div>
+            <div class="sidebar-user-role" th:text="${currentUser.role != null ? currentUser.role : 'Trader'}">Trader</div>
+          </div>
+        </div>
+        <form method="post" action="/logout">
+          <button class="sidebar-logout-btn" type="submit">
+            <i class="bi bi-box-arrow-right"></i>
+            <span>Logout</span>
+          </button>
+        </form>
+      </div>
+      </div>
+    </div>
+  </aside>
+</body>
+</html>
+

@@ -2,6 +2,7 @@ package com.example.demo.service;
 
 import com.example.demo.entity.Trade;
 import com.example.demo.entity.TradeReview;
+import com.example.demo.repository.TradeMistakeTagRepository;
 import com.example.demo.repository.TradeReviewRepository;
 import org.springframework.stereotype.Service;
 
@@ -20,10 +21,16 @@ public class AnalyticsService {
 
     private final TradeService tradeService;
     private final TradeReviewRepository tradeReviewRepository;
+    private final TradeMistakeTagRepository tradeMistakeTagRepository;
 
-    public AnalyticsService(TradeService tradeService, TradeReviewRepository tradeReviewRepository) {
+    public AnalyticsService(
+            TradeService tradeService,
+            TradeReviewRepository tradeReviewRepository,
+            TradeMistakeTagRepository tradeMistakeTagRepository
+    ) {
         this.tradeService = tradeService;
         this.tradeReviewRepository = tradeReviewRepository;
+        this.tradeMistakeTagRepository = tradeMistakeTagRepository;
     }
 
     public AnalyticsReport buildReportForUser(String userId) {
@@ -41,8 +48,18 @@ public class AnalyticsService {
         List<BreakdownRow> bySession = buildBreakdown(filteredTrades, Trade::getSession);
         List<BreakdownRow> bySymbol = buildBreakdown(filteredTrades, Trade::getSymbol);
         List<TrendPoint> equityCurve = buildEquityCurve(filteredTrades);
+        List<MistakeFrequencyRow> mistakeFrequency = buildMistakeFrequency(filteredTrades);
 
-        return new AnalyticsReport(overview, riskMetrics, processMetrics, bySetup, bySession, bySymbol, equityCurve);
+        return new AnalyticsReport(
+                overview,
+                riskMetrics,
+                processMetrics,
+                bySetup,
+                bySession,
+                bySymbol,
+                equityCurve,
+                mistakeFrequency
+        );
     }
 
     public TradeOverview buildOverviewForUser(String userId) {
@@ -71,6 +88,8 @@ public class AnalyticsService {
 
         TradeOverview currentOverview = buildOverview(currentTrades);
         TradeOverview previousOverview = buildOverview(previousTrades);
+        RiskMetrics currentRisk = buildRiskMetrics(currentTrades);
+        RiskMetrics previousRisk = buildRiskMetrics(previousTrades);
 
         return new PeriodComparison(
                 currentOverview,
@@ -80,8 +99,17 @@ public class AnalyticsService {
                 round2(currentOverview.getTotalPnl() - previousOverview.getTotalPnl()),
                 round2(currentOverview.getAvgPnl() - previousOverview.getAvgPnl()),
                 round2(currentOverview.getTotalR() - previousOverview.getTotalR()),
-                round2(currentOverview.getAvgR() - previousOverview.getAvgR())
+                round2(currentOverview.getAvgR() - previousOverview.getAvgR()),
+                calculateNullableDelta(currentRisk.getProfitFactor(), previousRisk.getProfitFactor()),
+                round2(currentRisk.getMaxDrawdown() - previousRisk.getMaxDrawdown())
         );
+    }
+
+    private Double calculateNullableDelta(Double currentValue, Double previousValue) {
+        if (currentValue == null || previousValue == null) {
+            return null;
+        }
+        return round2(currentValue - previousValue);
     }
 
     private TradeOverview buildOverview(List<Trade> trades) {
@@ -217,16 +245,61 @@ public class AnalyticsService {
 
         List<TrendPoint> points = new ArrayList<>();
         double runningPnl = 0.0;
+        double runningR = 0.0;
+        double peakPnl = 0.0;
 
         for (Trade trade : sorted) {
             runningPnl += trade.getPnl();
+            runningR += trade.getRMultiple();
+            peakPnl = Math.max(peakPnl, runningPnl);
             points.add(new TrendPoint(
                     buildTradePointLabel(trade),
-                    round2(runningPnl)
+                    round2(runningPnl),
+                    round2(runningR),
+                    round2(peakPnl - runningPnl)
             ));
         }
 
         return points;
+    }
+
+    private List<MistakeFrequencyRow> buildMistakeFrequency(List<Trade> trades) {
+        if (trades.isEmpty()) {
+            return List.of();
+        }
+
+        List<String> tradeIds = trades.stream()
+                .map(Trade::getId)
+                .filter(id -> id != null && !id.isBlank())
+                .toList();
+        Map<String, Integer> counts = new HashMap<>();
+
+        if (!tradeIds.isEmpty()) {
+            tradeMistakeTagRepository.findByTradeIdIn(tradeIds).forEach(link -> {
+                if (link.getMistakeTag() == null || link.getMistakeTag().getName() == null) {
+                    return;
+                }
+                String label = normalizeLabel(link.getMistakeTag().getName());
+                counts.put(label, counts.getOrDefault(label, 0) + 1);
+            });
+        }
+
+        List<TradeReview> reviews = tradeReviewRepository.findByTradeIdIn(tradeIds);
+        for (TradeReview review : reviews) {
+            if (Boolean.TRUE.equals(review.getHadFomo())) {
+                counts.put("FOMO", counts.getOrDefault("FOMO", 0) + 1);
+            }
+            if (Boolean.TRUE.equals(review.getEnteredBeforeNews())) {
+                counts.put("Before news", counts.getOrDefault("Before news", 0) + 1);
+            }
+        }
+
+        return counts.entrySet().stream()
+                .sorted(Map.Entry.<String, Integer>comparingByValue().reversed()
+                        .thenComparing(Map.Entry::getKey))
+                .limit(6)
+                .map(entry -> new MistakeFrequencyRow(entry.getKey(), entry.getValue()))
+                .toList();
     }
 
     private RiskMetrics buildRiskMetrics(List<Trade> trades) {
@@ -266,7 +339,7 @@ public class AnalyticsService {
 
     private ProcessMetrics buildProcessMetrics(List<Trade> trades) {
         if (trades.isEmpty()) {
-            return new ProcessMetrics(0, 0, 0.0, 0.0, 0.0, 0, 0, 0, 0, 0, 0, 0, 0, List.of());
+            return new ProcessMetrics(0, 0, 0.0, 0.0, 0.0, 0, 0, 0, 0, 0, 0, 0, 0, 0, List.of());
         }
 
         List<String> tradeIds = trades.stream().map(Trade::getId).toList();
@@ -284,6 +357,7 @@ public class AnalyticsService {
         int followedPlanTrades = 0;
         double followedPlanTotalR = 0.0;
         int badProcessWins = 0;
+        int ruleViolations = 0;
         int gradeA = 0;
         int gradeB = 0;
         int gradeC = 0;
@@ -300,6 +374,9 @@ public class AnalyticsService {
             }
 
             reviewedTrades++;
+            if (hasRuleViolation(review)) {
+                ruleViolations++;
+            }
             boolean highQuality = review.getQualityScore() >= 70;
             boolean tradeWin = trade.getPnl() > 0;
 
@@ -352,6 +429,7 @@ public class AnalyticsService {
                 round2(highQualityWinRate),
                 round2(avgRFollowedPlan),
                 badProcessWins,
+                ruleViolations,
                 gradeA,
                 gradeB,
                 gradeC,
@@ -361,6 +439,17 @@ public class AnalyticsService {
                 badProcessBadOutcome,
                 badProcessWinTrades
         );
+    }
+
+    private boolean hasRuleViolation(TradeReview review) {
+        return Boolean.FALSE.equals(review.getFollowedPlan())
+                || Boolean.FALSE.equals(review.getRespectedRisk())
+                || Boolean.FALSE.equals(review.getAlignedHtfBias())
+                || Boolean.FALSE.equals(review.getCorrectSession())
+                || Boolean.FALSE.equals(review.getCorrectSetup())
+                || Boolean.FALSE.equals(review.getCorrectPoi())
+                || Boolean.TRUE.equals(review.getHadFomo())
+                || Boolean.TRUE.equals(review.getEnteredBeforeNews());
     }
 
     private double calculateMaxDrawdown(List<Trade> trades) {
@@ -416,6 +505,7 @@ public class AnalyticsService {
         private final List<BreakdownRow> bySession;
         private final List<BreakdownRow> bySymbol;
         private final List<TrendPoint> equityCurve;
+        private final List<MistakeFrequencyRow> mistakeFrequency;
 
         public AnalyticsReport(
                 TradeOverview overview,
@@ -424,7 +514,8 @@ public class AnalyticsService {
                 List<BreakdownRow> bySetup,
                 List<BreakdownRow> bySession,
                 List<BreakdownRow> bySymbol,
-                List<TrendPoint> equityCurve
+                List<TrendPoint> equityCurve,
+                List<MistakeFrequencyRow> mistakeFrequency
         ) {
             this.overview = overview;
             this.riskMetrics = riskMetrics;
@@ -433,6 +524,7 @@ public class AnalyticsService {
             this.bySession = bySession;
             this.bySymbol = bySymbol;
             this.equityCurve = equityCurve;
+            this.mistakeFrequency = mistakeFrequency;
         }
 
         public TradeOverview getOverview() {
@@ -462,6 +554,10 @@ public class AnalyticsService {
         public List<TrendPoint> getEquityCurve() {
             return equityCurve;
         }
+
+        public List<MistakeFrequencyRow> getMistakeFrequency() {
+            return mistakeFrequency;
+        }
     }
 
     public static class PeriodComparison {
@@ -473,6 +569,8 @@ public class AnalyticsService {
         private final double avgPnlDelta;
         private final double totalRDelta;
         private final double avgRDelta;
+        private final Double profitFactorDelta;
+        private final double maxDrawdownDelta;
 
         public PeriodComparison(
                 TradeOverview current,
@@ -482,7 +580,9 @@ public class AnalyticsService {
                 double totalPnlDelta,
                 double avgPnlDelta,
                 double totalRDelta,
-                double avgRDelta
+                double avgRDelta,
+                Double profitFactorDelta,
+                double maxDrawdownDelta
         ) {
             this.current = current;
             this.previous = previous;
@@ -492,6 +592,8 @@ public class AnalyticsService {
             this.avgPnlDelta = avgPnlDelta;
             this.totalRDelta = totalRDelta;
             this.avgRDelta = avgRDelta;
+            this.profitFactorDelta = profitFactorDelta;
+            this.maxDrawdownDelta = maxDrawdownDelta;
         }
 
         public TradeOverview getCurrent() {
@@ -524,6 +626,14 @@ public class AnalyticsService {
 
         public double getAvgRDelta() {
             return avgRDelta;
+        }
+
+        public Double getProfitFactorDelta() {
+            return profitFactorDelta;
+        }
+
+        public double getMaxDrawdownDelta() {
+            return maxDrawdownDelta;
         }
     }
 
@@ -576,6 +686,7 @@ public class AnalyticsService {
         private final double highQualityWinRate;
         private final double avgRFollowedPlan;
         private final int badProcessWins;
+        private final int ruleViolations;
         private final int gradeA;
         private final int gradeB;
         private final int gradeC;
@@ -592,6 +703,7 @@ public class AnalyticsService {
                 double highQualityWinRate,
                 double avgRFollowedPlan,
                 int badProcessWins,
+                int ruleViolations,
                 int gradeA,
                 int gradeB,
                 int gradeC,
@@ -607,6 +719,7 @@ public class AnalyticsService {
             this.highQualityWinRate = highQualityWinRate;
             this.avgRFollowedPlan = avgRFollowedPlan;
             this.badProcessWins = badProcessWins;
+            this.ruleViolations = ruleViolations;
             this.gradeA = gradeA;
             this.gradeB = gradeB;
             this.gradeC = gradeC;
@@ -639,6 +752,10 @@ public class AnalyticsService {
 
         public int getBadProcessWins() {
             return badProcessWins;
+        }
+
+        public int getRuleViolations() {
+            return ruleViolations;
         }
 
         public int getGradeA() {
@@ -776,10 +893,14 @@ public class AnalyticsService {
     public static class TrendPoint {
         private final String label;
         private final double value;
+        private final double rValue;
+        private final double drawdown;
 
-        public TrendPoint(String label, double value) {
+        public TrendPoint(String label, double value, double rValue, double drawdown) {
             this.label = label;
             this.value = value;
+            this.rValue = rValue;
+            this.drawdown = drawdown;
         }
 
         public String getLabel() {
@@ -788,6 +909,32 @@ public class AnalyticsService {
 
         public double getValue() {
             return value;
+        }
+
+        public double getRValue() {
+            return rValue;
+        }
+
+        public double getDrawdown() {
+            return drawdown;
+        }
+    }
+
+    public static class MistakeFrequencyRow {
+        private final String label;
+        private final int count;
+
+        public MistakeFrequencyRow(String label, int count) {
+            this.label = label;
+            this.count = count;
+        }
+
+        public String getLabel() {
+            return label;
+        }
+
+        public int getCount() {
+            return count;
         }
     }
 

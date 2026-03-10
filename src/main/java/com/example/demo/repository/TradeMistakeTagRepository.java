@@ -9,6 +9,8 @@ public interface TradeMistakeTagRepository extends JpaRepository<TradeMistakeTag
 
     List<TradeMistakeTag> findByTradeId(String tradeId);
 
+    List<TradeMistakeTag> findByTradeIdIn(List<String> tradeIds);
+
     void deleteByTradeId(String tradeId);
 
     void deleteByMistakeTagId(String mistakeTagId);

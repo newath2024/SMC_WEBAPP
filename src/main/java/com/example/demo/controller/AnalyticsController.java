@@ -15,7 +15,6 @@ import org.springframework.ui.Model;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RequestMapping;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -25,7 +24,6 @@ import java.util.List;
 import java.util.Locale;
 
 @Controller
-@RequestMapping("/analytics")
 public class AnalyticsController {
 
     private final AnalyticsService analyticsService;
@@ -38,7 +36,7 @@ public class AnalyticsController {
         this.userRepository = userRepository;
     }
 
-    @GetMapping
+    @GetMapping("/dashboard")
     public String overview(
             @RequestParam(value = "period", required = false, defaultValue = "ALL") String period,
             @RequestParam(value = "from", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
@@ -84,11 +82,13 @@ public class AnalyticsController {
         model.addAttribute("period", range.period());
         model.addAttribute("from", range.fromDate());
         model.addAttribute("to", range.toDate());
+        model.addAttribute("tradeUsage", Math.min(report.getOverview().getTotalTrades(), 100));
+        model.addAttribute("tradeUsageLimit", 100);
 
-        return "analytics";
+        return "dashboard";
     }
 
-    @GetMapping(value = "/export.csv", produces = "text/csv")
+    @GetMapping(value = "/dashboard/export.csv", produces = "text/csv")
     public ResponseEntity<byte[]> exportCsv(
             @RequestParam(value = "period", required = false, defaultValue = "ALL") String period,
             @RequestParam(value = "from", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
@@ -122,6 +122,18 @@ public class AnalyticsController {
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
                 .contentType(new MediaType("text", "csv"))
                 .body(csv.getBytes());
+    }
+
+    @GetMapping("/analytics")
+    public String analyticsPage(Model model, HttpSession session) {
+        User currentUser = userService.getCurrentUser(session);
+        if (currentUser == null) {
+            return "redirect:/login";
+        }
+        model.addAttribute("currentUser", currentUser);
+        model.addAttribute("tradeUsage", 0);
+        model.addAttribute("tradeUsageLimit", 100);
+        return "analytics";
     }
 
     private String normalizePeriod(String period) {

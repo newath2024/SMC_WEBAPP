@@ -1,0 +1,493 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" rel="stylesheet">
+  <link th:href="@{/css/sidebar-toggle.css}" href="/css/sidebar-toggle.css" rel="stylesheet">
+  <link th:href="@{/css/analytics-dashboard.css}" href="/css/analytics-dashboard.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+</head>
+<body class="dashboard-body">
+  <div class="dashboard-shell app-shell collapsible-shell expanded">
+    <aside th:replace="~{fragments/sidebar :: appSidebar('dashboard', @{/dashboard/export.csv(period=${period}, from=${from}, to=${to}, userId=${selectedUserId})})}"></aside>
+
+    <main class="dashboard-main main-content">
+      <header class="dashboard-header">
+        <div class="header-primary">
+          <div class="header-title-row">
+            <button id="sidebarToggle" class="sidebar-toggle" type="button" aria-label="Toggle navigation" aria-expanded="true">
+              <i class="bi bi-layout-sidebar-inset"></i>
+            </button>
+            <div>
+              <h1 class="page-title">Dashboard</h1>
+              <p class="page-subtitle">Track performance, process quality, and execution consistency.</p>
+            </div>
+          </div>
+
+          <div class="header-actions">
+            <a class="header-btn" th:href="@{/dashboard/export.csv(period=${period}, from=${from}, to=${to}, userId=${selectedUserId})}">
+              <i class="bi bi-download"></i>
+              <span>Export CSV</span>
+            </a>
+            <a class="header-icon-btn" href="#settings" aria-label="Settings">
+              <i class="bi bi-gear"></i>
+            </a>
+            <div class="header-avatar" th:text="${currentUser != null ? #strings.substring(currentUser.username, 0, 1).toUpperCase() : 'U'}">U</div>
+          </div>
+        </div>
+
+        <div class="header-secondary">
+          <div class="period-pills">
+            <a class="period-pill"
+               th:classappend="${period == 'ALL'} ? ' active' : ''"
+               th:href="@{/dashboard(period='ALL', userId=${selectedUserId})}">All</a>
+            <a class="period-pill"
+               th:classappend="${period == '7D'} ? ' active' : ''"
+               th:href="@{/dashboard(period='7D', userId=${selectedUserId})}">7D</a>
+            <a class="period-pill"
+               th:classappend="${period == '30D'} ? ' active' : ''"
+               th:href="@{/dashboard(period='30D', userId=${selectedUserId})}">30D</a>
+            <a class="period-pill"
+               th:classappend="${period == '90D'} ? ' active' : ''"
+               th:href="@{/dashboard(period='90D', userId=${selectedUserId})}">90D</a>
+            <button class="period-pill"
+                    id="customRangeToggle"
+                    type="button"
+                    th:classappend="${period == 'CUSTOM'} ? ' active' : ''">Custom Range</button>
+          </div>
+
+          <form class="custom-range-form"
+                id="customRangeForm"
+                th:action="@{/dashboard}"
+                method="get"
+                th:classappend="${period == 'CUSTOM'} ? ' is-visible' : ''">
+            <input type="hidden" name="period" value="CUSTOM">
+            <input type="hidden" name="userId" th:value="${selectedUserId}">
+            <input type="hidden" id="fromDate" name="from" th:value="${from}">
+            <input type="hidden" id="toDate" name="to" th:value="${to}">
+            <input id="dateRange" class="range-input" type="text" placeholder="Select date range">
+            <button class="apply-btn" type="submit">Apply</button>
+          </form>
+        </div>
+
+        <form class="admin-filter"
+              th:if="${adminView}"
+              th:action="@{/dashboard}"
+              method="get">
+          <input type="hidden" name="period" th:value="${period}">
+          <input type="hidden" name="from" th:value="${from}">
+          <input type="hidden" name="to" th:value="${to}">
+          <label for="userId" class="admin-filter-label">Account</label>
+          <select class="admin-filter-select" id="userId" name="userId" onchange="this.form.submit()">
+            <option th:value="${currentUser.id}" th:selected="${selectedUserId == currentUser.id}">My account</option>
+            <option th:each="user : ${managedUsers}"
+                    th:value="${user.id}"
+                    th:selected="${selectedUserId == user.id}"
+                    th:text="${user.username}">Trader</option>
+          </select>
+        </form>
+      </header>
+
+      <section class="upgrade-banner">
+        <div>
+          <div class="eyebrow">Unlock advanced analytics</div>
+          <h2>Session heatmap, strategy edge score, and AI trade review.</h2>
+          <p>Turn the journal into a product funnel without changing your existing trade workflow.</p>
+        </div>
+        <a class="upgrade-banner-btn" href="#billing">Upgrade to Pro</a>
+      </section>
+
+      <section class="kpi-grid">
+        <article class="metric-card">
+          <div class="metric-label">Net PnL</div>
+          <div class="metric-value"
+               th:classappend="${overview.totalPnl >= 0} ? ' is-positive' : ' is-negative'"
+               th:text="${overview.totalPnl >= 0 ? '+$' + #numbers.formatDecimal(overview.totalPnl, 1, 2) : '-$' + #numbers.formatDecimal(T(java.lang.Math).abs(overview.totalPnl), 1, 2)}">+$0.00</div>
+          <div class="metric-delta"
+               th:if="${comparison != null}"
+               th:classappend="${comparison.totalPnlDelta >= 0} ? ' is-positive' : ' is-negative'"
+               th:text="${comparison.totalPnlDelta >= 0 ? '▲ +' : '▼ -'} + '$' + #numbers.formatDecimal(T(java.lang.Math).abs(comparison.totalPnlDelta), 1, 2) + ' vs last period'">▲ +$0.00 vs last period</div>
+          <div class="metric-delta" th:if="${comparison == null}">All selected trades</div>
+        </article>
+
+        <article class="metric-card">
+          <div class="metric-label">Win Rate</div>
+          <div class="metric-value" th:text="${#numbers.formatDecimal(overview.winRate, 1, 1) + '%'}">0.0%</div>
+          <div class="metric-delta"
+               th:if="${comparison != null}"
+               th:classappend="${comparison.winRateDelta >= 0} ? ' is-positive' : ' is-negative'"
+               th:text="${comparison.winRateDelta >= 0 ? '▲ +' : '▼ -'} + #numbers.formatDecimal(T(java.lang.Math).abs(comparison.winRateDelta), 1, 1) + '% vs last period'">▲ +0.0% vs last period</div>
+          <div class="metric-delta" th:if="${comparison == null}" th:text="${overview.winTrades + ' wins out of ' + overview.totalTrades + ' trades'}">0 wins out of 0 trades</div>
+        </article>
+
+        <article class="metric-card">
+          <div class="metric-label">Profit Factor</div>
+          <div class="metric-value" th:text="${riskMetrics.profitFactor != null ? #numbers.formatDecimal(riskMetrics.profitFactor, 1, 2) : 'N/A'}">N/A</div>
+          <div class="metric-delta"
+               th:if="${comparison != null and comparison.profitFactorDelta != null}"
+               th:classappend="${comparison.profitFactorDelta >= 0} ? ' is-positive' : ' is-negative'"
+               th:text="${comparison.profitFactorDelta >= 0 ? '+' : '-'} + #numbers.formatDecimal(T(java.lang.Math).abs(comparison.profitFactorDelta), 1, 2) + ' vs last period'">+0.00 vs last period</div>
+          <div class="metric-delta"
+               th:if="${comparison == null or comparison.profitFactorDelta == null}"
+               th:text="${'Expectancy ' + #numbers.formatDecimal(riskMetrics.expectancy, 1, 2)}">Expectancy 0.00</div>
+        </article>
+
+        <article class="metric-card">
+          <div class="metric-label">Max Drawdown</div>
+          <div class="metric-value is-negative" th:text="${'-$' + #numbers.formatDecimal(riskMetrics.maxDrawdown, 1, 2)}">-$0.00</div>
+          <div class="metric-delta"
+               th:if="${comparison != null}"
+               th:classappend="${comparison.maxDrawdownDelta <= 0} ? ' is-positive' : ' is-negative'"
+               th:text="${comparison.maxDrawdownDelta <= 0 ? 'Improved vs last period' : 'Worse vs last period'}">Improved vs last period</div>
+          <div class="metric-delta" th:if="${comparison == null}">Peak-to-trough risk</div>
+        </article>
+      </section>
+
+      <section class="hero-card">
+        <div class="section-head">
+          <div>
+            <div class="section-title">Equity Curve</div>
+            <p class="section-copy">Full-width performance view across the selected trade range.</p>
+          </div>
+          <div class="chart-toggle-group">
+            <button class="chart-toggle is-active" type="button" data-equity-view="pnl">PnL</button>
+            <button class="chart-toggle" type="button" data-equity-view="r">R multiple</button>
+            <button class="chart-toggle chart-toggle-lock" type="button" data-equity-view="drawdown">
+              <span>Drawdown overlay</span>
+              <i class="bi bi-lock-fill"></i>
+            </button>
+          </div>
+        </div>
+        <div class="hero-chart-wrap">
+          <canvas id="equityCurveChart"></canvas>
+          <div class="chart-empty" id="equityCurveEmpty">Add at least 2 trades to render the equity curve.</div>
+        </div>
+      </section>
+
+      <section class="analytics-grid">
+        <article class="dashboard-card">
+          <div class="section-head">
+            <div>
+              <div class="section-title">Setup Performance</div>
+              <p class="section-copy">Compare your best and worst setups by the metric that matters now.</p>
+            </div>
+            <div class="chart-toggle-group compact">
+              <button class="chart-toggle is-active" type="button" data-setup-metric="pnl">PnL</button>
+              <button class="chart-toggle" type="button" data-setup-metric="winRate">Win rate</button>
+              <button class="chart-toggle" type="button" data-setup-metric="avgR">Avg R</button>
+            </div>
+          </div>
+          <div class="chart-block">
+            <canvas id="setupPerformanceChart"></canvas>
+            <div class="chart-empty" id="setupPerformanceEmpty">No setup data yet.</div>
+          </div>
+        </article>
+
+        <article class="dashboard-card">
+          <div class="section-head">
+            <div>
+              <div class="section-title">Result Breakdown</div>
+              <p class="section-copy">Distribution of wins, losses, and breakeven trades.</p>
+            </div>
+          </div>
+          <div class="result-breakdown">
+            <div class="donut-wrap">
+              <canvas id="resultBreakdownChart"></canvas>
+            </div>
+            <div class="result-legend">
+              <div class="legend-row">
+                <span class="legend-dot win"></span>
+                <span>Win</span>
+                <strong th:text="${overview.totalTrades > 0 ? #numbers.formatDecimal((overview.winTrades * 100.0) / overview.totalTrades, 1, 0) + '%' : '0%'}">0%</strong>
+              </div>
+              <div class="legend-row">
+                <span class="legend-dot loss"></span>
+                <span>Loss</span>
+                <strong th:text="${overview.totalTrades > 0 ? #numbers.formatDecimal((overview.lossTrades * 100.0) / overview.totalTrades, 1, 0) + '%' : '0%'}">0%</strong>
+              </div>
+              <div class="legend-row">
+                <span class="legend-dot be"></span>
+                <span>BE</span>
+                <strong th:text="${overview.totalTrades > 0 ? #numbers.formatDecimal((overview.beTrades * 100.0) / overview.totalTrades, 1, 0) + '%' : '0%'}">0%</strong>
+              </div>
+            </div>
+          </div>
+          <div class="stat-pair-row">
+            <div class="mini-stat">
+              <span class="mini-stat-label">Expectancy</span>
+              <strong th:text="${#numbers.formatDecimal(riskMetrics.expectancy, 1, 2) + 'R'}">0.00R</strong>
+            </div>
+            <div class="mini-stat">
+              <span class="mini-stat-label">Avg R</span>
+              <strong th:text="${#numbers.formatDecimal(overview.avgR, 1, 2)}">0.00</strong>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <section class="dashboard-card process-card">
+        <div class="section-head">
+          <div>
+            <div class="section-title">Process Quality</div>
+            <p class="section-copy">The operational layer traders actually care about.</p>
+          </div>
+        </div>
+
+        <div class="process-metrics">
+          <div class="process-metric">
+            <span class="process-metric-label">Reviewed Trades</span>
+            <strong th:text="${#numbers.formatDecimal(processMetrics.reviewedRate, 1, 0) + '%'}">0%</strong>
+          </div>
+          <div class="process-metric">
+            <span class="process-metric-label">Bad Wins</span>
+            <strong th:text="${processMetrics.badProcessWins}">0</strong>
+          </div>
+          <div class="process-metric">
+            <span class="process-metric-label">Rule Violations</span>
+            <strong th:text="${processMetrics.ruleViolations}">0</strong>
+          </div>
+          <div class="process-metric">
+            <span class="process-metric-label">HQ Trades</span>
+            <strong th:text="${processMetrics.highQualityTrades}">0</strong>
+          </div>
+        </div>
+
+        <div class="mistake-panel">
+          <div class="mistake-panel-head">
+            <div class="section-title small">Mistake Frequency</div>
+            <div class="section-copy" th:if="${#lists.isEmpty(report.mistakeFrequency)}">No linked mistake data yet.</div>
+          </div>
+          <div class="chart-block compact">
+            <canvas id="mistakeFrequencyChart"></canvas>
+            <div class="chart-empty" id="mistakeFrequencyEmpty">Log mistake tags or review flags to see process leaks.</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="premium-grid">
+        <article class="locked-card">
+          <div class="locked-title">Session Heatmap <i class="bi bi-lock-fill"></i></div>
+          <p>Upgrade to Pro to unlock time-of-day edge visibility.</p>
+        </article>
+        <article class="locked-card">
+          <div class="locked-title">Weekday Performance <i class="bi bi-lock-fill"></i></div>
+          <p>Upgrade to Pro for daily edge scoring and weekly trend analysis.</p>
+        </article>
+        <article class="locked-card">
+          <div class="locked-title">AI Weekly Coach <i class="bi bi-lock-fill"></i></div>
+          <p>Upgrade to Pro for automated review summaries and coaching prompts.</p>
+        </article>
+      </section>
+
+      <section class="dashboard-card detail-card" id="detailTabs">
+        <div class="section-head">
+          <div>
+            <div class="section-title">Detail Tables</div>
+            <p class="section-copy">Drill into setups, sessions, symbols, and bad wins.</p>
+          </div>
+        </div>
+
+        <div class="table-tabs">
+          <button class="table-tab is-active" type="button" data-table-tab="setup">By Setup</button>
+          <button class="table-tab" type="button" data-table-tab="session">By Session</button>
+          <button class="table-tab" type="button" data-table-tab="symbol">By Symbol</button>
+          <button class="table-tab" type="button" data-table-tab="badwins">Bad Wins</button>
+        </div>
+
+        <div class="table-panel is-active" data-table-panel="setup">
+          <div class="table-responsive">
+            <table class="dashboard-table">
+              <thead>
+                <tr>
+                  <th>Setup</th>
+                  <th>Trades</th>
+                  <th>WinRate</th>
+                  <th>TotalPnL</th>
+                  <th>AvgPnL</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr th:each="row : ${report.bySetup}">
+                  <td th:text="${row.label}">Setup</td>
+                  <td th:text="${row.totalTrades}">0</td>
+                  <td th:text="${#numbers.formatDecimal(row.winRate, 1, 0) + '%'}">0%</td>
+                  <td th:classappend="${row.totalPnl >= 0} ? ' value-positive' : ' value-negative'"
+                      th:text="${row.totalPnl >= 0 ? '+$' + #numbers.formatDecimal(row.totalPnl, 1, 2) : '-$' + #numbers.formatDecimal(T(java.lang.Math).abs(row.totalPnl), 1, 2)}">+$0.00</td>
+                  <td th:classappend="${row.avgPnl >= 0} ? ' value-positive' : ' value-negative'"
+                      th:text="${row.avgPnl >= 0 ? '+$' + #numbers.formatDecimal(row.avgPnl, 1, 2) : '-$' + #numbers.formatDecimal(T(java.lang.Math).abs(row.avgPnl), 1, 2)}">+$0.00</td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(report.bySetup)}">
+                  <td colspan="5" class="empty-cell">No setup rows available.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="table-panel" data-table-panel="session">
+          <div class="table-responsive">
+            <table class="dashboard-table">
+              <thead>
+                <tr>
+                  <th>Session</th>
+                  <th>Trades</th>
+                  <th>WinRate</th>
+                  <th>TotalPnL</th>
+                  <th>Avg R</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr th:each="row : ${report.bySession}">
+                  <td th:text="${row.label}">Session</td>
+                  <td th:text="${row.totalTrades}">0</td>
+                  <td th:text="${#numbers.formatDecimal(row.winRate, 1, 0) + '%'}">0%</td>
+                  <td th:classappend="${row.totalPnl >= 0} ? ' value-positive' : ' value-negative'"
+                      th:text="${row.totalPnl >= 0 ? '+$' + #numbers.formatDecimal(row.totalPnl, 1, 2) : '-$' + #numbers.formatDecimal(T(java.lang.Math).abs(row.totalPnl), 1, 2)}">+$0.00</td>
+                  <td th:text="${#numbers.formatDecimal(row.avgR, 1, 2)}">0.00</td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(report.bySession)}">
+                  <td colspan="5" class="empty-cell">No session rows available.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="table-panel" data-table-panel="symbol">
+          <div class="table-responsive">
+            <table class="dashboard-table">
+              <thead>
+                <tr>
+                  <th>Symbol</th>
+                  <th>Trades</th>
+                  <th>WinRate</th>
+                  <th>TotalPnL</th>
+                  <th>Avg R</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr th:each="row : ${report.bySymbol}">
+                  <td th:text="${row.label}">Symbol</td>
+                  <td th:text="${row.totalTrades}">0</td>
+                  <td th:text="${#numbers.formatDecimal(row.winRate, 1, 0) + '%'}">0%</td>
+                  <td th:classappend="${row.totalPnl >= 0} ? ' value-positive' : ' value-negative'"
+                      th:text="${row.totalPnl >= 0 ? '+$' + #numbers.formatDecimal(row.totalPnl, 1, 2) : '-$' + #numbers.formatDecimal(T(java.lang.Math).abs(row.totalPnl), 1, 2)}">+$0.00</td>
+                  <td th:text="${#numbers.formatDecimal(row.avgR, 1, 2)}">0.00</td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(report.bySymbol)}">
+                  <td colspan="5" class="empty-cell">No symbol rows available.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="table-panel" data-table-panel="badwins">
+          <div class="table-responsive">
+            <table class="dashboard-table">
+              <thead>
+                <tr>
+                  <th>Trade</th>
+                  <th>Symbol</th>
+                  <th>PnL</th>
+                  <th>Quality Score</th>
+                  <th>Entry</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr th:each="row : ${processMetrics.badProcessWinTrades}">
+                  <td>
+                    <a th:href="@{/trades/{id}(id=${row.tradeId})}" th:text="${row.tradeId}">trade-id</a>
+                  </td>
+                  <td th:text="${row.symbol}">XAUUSD</td>
+                  <td class="value-positive" th:text="${'+$' + #numbers.formatDecimal(row.pnl, 1, 2)}">+$0.00</td>
+                  <td th:text="${row.qualityScore}">0</td>
+                  <td th:text="${row.entryTime != null ? #temporals.format(row.entryTime, 'yyyy-MM-dd HH:mm') : '-'}">-</td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(processMetrics.badProcessWinTrades)}">
+                  <td colspan="5" class="empty-cell">No bad wins for this range.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section class="pricing-grid" id="billing">
+        <article class="pricing-card">
+          <div class="pricing-tier">Free</div>
+          <div class="pricing-price">$0</div>
+          <ul class="pricing-list">
+            <li>100 trades</li>
+            <li>Basic analytics</li>
+            <li>CSV export</li>
+            <li>1 account</li>
+          </ul>
+          <a class="pricing-btn secondary" th:href="@{/trades}">Start Free</a>
+        </article>
+        <article class="pricing-card featured">
+          <div class="pricing-badge">Recommended</div>
+          <div class="pricing-tier">Pro</div>
+          <div class="pricing-price">$7<span>/ month</span></div>
+          <ul class="pricing-list">
+            <li>Unlimited trades</li>
+            <li>Advanced analytics</li>
+            <li>Setup insights</li>
+            <li>Session analysis</li>
+            <li>Process scoring</li>
+            <li>AI weekly summary</li>
+          </ul>
+          <a class="pricing-btn" href="#settings">Upgrade</a>
+        </article>
+      </section>
+
+      <section class="dashboard-card settings-card" id="settings">
+        <div class="section-title">Conversion Hooks</div>
+        <div class="settings-list">
+          <div>Strategy edge score</div>
+          <div>Risk consistency score</div>
+          <div>Session performance</div>
+          <div>Mistake trend</div>
+          <div>AI trade review</div>
+          <div>Weekly report</div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script th:inline="javascript">
+    window.analyticsDashboardData = {
+      period: /*[[${period}]]*/ "ALL",
+      currentFrom: /*[[${from != null ? from.toString() : null}]]*/ null,
+      currentTo: /*[[${to != null ? to.toString() : null}]]*/ null,
+      tradesBaseUrl: /*[[@{/trades(view='table')}]]*/ "/trades?view=table",
+      equityLabels: /*[[${report.equityCurve.![label]}]]*/ [],
+      equityPnlValues: /*[[${report.equityCurve.![value]}]]*/ [],
+      equityRValues: /*[[${report.equityCurve.![rValue]}]]*/ [],
+      equityDrawdownValues: /*[[${report.equityCurve.![drawdown]}]]*/ [],
+      setupLabels: /*[[${report.bySetup.![label]}]]*/ [],
+      setupPnlValues: /*[[${report.bySetup.![totalPnl]}]]*/ [],
+      setupWinRateValues: /*[[${report.bySetup.![winRate]}]]*/ [],
+      setupAvgRValues: /*[[${report.bySetup.![avgR]}]]*/ [],
+      resultValues: [
+        /*[[${overview.winTrades}]]*/ 0,
+        /*[[${overview.lossTrades}]]*/ 0,
+        /*[[${overview.beTrades}]]*/ 0
+      ],
+      mistakeLabels: /*[[${report.mistakeFrequency.![label]}]]*/ [],
+      mistakeCounts: /*[[${report.mistakeFrequency.![count]}]]*/ []
+    };
+  </script>
+  <script th:src="@{/js/analytics-dashboard.js}" src="/js/analytics-dashboard.js"></script>
+  <script th:src="@{/js/sidebar-toggle.js}" src="/js/sidebar-toggle.js"></script>
+</body>
+</html>
+
