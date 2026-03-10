@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
-<title>Create Setup</title>
+<title th:text="${editMode} ? 'Edit Trading Setup' : 'Create Setup'">Create Setup</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -11,6 +11,7 @@ href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
   <link th:href="@{/css/sidebar-toggle.css}" href="/css/sidebar-toggle.css" rel="stylesheet">
   <link th:href="@{/css/analytics-dashboard.css}" href="/css/analytics-dashboard.css" rel="stylesheet">
   <link th:href="@{/css/app-page.css}" href="/css/app-page.css" rel="stylesheet">
+  <link th:href="@{/css/setup-form.css}" href="/css/setup-form.css" rel="stylesheet">
 
 </head>
 
@@ -21,43 +22,60 @@ href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
 
     
     <main class="main-content">
+      <div class="setup-form-shell">
+        <nav class="setup-breadcrumb" aria-label="breadcrumb">
+          <a th:href="@{/setups}">Setups</a>
+          <span class="setup-breadcrumb-sep">/</span>
+          <span th:text="${editMode} ? 'Edit Setup' : 'Create Setup'">Edit Setup</span>
+        </nav>
 
-    <div class="d-flex align-items-center gap-2 mb-3">
-      <button id="sidebarToggle" class="sidebar-toggle" type="button" aria-label="Toggle navigation">
-        <i class="bi bi-layout-sidebar-inset"></i>
-      </button>
-    </div>
+        <header class="setup-form-header">
+          <h2 th:text="${editMode} ? 'Edit Trading Setup' : 'Create Trading Setup'">Edit Trading Setup</h2>
+          <p th:text="${editMode} ? 'Update your strategy details and description.' : 'Create a setup template for your future trades.'">
+            Update your strategy details and description.
+          </p>
+        </header>
 
-<h2>Create Setup</h2>
+        <section class="setup-form-card">
+          <div class="alert alert-danger" th:if="${error != null}" th:text="${error}"></div>
 
-<form th:action="@{/setups}" th:object="${setup}" method="post">
+          <form th:action="${editMode} ? '/setups/' + setup.id + '/edit' : '/setups'" th:object="${setup}" method="post">
+            <div class="setup-form-group">
+              <label class="form-label setup-form-label">Setup Name</label>
+              <input type="text"
+                     class="form-control"
+                     th:field="*{name}"
+                     required>
+            </div>
 
-<div class="mb-3">
-<label class="form-label">Setup Name</label>
-<input type="text"
-       class="form-control"
-       th:field="*{name}"
-       required>
-</div>
+            <div class="setup-form-group">
+              <label class="form-label setup-form-label">Description</label>
+              <textarea class="form-control"
+                        th:field="*{description}"
+                        rows="5"></textarea>
+            </div>
 
-<div class="mb-3">
-<label class="form-label">Description</label>
-<textarea class="form-control"
-          th:field="*{description}"
-          rows="3">
-</textarea>
-</div>
+            <div class="setup-form-group" th:if="${editMode}">
+              <label class="form-label setup-form-label">Status</label>
+              <div class="setup-status-options">
+                <label class="setup-status-option">
+                  <input type="radio" name="active" value="true" th:checked="${setup.active}">
+                  <span>Active</span>
+                </label>
+                <label class="setup-status-option">
+                  <input type="radio" name="active" value="false" th:checked="${!setup.active}">
+                  <span>Archived</span>
+                </label>
+              </div>
+            </div>
 
-<button class="btn btn-primary">
-Save Setup
-</button>
-
-<a class="btn btn-secondary"
-   th:href="@{/setups}">
-Cancel
-</a>
-
-</form>
+            <div class="setup-form-actions">
+              <button class="btn btn-primary" type="submit" th:text="${editMode} ? 'Save Changes' : 'Save Setup'">Save Changes</button>
+              <a class="btn btn-outline-secondary" th:href="@{/setups}">Cancel</a>
+            </div>
+          </form>
+        </section>
+      </div>
     </main>
   </div>
 </div>
@@ -66,6 +84,8 @@ Cancel
 
 </body>
 </html>
+
+
 
 
 

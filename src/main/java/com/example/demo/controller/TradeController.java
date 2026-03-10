@@ -22,6 +22,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
+import java.util.Objects;
 
 @Controller
 @RequestMapping("/trades")
@@ -56,6 +57,45 @@ public class TradeController {
         model.addAttribute("mistakeTags", mistakeTagService.findActive());
     }
 
+    private void fillTradeListData(
+            Model model,
+            User currentUser,
+            List<Trade> trades,
+            boolean filteredView,
+            boolean tableOnlyView,
+            boolean adminView,
+            String setup,
+            String sessionFilter,
+            String symbol,
+            LocalDate from,
+            LocalDate to
+    ) {
+        long winCount = trades.stream()
+                .map(Trade::getResult)
+                .filter(Objects::nonNull)
+                .filter("WIN"::equalsIgnoreCase)
+                .count();
+        double winRate = trades.isEmpty() ? 0.0 : (winCount * 100.0) / trades.size();
+        double totalPnl = trades.stream().mapToDouble(Trade::getPnl).sum();
+        double averageR = trades.isEmpty() ? 0.0 : trades.stream().mapToDouble(Trade::getRMultiple).average().orElse(0.0);
+
+        model.addAttribute("trades", trades);
+        model.addAttribute("filteredView", filteredView);
+        model.addAttribute("tableOnlyView", tableOnlyView);
+        model.addAttribute("adminView", adminView);
+        model.addAttribute("selectedSetup", setup);
+        model.addAttribute("selectedSession", sessionFilter);
+        model.addAttribute("selectedSymbol", symbol);
+        model.addAttribute("selectedFrom", from);
+        model.addAttribute("selectedTo", to);
+        model.addAttribute("tradeCount", trades.size());
+        model.addAttribute("winCount", winCount);
+        model.addAttribute("winRate", winRate);
+        model.addAttribute("totalPnl", totalPnl);
+        model.addAttribute("averageR", averageR);
+        fillTradeFormData(model, currentUser);
+    }
+
     @GetMapping
     public String list(
             @RequestParam(value = "view", required = false) String view,
@@ -86,19 +126,25 @@ public class TradeController {
         boolean filteredView = tableOnlyView || hasActiveFilter(setup, sessionFilter, symbol, from, to);
         boolean adminView = userService.isAdmin(currentUser);
 
-        model.addAttribute("trades", trades);
-        model.addAttribute("trade", new Trade());
-        model.addAttribute("filteredView", filteredView);
-        model.addAttribute("tableOnlyView", tableOnlyView);
-        model.addAttribute("adminView", adminView);
-        model.addAttribute("selectedSetup", setup);
-        model.addAttribute("selectedSession", sessionFilter);
-        model.addAttribute("selectedSymbol", symbol);
-        model.addAttribute("selectedFrom", from);
-        model.addAttribute("selectedTo", to);
-        fillTradeFormData(model, currentUser);
+        fillTradeListData(model, currentUser, trades, filteredView, tableOnlyView, adminView, setup, sessionFilter, symbol, from, to);
 
         return "trades";
+    }
+
+    @GetMapping("/new")
+    public String createForm(Model model, HttpSession session) {
+        User currentUser = userService.getCurrentUser(session);
+        if (currentUser == null) {
+            return "redirect:/login";
+        }
+        if (userService.isAdmin(currentUser)) {
+            return "redirect:/trades";
+        }
+
+        model.addAttribute("trade", new Trade());
+        model.addAttribute("editMode", false);
+        fillTradeFormData(model, currentUser);
+        return "tradeForm";
     }
 
     @PostMapping
@@ -123,23 +169,21 @@ public class TradeController {
         }
 
         if (bindingResult.hasErrors()) {
-            model.addAttribute("trades", tradeService.findAllByUser(currentUser.getId()));
-            model.addAttribute("adminView", false);
+            model.addAttribute("editMode", false);
             fillTradeFormData(model, currentUser);
             model.addAttribute("trade", trade);
-            return "trades";
+            return "tradeForm";
         }
 
         try {
             tradeService.saveForUser(trade, currentUser, mistakeIds, customMistakes);
             return "redirect:/trades";
         } catch (RuntimeException ex) {
-            model.addAttribute("trades", tradeService.findAllByUser(currentUser.getId()));
-            model.addAttribute("adminView", false);
+            model.addAttribute("editMode", false);
             fillTradeFormData(model, currentUser);
             model.addAttribute("trade", trade);
             model.addAttribute("error", friendlyErrorMessage(ex));
-            return "trades";
+            return "tradeForm";
         }
     }
 
@@ -233,6 +277,7 @@ public class TradeController {
         }
 
         if (bindingResult.hasErrors()) {
+            trade.setId(id);
             model.addAttribute("trade", trade);
             model.addAttribute("editMode", true);
             model.addAttribute("tradeImages", tradeImageService.findByTradeId(id));
@@ -248,6 +293,7 @@ public class TradeController {
             }
             return "redirect:/trades/" + id;
         } catch (RuntimeException ex) {
+            trade.setId(id);
             model.addAttribute("trade", trade);
             model.addAttribute("editMode", true);
             model.addAttribute("tradeImages", tradeImageService.findByTradeId(id));

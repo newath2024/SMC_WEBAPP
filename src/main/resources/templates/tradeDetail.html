@@ -468,13 +468,7 @@
     <aside th:replace="~{fragments/sidebar :: appSidebar('trades', @{/dashboard/export.csv(period='ALL')})}"></aside>
 
     <main class="main-content trade-detail-page">
-      <div class="d-flex align-items-center gap-2 mb-3">
-        <button id="sidebarToggle" class="sidebar-toggle" type="button" aria-label="Toggle navigation">
-          <i class="bi bi-layout-sidebar-inset"></i>
-        </button>
-      </div>
-
-      <section class="trade-panel trade-hero mb-4">
+<section class="trade-panel trade-hero mb-4">
         <div class="d-flex flex-column flex-lg-row justify-content-between gap-3">
           <div>
             <div class="trade-kicker mb-2">Trading Journal Entry</div>
@@ -926,4 +920,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
 </body>
 </html>
+
+
 

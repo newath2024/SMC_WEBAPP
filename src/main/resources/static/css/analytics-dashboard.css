@@ -32,11 +32,11 @@ body.dashboard-body {
 }
 
 .dashboard-shell.collapsible-shell {
-  --sidebar-width: 76px;
+  --sidebar-width: 72px;
 }
 
 .dashboard-shell.collapsible-shell.expanded {
-  --sidebar-width: 240px;
+  --sidebar-width: 260px;
 }
 
 .app-sidebar {
@@ -58,13 +58,32 @@ body.dashboard-body {
 .sidebar-panel .card-body {
   min-height: calc(100vh - 40px);
   padding: 22px 18px;
+  transition: padding 0.3s ease;
 }
 
 .sidebar-brand {
   display: flex;
-  gap: 12px;
+  gap: 0;
   align-items: center;
   margin-bottom: 28px;
+  text-decoration: none;
+  color: inherit;
+}
+
+.sidebar-brand-logo-mark {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  flex: 0 0 42px;
+  box-shadow: 0 12px 22px rgba(59, 130, 246, 0.3);
+}
+
+.sidebar-brand-logo-full {
+  height: 32px;
+  width: auto;
+  max-width: 170px;
+  object-fit: contain;
+  display: block;
 }
 
 .sidebar-brand-mark,
@@ -96,28 +115,17 @@ body.dashboard-body {
   margin-top: 18px;
 }
 
-.app-shell.collapsible-shell:not(.expanded) .sidebar-brand-copy,
-.app-shell.collapsible-shell:not(.expanded) .sidebar-plan,
-.app-shell.collapsible-shell:not(.expanded) .sidebar-user-copy,
-.app-shell.collapsible-shell:not(.expanded) .sidebar-logout-btn span {
+.sidebar .sidebar-brand-copy,
+.sidebar .sidebar-plan,
+.sidebar .sidebar-user-copy,
+.sidebar .sidebar-logout-btn span {
+  transition: opacity 0.2s ease;
+}
+
+.sidebar.collapsed .sidebar-plan,
+.sidebar.collapsed .sidebar-user-copy,
+.sidebar.collapsed .sidebar-logout-btn span {
   display: none;
-}
-
-.app-shell.collapsible-shell:not(.expanded) .sidebar-panel {
-  padding-left: 0;
-  padding-right: 0;
-}
-
-.app-shell.collapsible-shell:not(.expanded) .sidebar-panel .card-body {
-  padding-left: 12px;
-  padding-right: 12px;
-}
-
-.app-shell.collapsible-shell:not(.expanded) .sidebar-brand,
-.app-shell.collapsible-shell:not(.expanded) .sidebar-user,
-.app-shell.collapsible-shell:not(.expanded) .sidebar-link,
-.app-shell.collapsible-shell:not(.expanded) .sidebar-logout-btn {
-  justify-content: center;
 }
 
 .sidebar-group-title {

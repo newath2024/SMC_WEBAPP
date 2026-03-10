@@ -11,6 +11,8 @@ href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
   <link th:href="@{/css/sidebar-toggle.css}" href="/css/sidebar-toggle.css" rel="stylesheet">
   <link th:href="@{/css/analytics-dashboard.css}" href="/css/analytics-dashboard.css" rel="stylesheet">
   <link th:href="@{/css/app-page.css}" href="/css/app-page.css" rel="stylesheet">
+  <link th:href="@{/css/setups-page.css}" href="/css/setups-page.css" rel="stylesheet">
+  <link th:href="@{/css/setup-form.css}" href="/css/setup-form.css" rel="stylesheet">
 </head>
 
 <body class="dashboard-body app-page-body">
@@ -18,50 +20,264 @@ href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
   <div class="app-shell collapsible-shell expanded">
     <aside th:replace="~{fragments/sidebar :: appSidebar('setups', @{/dashboard/export.csv(period='ALL')})}"></aside>
 
-    
     <main class="main-content">
+      <section class="setups-header">
+        <div>
+          <p class="setups-eyebrow mb-2">SETUP LIBRARY</p>
+          <h2 class="m-0" th:text="${adminView} ? 'All Trading Setups' : 'My Trading Setups'">My Trading Setups</h2>
+          <p class="setups-subtext mb-0">Organize strategies and track their performance.</p>
+        </div>
+        <a class="btn btn-primary setups-create-btn" th:href="@{/setups/new}">
+          <i class="bi bi-plus-lg"></i>
+          <span>Create Setup</span>
+        </a>
+      </section>
 
-    <div class="d-flex align-items-center gap-2 mb-3">
-      <button id="sidebarToggle" class="sidebar-toggle" type="button" aria-label="Toggle navigation">
-        <i class="bi bi-layout-sidebar-inset"></i>
-      </button>
-    </div>
-      <h2 th:text="${adminView} ? 'All Trading Setups' : 'My Trading Setups'">My Trading Setups</h2>
+      <section class="setups-toolbar">
+        <div class="setups-search-wrap">
+          <i class="bi bi-search"></i>
+          <input id="setupSearch"
+                 type="search"
+                 class="form-control"
+                 placeholder="Search setups by name or description">
+        </div>
+      </section>
 
-      <a class="btn btn-primary mb-3"
-         th:href="@{/setups/new}">
-         + New Setup
-      </a>
+      <section class="setups-grid" id="setupsGrid" th:if="${!#lists.isEmpty(setups)}">
+        <article class="setup-card"
+                 th:each="s : ${setups}"
+                 th:with="stats=${setupStats[s.id]}"
+                 th:attr="data-search=${(s.name != null ? s.name : '') + ' ' + (s.description != null ? s.description : '') + ' ' + ((adminView and s.user != null and s.user.username != null) ? s.user.username : '')},data-href=@{/trades(setup=${s.name}, view='table')}">
+          <div class="setup-card-top">
+            <h3 class="setup-card-title">
+              <i class="bi bi-graph-up-arrow setup-title-icon"></i>
+              <span th:text="${s.name}">Setup Name</span>
+            </h3>
+            <div class="setup-card-tags">
+              <span class="setup-status-badge"
+                    th:classappend="${s.active} ? ' is-active' : ' is-archived'"
+                    th:text="${s.active} ? 'Active' : 'Archived'">Active</span>
+              <span class="setup-owner-badge"
+                    th:if="${adminView}"
+                    th:text="${s.user != null ? s.user.username : 'Unknown'}">owner</span>
+            </div>
+          </div>
 
-      <table class="table table-bordered bg-white">
+          <p class="setup-card-desc"
+             th:text="${#strings.isEmpty(s.description) ? 'No description provided yet.' : s.description}">
+            Description
+          </p>
 
-      <thead>
-      <tr>
-      <th>Name</th>
-      <th>Description</th>
-      <th th:if="${adminView}">Owner</th>
-      </tr>
-      </thead>
+          <div class="setup-metrics">
+            <div class="setup-metric">
+              <div class="setup-metric-label">Trades</div>
+              <div class="setup-metric-value" th:text="${stats != null ? stats.tradeCount : 0}">0</div>
+            </div>
+            <div class="setup-metric">
+              <div class="setup-metric-label">Win Rate</div>
+              <div class="setup-metric-value"
+                   th:text="${(stats != null ? #numbers.formatDecimal(stats.winRate, 1, 1) : '0.0') + '%'}">0.0%</div>
+            </div>
+            <div class="setup-metric">
+              <div class="setup-metric-label">Avg R</div>
+              <div class="setup-metric-value"
+                   th:text="${stats != null ? #numbers.formatDecimal(stats.averageR, 1, 2) : '0.00'}">0.00</div>
+            </div>
+          </div>
 
-      <tbody>
+          <div class="setup-performance">
+            <div class="setup-performance-label">PnL</div>
+            <div class="setup-performance-value"
+                 th:classappend="${stats != null and stats.totalPnl < 0} ? ' is-negative' : ''"
+                 th:text="${(stats != null and stats.totalPnl > 0 ? '+' : '') + '$' + (stats != null ? #numbers.formatDecimal(stats.totalPnl, 1, 2) : '0.00')}">+$0.00</div>
+          </div>
 
-      <tr th:each="s : ${setups}">
-      <td th:text="${s.name}"></td>
-      <td th:text="${s.description}"></td>
-      <td th:if="${adminView}" th:text="${s.user != null ? s.user.username : '-'}"></td>
-      </tr>
+          <div class="setup-actions">
+            <a class="btn btn-outline-primary btn-sm"
+               th:href="@{/trades(setup=${s.name}, view='table')}">View Trades</a>
+            <button class="btn btn-outline-secondary btn-sm setup-edit-trigger"
+                    type="button"
+                    th:attr="data-setup-id=${s.id},data-setup-name=${s.name},data-setup-description=${s.description != null ? s.description : ''},data-setup-active=${s.active}">
+              Edit Setup
+            </button>
+            <details class="setup-more-menu">
+              <summary class="setup-more-trigger" aria-label="More actions">
+                <i class="bi bi-three-dots-vertical"></i>
+              </summary>
+              <div class="setup-more-popover">
+                <form th:action="@{/setups/{id}/toggle-active(id=${s.id})}" method="post">
+                  <input type="hidden" name="active" th:value="${s.active ? 'false' : 'true'}">
+                  <button class="btn btn-sm w-100"
+                          th:classappend="${s.active} ? ' btn-outline-danger' : ' btn-outline-secondary'"
+                          type="submit"
+                          th:text="${s.active} ? 'Archive Setup' : 'Restore Setup'">
+                    Archive Setup
+                  </button>
+                </form>
+              </div>
+            </details>
+          </div>
+        </article>
 
-      </tbody>
-      </table>
+        <a class="setup-card setup-card-create" th:href="@{/setups/new}">
+          <div class="setup-card-create-icon"><i class="bi bi-plus-lg"></i></div>
+          <h3 class="setup-card-title">Create new setup</h3>
+          <p class="setup-card-desc mb-0">Add a new strategy template and start tracking its edge.</p>
+        </a>
+      </section>
+
+      <section id="setupEmptyState" class="setups-empty-state" th:if="${#lists.isEmpty(setups)}">
+        No setups yet. Create your first setup to start tracking performance.
+      </section>
+
+      <div id="setupEditModal" class="setup-modal" aria-hidden="true">
+        <div class="setup-modal-backdrop" data-modal-close="true"></div>
+        <div class="setup-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="setupEditModalTitle">
+          <div class="setup-modal-header">
+            <div>
+              <h3 id="setupEditModalTitle">Edit Trading Setup</h3>
+              <p>Update your strategy details and description.</p>
+            </div>
+            <button class="setup-modal-close" type="button" data-modal-close="true" aria-label="Close">
+              <i class="bi bi-x-lg"></i>
+            </button>
+          </div>
+
+          <form id="setupInlineEditForm" method="post">
+            <div class="setup-form-group">
+              <label class="form-label setup-form-label" for="inlineSetupName">Setup Name</label>
+              <input id="inlineSetupName" class="form-control" type="text" name="name" required>
+            </div>
+
+            <div class="setup-form-group">
+              <label class="form-label setup-form-label" for="inlineSetupDescription">Description</label>
+              <textarea id="inlineSetupDescription" class="form-control" name="description" rows="5"></textarea>
+            </div>
+
+            <div class="setup-form-group">
+              <label class="form-label setup-form-label">Status</label>
+              <div class="setup-status-options">
+                <label class="setup-status-option">
+                  <input type="radio" name="active" value="true">
+                  <span>Active</span>
+                </label>
+                <label class="setup-status-option">
+                  <input type="radio" name="active" value="false">
+                  <span>Archived</span>
+                </label>
+              </div>
+            </div>
+
+            <div class="setup-form-actions">
+              <button class="btn btn-primary" type="submit">Save Changes</button>
+              <button class="btn btn-outline-secondary" type="button" data-modal-close="true">Cancel</button>
+            </div>
+          </form>
+        </div>
+      </div>
     </main>
   </div>
 </div>
 
   <script th:src="@{/js/sidebar-toggle.js}" src="/js/sidebar-toggle.js"></script>
+  <script>
+    (function () {
+      const input = document.getElementById("setupSearch");
+      const grid = document.getElementById("setupsGrid");
+      if (!input || !grid) return;
+
+      const cards = Array.from(grid.querySelectorAll(".setup-card"));
+      const dynamicEmpty = document.createElement("div");
+      dynamicEmpty.className = "setups-empty-state";
+      dynamicEmpty.textContent = "No setups match your search.";
+      dynamicEmpty.style.display = "none";
+      grid.insertAdjacentElement("afterend", dynamicEmpty);
+
+      function applySearchFilter() {
+        const keyword = input.value.trim().toLowerCase();
+        let visibleCount = 0;
+
+        cards.forEach(function (card) {
+          const haystack = (card.dataset.search || "").toLowerCase();
+          const visible = !keyword || haystack.includes(keyword);
+          card.style.display = visible ? "" : "none";
+          if (visible) visibleCount += 1;
+        });
+
+        dynamicEmpty.style.display = visibleCount === 0 ? "block" : "none";
+      }
+
+      cards.forEach(function (card) {
+        const href = card.dataset.href;
+        if (!href) return;
+
+        card.classList.add("is-clickable");
+        card.addEventListener("click", function () {
+          window.location.href = href;
+        });
+      });
+
+      grid.querySelectorAll(".setup-actions a, .setup-actions button, .setup-actions summary, .setup-actions details, .setup-actions form").forEach(function (el) {
+        el.addEventListener("click", function (event) {
+          event.stopPropagation();
+        });
+      });
+
+      const modal = document.getElementById("setupEditModal");
+      const editForm = document.getElementById("setupInlineEditForm");
+      const inputName = document.getElementById("inlineSetupName");
+      const inputDesc = document.getElementById("inlineSetupDescription");
+      const statusOptions = editForm ? editForm.querySelectorAll("input[name='active']") : [];
+
+      function closeModal() {
+        if (!modal) return;
+        modal.classList.remove("is-open");
+        modal.setAttribute("aria-hidden", "true");
+        document.body.classList.remove("modal-open");
+      }
+
+      function openModal() {
+        if (!modal) return;
+        modal.classList.add("is-open");
+        modal.setAttribute("aria-hidden", "false");
+        document.body.classList.add("modal-open");
+      }
+
+      grid.querySelectorAll(".setup-edit-trigger").forEach(function (button) {
+        button.addEventListener("click", function () {
+          if (!editForm) return;
+          const setupId = button.dataset.setupId;
+          const setupName = button.dataset.setupName || "";
+          const setupDescription = button.dataset.setupDescription || "";
+          const setupActive = (button.dataset.setupActive || "true") === "true";
+
+          editForm.action = "/setups/" + setupId + "/edit";
+          inputName.value = setupName;
+          inputDesc.value = setupDescription;
+          statusOptions.forEach(function (option) {
+            option.checked = (option.value === "true") === setupActive;
+          });
+
+          openModal();
+        });
+      });
+
+      if (modal) {
+        modal.querySelectorAll("[data-modal-close='true']").forEach(function (closeEl) {
+          closeEl.addEventListener("click", closeModal);
+        });
+      }
+
+      document.addEventListener("keydown", function (event) {
+        if (event.key === "Escape") {
+          closeModal();
+        }
+      });
+
+      input.addEventListener("input", applySearchFilter);
+    })();
+  </script>
 
 </body>
 </html>
-
-
-
 

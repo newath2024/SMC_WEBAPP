@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="580" height="120" viewBox="0 0 580 120" role="img" aria-label="TradeJournal">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3b82f6"/>
+      <stop offset="100%" stop-color="#1d4ed8"/>
+    </linearGradient>
+    <linearGradient id="barGrad" x1="0%" y1="100%" x2="0%" y2="0%">
+      <stop offset="0%" stop-color="#34d399"/>
+      <stop offset="100%" stop-color="#84cc16"/>
+    </linearGradient>
+    <linearGradient id="wordGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#60a5fa"/>
+      <stop offset="100%" stop-color="#1d4ed8"/>
+    </linearGradient>
+  </defs>
+  <rect x="4" y="4" width="112" height="112" rx="24" fill="url(#bgGrad)"/>
+  <path d="M24 66L50 40L65 55L91 29" fill="none" stroke="#ffffff" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M84 29H91V36" fill="none" stroke="#ffffff" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="30" y="70" width="14" height="30" rx="3" fill="url(#barGrad)"/>
+  <rect x="52" y="62" width="14" height="38" rx="3" fill="url(#barGrad)"/>
+  <rect x="74" y="52" width="14" height="48" rx="3" fill="url(#barGrad)"/>
+  <text x="136" y="78" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="66" font-weight="700" fill="#173f75">Trade</text>
+  <text x="308" y="78" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="66" font-weight="600" fill="url(#wordGrad)">Journal</text>
+</svg>

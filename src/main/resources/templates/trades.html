@@ -3,356 +3,628 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Trade Journal</title>
+  <title>Trades</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" rel="stylesheet">
   <link th:href="@{/css/sidebar-toggle.css}" href="/css/sidebar-toggle.css" rel="stylesheet">
   <link th:href="@{/css/analytics-dashboard.css}" href="/css/analytics-dashboard.css" rel="stylesheet">
   <link th:href="@{/css/app-page.css}" href="/css/app-page.css" rel="stylesheet">
+  <link th:href="@{/css/trades-page.css}" href="/css/trades-page.css" rel="stylesheet">
 </head>
-<body class="dashboard-body app-page-body">
+<body class="dashboard-body app-page-body trade-page-body">
 
 <div class="container-fluid py-3 px-3 px-lg-4">
-<div class="app-shell collapsible-shell expanded">
-  <aside th:replace="~{fragments/sidebar :: appSidebar('trades', @{/dashboard/export.csv(period='ALL')})}"></aside>
+  <div class="app-shell collapsible-shell expanded">
+    <aside th:replace="~{fragments/sidebar :: appSidebar('trades', @{/dashboard/export.csv(period='ALL')})}"></aside>
 
-  
     <main class="main-content">
-
-    <div class="d-flex align-items-center gap-2 mb-3">
-      <button id="sidebarToggle" class="sidebar-toggle" type="button" aria-label="Toggle navigation">
-        <i class="bi bi-layout-sidebar-inset"></i>
-      </button>
-    </div>
-  <div class="d-flex justify-content-between align-items-center mb-3">
-    <div>
-      <h2 class="m-0">Trade Journal</h2>
-    </div>
-  </div>
-
-  <div class="alert alert-info py-2"
-       th:if="${(selectedSetup != null and !#strings.isEmpty(selectedSetup)) or (selectedSession != null and !#strings.isEmpty(selectedSession)) or (selectedSymbol != null and !#strings.isEmpty(selectedSymbol)) or selectedFrom != null or selectedTo != null}">
-    <span class="me-2">Filtered:</span>
-    <span class="badge text-bg-primary me-1" th:if="${selectedSetup != null and !#strings.isEmpty(selectedSetup)}" th:text="'Setup: ' + ${selectedSetup}"></span>
-    <span class="badge text-bg-primary me-1" th:if="${selectedSession != null and !#strings.isEmpty(selectedSession)}" th:text="'Session: ' + ${selectedSession}"></span>
-    <span class="badge text-bg-primary me-1" th:if="${selectedSymbol != null and !#strings.isEmpty(selectedSymbol)}" th:text="'Symbol: ' + ${selectedSymbol}"></span>
-    <span class="badge text-bg-secondary me-1" th:if="${selectedFrom != null}" th:text="'From: ' + ${selectedFrom}"></span>
-    <span class="badge text-bg-secondary me-2" th:if="${selectedTo != null}" th:text="'To: ' + ${selectedTo}"></span>
-    <a th:if="${tableOnlyView}" th:href="@{/trades(view='table')}" class="btn btn-sm btn-outline-secondary">Clear filters</a>
-    <a th:if="${!tableOnlyView}" th:href="@{/trades}" class="btn btn-sm btn-outline-secondary">Clear filters</a>
-  </div>
-
-  <div class="alert alert-secondary py-2"
-       th:if="${filteredView}">
-    <span th:if="${tableOnlyView}">Add Trade form is hidden in View Trades mode.</span>
-    <span th:if="${!tableOnlyView}">Add Trade form is hidden while filters are active.</span>
-  </div>
-
-  <div class="alert alert-secondary py-2" th:if="${adminView}">
-    Add Trade form is disabled for management role.
-  </div>
-
-  <div class="card shadow-sm mb-4" th:if="${!filteredView and !adminView}">
-    <div class="card-body">
-      <h5 class="card-title mb-3">Add Trade</h5>
-      <div class="alert alert-danger" th:if="${error != null}" th:text="${error}"></div>
-
-      <form id="tradeForm" th:action="@{/trades}" th:object="${trade}" method="post">
-        <div class="row g-3">
-
-          <div class="col-md-3">
-            <label class="form-label">Account</label>
-            <input class="form-control" th:field="*{accountLabel}">
-            <div class="text-danger small"
-                 th:if="${#fields.hasErrors('accountLabel')}"
-                 th:errors="*{accountLabel}"></div>
-          </div>
-
-          <div class="col-md-3">
-            <label class="form-label">Symbol</label>
-            <select id="symbol" th:field="*{symbol}" class="form-select">
-              <option value="">-- Select Symbol --</option>
-              <option value="XAUUSD">XAUUSD</option>
-              <option value="EURUSD">EURUSD</option>
-              <option value="GBPUSD">GBPUSD</option>
-              <option value="USDJPY">USDJPY</option>
-              <option value="BTCUSD">BTCUSD</option>
-              <option value="ETHUSD">ETHUSD</option>
-            </select>
-            <div class="text-danger small"
-                 th:if="${#fields.hasErrors('symbol')}"
-                 th:errors="*{symbol}"></div>
-          </div>
-
-          <div class="col-md-3">
-            <label class="form-label">Direction</label>
-            <select id="direction" class="form-select" th:field="*{direction}">
-              <option value="">-- Select --</option>
-              <option value="BUY">BUY</option>
-              <option value="SELL">SELL</option>
-            </select>
-            <div class="text-danger small"
-                 th:if="${#fields.hasErrors('direction')}"
-                 th:errors="*{direction}"></div>
-          </div>
-
-          <div class="col-md-3">
-            <label class="form-label">Setup</label>
-            <select class="form-select" th:field="*{setup.id}">
-                <option value="">-- Select setup --</option>
-
-                <option th:each="s : ${setups}"
-                        th:value="${s.id}"
-                        th:text="${s.name}">
-                </option>
-            </select>
-            <div class="text-danger small"
-                 th:if="${#fields.hasErrors('setup')}"
-                 th:errors="*{setup}"></div>
-          </div>
-
-          <div class="col-md-3">
-            <label class="form-label">HTF</label>
-            <select class="form-select" th:field="*{htf}">
-              <option value="">-- Select --</option>
-              <option value="H4">H4</option>
-              <option value="H1">H1</option>
-              <option value="M30">M30</option>
-              <option value="M15">M15</option>
-            </select>
-            <div class="text-danger small"
-                 th:if="${#fields.hasErrors('htf')}"
-                 th:errors="*{htf}"></div>
-          </div>
-
-          <div class="col-md-3">
-            <label class="form-label">LTF</label>
-            <select class="form-select" th:field="*{ltf}">
-              <option value="">-- Select --</option>
-              <option value="M15">M15</option>
-              <option value="M5">M5</option>
-              <option value="M1">M1</option>
-            </select>
-            <div class="text-danger small"
-                 th:if="${#fields.hasErrors('ltf')}"
-                 th:errors="*{ltf}"></div>
-          </div>
-
-          <div class="col-md-3">
-            <label class="form-label">Session</label>
-            <select class="form-select" th:field="*{session}">
-              <option value="">-- Select --</option>
-              <option value="ASIA">ASIA</option>
-              <option value="LONDON">LONDON</option>
-              <option value="NEW_YORK">NEW_YORK</option>
-              <option value="OTHER">OTHER</option>
-            </select>
-          </div>
-
-          <div class="col-md-3">
-            <label class="form-label">Result</label>
-            <select id="result" class="form-select" th:field="*{result}">
-              <option value="">-- Select --</option>
-              <option value="WIN">WIN</option>
-              <option value="LOSS">LOSS</option>
-              <option value="BE and take partial">BE and take partial</option>
-            </select>
-          </div>
-
-          <div class="col-md-3">
-            <label class="form-label">Entry Time</label>
-            <input class="form-control" type="datetime-local" th:field="*{entryTime}">
-            <div class="text-danger small"
-                 th:if="${#fields.hasErrors('entryTime')}"
-                 th:errors="*{entryTime}"></div>
-          </div>
-
-          <div class="col-md-3">
-            <label class="form-label">Exit Time</label>
-            <input class="form-control" type="datetime-local" th:field="*{exitTime}">
-          </div>
-
-          <div class="col-md-3">
-            <label class="form-label">Entry Price</label>
-            <input id="entryPrice" class="form-control" type="number" step="0.00001" th:field="*{entryPrice}">
-            <div class="text-danger small"
-                 th:if="${#fields.hasErrors('entryPrice')}"
-                 th:errors="*{entryPrice}"></div>
-          </div>
-
-          <div class="col-md-3">
-            <label class="form-label">Stop Loss</label>
-            <input id="stopLoss" class="form-control" type="number" step="0.00001" th:field="*{stopLoss}">
-            <div class="text-danger small"
-                 th:if="${#fields.hasErrors('stopLoss')}"
-                 th:errors="*{stopLoss}"></div>
-          </div>
-
-          <div class="col-md-3">
-            <label class="form-label">Take Profit</label>
-            <input class="form-control" type="number" step="0.00001" th:field="*{takeProfit}">
-          </div>
-
-          <div class="col-md-3">
-            <label class="form-label">Exit Price</label>
-            <input id="exitPrice" class="form-control" type="number" step="0.00001" th:field="*{exitPrice}">
-          </div>
-
-          <div class="col-md-3">
-            <label class="form-label">Position Size</label>
-            <input id="positionSize" class="form-control" type="number" step="0.01" th:field="*{positionSize}">
-            <div id="volumeHint" class="form-text">Unit: lot</div>
-          </div>
-
-          <div class="col-md-3">
-            <label class="form-label">PnL</label>
-            <input id="pnl" class="form-control" type="number" step="0.01" th:field="*{pnl}" readonly>
-          </div>
-
-          <div class="col-md-3">
-            <label class="form-label">R Multiple</label>
-            <input id="rMultiple" class="form-control" type="number" step="0.01" th:field="*{rMultiple}" readonly>
-          </div>
-
-          <div class="col-12">
-            <label class="form-label">Mistakes</label>
-
-            <div class="border rounded p-3 bg-light">
-              <div class="row g-2" th:if="${!#lists.isEmpty(mistakeTags)}">
-                <div class="col-md-4" th:each="m : ${mistakeTags}">
-                  <div class="form-check">
-                    <input class="form-check-input"
-                          type="checkbox"
-                          name="mistakeIds"
-                          th:id="'mistake_' + ${m.id}"
-                          th:value="${m.id}">
-                    <label class="form-check-label"
-                          th:for="'mistake_' + ${m.id}"
-                          th:text="${m.name}">
-                    </label>
-                  </div>
-                </div>
-              </div>
-
-              <div class="text-muted small mb-3" th:if="${#lists.isEmpty(mistakeTags)}">
-                No mistake tags available. You can still add custom mistakes below.
-              </div>
-
-              <div class="mt-2">
-                <label class="form-label mb-1">Other mistakes</label>
-                <input class="form-control"
-                      type="text"
-                      name="customMistakes"
-                      placeholder="Example: revenge trade, poor patience, bad news timing">
-                <div class="form-text">
-                  Separate multiple custom mistakes with commas.
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="col-12">
-            <label class="form-label">Note</label>
-            <textarea class="form-control" rows="3" th:field="*{note}"></textarea>
-          </div>
-
-          <div class="col-12">
-            <label class="form-label">Setup Images</label>
-            <input id="setupImagesInput" class="form-control" type="file" name="setupImages" accept="image/*" multiple>
-            <div class="mt-2">
-              <label class="form-label mb-1">Image Type</label>
-              <select id="setupImageType" class="form-select form-select-sm">
-                <option value="BEFORE">BEFORE</option>
-                <option value="AFTER">AFTER</option>
-                <option value="REVIEW">REVIEW</option>
-                <option value="SETUP">SETUP</option>
-              </select>
-            </div>
-            <div id="setupImagesInfo" class="form-text"></div>
-            <div id="setupImagesError" class="text-danger small mt-1 d-none"></div>
-            <div class="form-text">Upload chart/setup screenshots for future review and AI analysis.</div>
-          </div>
-
-          <div class="col-12">
-            <button class="btn btn-primary" type="submit">Save Trade</button>
-          </div>
-
+<section class="trade-hero">
+        <div>
+          <p class="trade-eyebrow mb-2">Trading journal</p>
+          <h2 class="m-0">Trades</h2>
+          <p class="trade-subtitle mb-0">Review performance, filter fast, and jump into trade details without leaving the list.</p>
         </div>
-      </form>
-    </div>
-  </div>
+        <div class="trade-hero-actions" th:if="${!adminView}">
+          <a class="btn btn-primary trade-add-button" th:href="@{/trades/new}">
+            <i class="bi bi-plus-lg"></i>
+            <span>New Trade</span>
+          </a>
+        </div>
+      </section>
 
-  <div class="card shadow-sm">
-    <div class="card-body">
-      <h5 class="card-title mb-3">Trades</h5>
+      <section class="trade-stats-grid">
+        <article class="trade-stat-card">
+          <span class="trade-stat-label">Trades in view</span>
+          <strong id="tradesInViewValue" class="trade-stat-value" th:text="${tradeCount}">0</strong>
+          <span class="trade-stat-meta">Current filtered view</span>
+        </article>
+        <article class="trade-stat-card">
+          <span class="trade-stat-label">Win rate</span>
+          <strong id="winRateValue" class="trade-stat-value" th:text="${#numbers.formatDecimal(winRate,1,1) + '%'}">0.0%</strong>
+          <span id="winRateMeta" class="trade-stat-meta" th:text="${winCount + ' wins'}">0 wins</span>
+        </article>
+        <article class="trade-stat-card">
+          <span class="trade-stat-label">Net PnL</span>
+          <strong id="netPnlValue" class="trade-stat-value" th:classappend="${totalPnl > 0 ? ' is-profit' : (totalPnl < 0 ? ' is-loss' : '')}"
+                  th:text="${(totalPnl > 0 ? '+' : '') + #numbers.formatDecimal(totalPnl,1,2)}">0.00</strong>
+          <span class="trade-stat-meta">Across filtered trades</span>
+        </article>
+        <article class="trade-stat-card">
+          <span class="trade-stat-label">Avg R</span>
+          <strong id="avgRValue" class="trade-stat-value" th:classappend="${averageR > 0 ? ' is-profit' : (averageR < 0 ? ' is-loss' : '')}"
+                  th:text="${(averageR > 0 ? '+' : '') + #numbers.formatDecimal(averageR,1,2) + 'R'}">0.00R</strong>
+          <span class="trade-stat-meta">Across filtered trades</span>
+        </article>
+        <article class="trade-stat-card">
+          <span class="trade-stat-label">Expectancy</span>
+          <strong id="expectancyValue" class="trade-stat-value">0.00R</strong>
+          <span id="expectancyMeta" class="trade-stat-meta">Expected R per trade (filtered)</span>
+        </article>
+      </section>
 
-      <div class="table-responsive">
-        <table class="table table-striped align-middle">
-          <thead>
-          <tr>
-            <th>Symbol</th>
-            <th>Direction</th>
-            <th>HTF</th>
-            <th>LTF</th>
-            <th>Entry</th>
-            <th>SL</th>
-            <th>Exit</th>
-            <th>Result</th>
-            <th>PnL</th>
-            <th>R</th>
-            <th>Session</th>
-            <th>Action</th>
-          </tr>
-          </thead>
-          <tbody>
-          <tr th:each="t : ${trades}">
-            <td>
-              <a th:href="@{/trades/{id}(id=${t.id})}" th:text="${t.symbol}"></a>
-            </td>
-            <td th:text="${t.direction}"></td>
-            <td th:text="${t.htf}"></td>
-            <td th:text="${t.ltf}"></td>
-            <td th:text="${#numbers.formatDecimal(t.entryPrice,1,5)}"></td>
-            <td th:text="${#numbers.formatDecimal(t.stopLoss,1,5)}"></td>
-            <td th:text="${t.exitPrice != 0 ? #numbers.formatDecimal(t.exitPrice,1,5) : '-'}"></td>
-            <td th:text="${t.result}"></td>
-            <td th:text="${#numbers.formatDecimal(t.pnl,1,2)}"></td>
-            <td th:text="${#numbers.formatDecimal(t.rMultiple,1,2)}"></td>
-            <td th:text="${t.session}"></td>
-            <td>
-              <a class="btn btn-sm btn-outline-primary"
-                 th:href="@{/trades/{id}/edit(id=${t.id})}">
-                Edit
-              </a>
-              <form th:action="@{/trades/{id}/delete(id=${t.id})}" method="post"
-                    onsubmit="return confirm('Delete this trade?');">
-                <button class="btn btn-sm btn-danger" type="submit">Delete</button>
-              </form>
-            </td>
-          </tr>
-          <tr th:if="${#lists.isEmpty(trades)}">
-            <td colspan="12" class="text-center text-muted">No trades yet.</td>
-          </tr>
-          </tbody>
-        </table>
+      <div class="alert alert-info py-2 mb-0"
+           th:if="${(selectedSetup != null and !#strings.isEmpty(selectedSetup)) or (selectedSession != null and !#strings.isEmpty(selectedSession)) or (selectedSymbol != null and !#strings.isEmpty(selectedSymbol)) or selectedFrom != null or selectedTo != null or (param.result != null and !#strings.isEmpty(param.result[0])) or (param.mistake != null and !#strings.isEmpty(param.mistake[0]))}">
+        <span class="me-2">Active filters:</span>
+        <span class="badge text-bg-primary me-1" th:if="${selectedSetup != null and !#strings.isEmpty(selectedSetup)}" th:text="${'Setup: ' + selectedSetup}"></span>
+        <span class="badge text-bg-primary me-1" th:if="${selectedSession != null and !#strings.isEmpty(selectedSession)}" th:text="${'Session: ' + selectedSession}"></span>
+        <span class="badge text-bg-primary me-1" th:if="${selectedSymbol != null and !#strings.isEmpty(selectedSymbol)}" th:text="${'Symbol: ' + selectedSymbol}"></span>
+        <span class="badge text-bg-primary me-1" th:if="${param.result != null and !#strings.isEmpty(param.result[0])}" th:text="${'Result: ' + param.result[0]}"></span>
+        <span class="badge text-bg-primary me-1" th:if="${param.mistake != null and !#strings.isEmpty(param.mistake[0])}" th:text="${'Mistake: ' + param.mistake[0]}"></span>
+        <span class="badge text-bg-secondary me-1" th:if="${selectedFrom != null}" th:text="${'From: ' + selectedFrom}"></span>
+        <span class="badge text-bg-secondary me-2" th:if="${selectedTo != null}" th:text="${'To: ' + selectedTo}"></span>
+        <a th:href="@{/trades}" class="btn btn-sm btn-outline-secondary">Clear</a>
       </div>
-    </div>
+
+      <div class="alert alert-secondary py-2 mb-0" th:if="${adminView}">
+        Add Trade is disabled for management role.
+      </div>
+
+      <section class="card shadow-sm trade-table-card">
+        <div class="card-body">
+          <div class="trade-list-header">
+            <div>
+              <h5 class="card-title mb-1">Trade Log</h5>
+              <p class="trade-list-copy mb-0">Compact journal view with detail access from any row.</p>
+            </div>
+            <div class="trade-view-toggle" role="group" aria-label="View mode">
+              <button class="trade-view-toggle-btn is-active" type="button">Table</button>
+              <button class="trade-view-toggle-btn" type="button" disabled>Card</button>
+              <button class="trade-view-toggle-btn" type="button" disabled>Calendar</button>
+            </div>
+          </div>
+
+          <form class="trade-filter-bar" method="get" th:action="@{/trades}">
+            <div class="trade-filter-row trade-filter-row-primary">
+              <div class="trade-filter-field trade-filter-field-wide">
+                <label class="form-label" for="symbolSearch">Search Symbol</label>
+                <div class="trade-search-input-wrap">
+                  <i class="bi bi-search"></i>
+                  <input id="symbolSearch" class="form-control" type="text" name="symbol" th:value="${selectedSymbol}" placeholder="Search symbol (e.g. XAUUSD, BTCUSD)">
+                </div>
+              </div>
+              <div class="trade-filter-field">
+                <label class="form-label" for="setupFilter">Setup</label>
+                <select id="setupFilter" class="form-select" name="setup">
+                  <option value="">All setups</option>
+                  <option th:each="s : ${setups}" th:value="${s.name}" th:text="${s.name}" th:selected="${selectedSetup == s.name}"></option>
+                </select>
+              </div>
+              <div class="trade-filter-field">
+                <label class="form-label" for="sessionFilter">Session</label>
+                <select id="sessionFilter" class="form-select" name="session">
+                  <option value="">All sessions</option>
+                  <option value="ASIA" th:selected="${selectedSession == 'ASIA'}">ASIA</option>
+                  <option value="LONDON" th:selected="${selectedSession == 'LONDON'}">LONDON</option>
+                  <option value="NEW_YORK" th:selected="${selectedSession == 'NEW_YORK'}">NEW_YORK</option>
+                  <option value="OTHER" th:selected="${selectedSession == 'OTHER'}">OTHER</option>
+                </select>
+              </div>
+              <div class="trade-filter-field">
+                <label class="form-label" for="resultFilter">Result</label>
+                <select id="resultFilter" class="form-select" name="result">
+                  <option value="">All</option>
+                  <option value="WIN">Win</option>
+                  <option value="LOSS">Loss</option>
+                  <option value="BE">BE</option>
+                  <option value="PARTIAL">Partial</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="trade-filter-row trade-filter-row-secondary">
+              <div class="trade-filter-field">
+                <label class="form-label" for="mistakeFilter">Mistake</label>
+                <select id="mistakeFilter" class="form-select" name="mistake">
+                  <option value="">All</option>
+                  <option th:each="m : ${mistakeTags}" th:value="${m.name}" th:text="${m.name}"></option>
+                </select>
+              </div>
+              <div class="trade-filter-field trade-date-range-field">
+                <label class="form-label" for="dateRangeDisplay">Date Range</label>
+                <div class="trade-date-toolbar">
+                  <button id="dateRangeDisplay" class="trade-date-display" type="button" aria-label="Select date range">
+                    <i class="bi bi-calendar3"></i>
+                    <span id="dateRangeDisplayText">All dates</span>
+                  </button>
+                  <a class="btn btn-sm btn-outline-secondary trade-reset-btn" th:href="@{/trades}">Reset Filters</a>
+                </div>
+                <input id="dateRangeInput" class="trade-range-input" type="text" autocomplete="off">
+                <div class="trade-date-hidden-inputs">
+                  <input id="fromDate" class="form-control" type="date" name="from" th:value="${selectedFrom}">
+                  <input id="toDate" class="form-control" type="date" name="to" th:value="${selectedTo}">
+                </div>
+              </div>
+            </div>
+          </form>
+
+          <div class="table-responsive">
+            <table class="table trade-table align-middle mb-0">
+              <thead>
+              <tr>
+                <th>
+                  <button class="trade-sort-btn" type="button" data-sort-key="date">Date <span class="trade-sort-indicator">-</span></button>
+                </th>
+                <th>Symbol</th>
+                <th>Direction</th>
+                <th>Setup</th>
+                <th>Session</th>
+                <th>Result</th>
+                <th>
+                  <button class="trade-sort-btn" type="button" data-sort-key="pnl">PnL <span class="trade-sort-indicator">-</span></button>
+                </th>
+                <th>
+                  <button class="trade-sort-btn" type="button" data-sort-key="r">R <span class="trade-sort-indicator">-</span></button>
+                </th>
+                <th>Actions</th>
+              </tr>
+              </thead>
+              <tbody id="tradeTableBody">
+              <tr th:each="t : ${trades}" class="trade-row trade-data-row"
+                  th:attr="data-href=@{/trades/{id}(id=${t.id})},
+                           data-sort-date=${t.entryTime != null ? #temporals.format(t.entryTime, 'yyyyMMddHHmmss') : (t.tradeDate != null ? #temporals.format(t.tradeDate, 'yyyyMMddHHmmss') : (t.createdAt != null ? #temporals.format(t.createdAt, 'yyyyMMddHHmmss') : '0'))},
+                           data-sort-pnl=${t.pnl},
+                           data-sort-r=${t.rMultiple},
+                           data-symbol=${t.symbol != null ? t.symbol : ''},
+                           data-setup=${t.setupName != null ? t.setupName : ''},
+                           data-session=${t.session != null ? t.session : ''},
+                           data-result=${t.result != null ? t.result : ''},
+                           data-mistakes=${t.mistakes != null ? #strings.listJoin(t.mistakes.![name], '|') : ''},
+                           data-trade-date=${t.entryTime != null ? #temporals.format(t.entryTime, 'yyyy-MM-dd') : (t.tradeDate != null ? #temporals.format(t.tradeDate, 'yyyy-MM-dd') : (t.createdAt != null ? #temporals.format(t.createdAt, 'yyyy-MM-dd') : ''))}">
+                <td class="trade-date-cell">
+                  <div th:text="${t.entryTime != null ? #temporals.format(t.entryTime, 'dd MMM yyyy') : (t.tradeDate != null ? #temporals.format(t.tradeDate, 'dd MMM yyyy') : '-')}">10 Mar 2026</div>
+                </td>
+                <td class="trade-symbol-cell">
+                  <a class="trade-symbol-link" th:href="@{/trades/{id}(id=${t.id})}" th:text="${t.symbol}">XAUUSD</a>
+                  <small class="trade-symbol-meta"
+                         th:text="${t.entryTime != null ? #temporals.format(t.entryTime, 'yyyy-MM-dd HH:mm') : (t.tradeDate != null ? #temporals.format(t.tradeDate, 'yyyy-MM-dd HH:mm') : '-')}">2026-03-04 23:18</small>
+                </td>
+                <td>
+                  <span class="trade-pill"
+                        th:classappend="${t.direction == 'BUY' ? ' trade-pill-buy' : ' trade-pill-sell'}"
+                        th:text="${t.direction}">BUY</span>
+                </td>
+                <td class="trade-setup-cell">
+                  <span class="trade-setup-text"
+                        th:text="${t.setupName != null ? t.setupName : '-'}"
+                        th:title="${t.setupName != null ? t.setupName : '-'}">Setup</span>
+                </td>
+                <td>
+                  <span class="trade-session-badge"
+                        th:classappend="${t.session == 'ASIA' ? ' trade-session-asia' : (t.session == 'LONDON' ? ' trade-session-london' : (t.session == 'NEW_YORK' ? ' trade-session-newyork' : ' trade-session-other'))}"
+                        th:text="${t.session != null ? #strings.replace(t.session, '_', ' ') : 'OTHER'}">LONDON</span>
+                </td>
+                <td>
+                  <span class="trade-result-badge"
+                        th:with="resultValue=${t.result != null ? t.result.trim().toUpperCase() : ''},partialValue=${t.result != null ? #strings.containsIgnoreCase(t.result, 'partial') : false}"
+                        th:classappend="${resultValue == 'WIN' ? ' trade-result-win' : (resultValue == 'LOSS' ? ' trade-result-loss' : ((resultValue == 'BE' or resultValue == 'BREAKEVEN') ? ' trade-result-be' : (partialValue ? ' trade-result-partial' : ' trade-result-open')))}"
+                        th:text="${resultValue == '' ? 'OPEN' : (resultValue == 'WIN' ? 'WIN' : (resultValue == 'LOSS' ? 'LOSS' : ((resultValue == 'BE' or resultValue == 'BREAKEVEN') ? 'BE' : (partialValue ? 'PARTIAL' : resultValue))))}">WIN</span>
+                </td>
+                <td>
+                  <span class="trade-value"
+                        th:classappend="${t.pnl > 0 ? ' is-profit' : (t.pnl < 0 ? ' is-loss' : '')}"
+                        th:text="${(t.pnl > 0 ? '+' : '') + #numbers.formatDecimal(t.pnl,1,2)}">0.00</span>
+                </td>
+                <td>
+                  <span class="trade-value"
+                        th:classappend="${t.rMultiple > 0 ? ' is-profit' : (t.rMultiple < 0 ? ' is-loss' : '')}"
+                        th:text="${(t.rMultiple > 0 ? '+' : '') + #numbers.formatDecimal(t.rMultiple,1,2) + 'R'}">0.00R</span>
+                </td>
+                <td class="trade-actions-cell">
+                  <details class="trade-action-menu" onclick="event.stopPropagation()">
+                    <summary class="trade-action-trigger" aria-label="Trade actions">...</summary>
+                    <div class="trade-action-dropdown">
+                      <a th:href="@{/trades/{id}(id=${t.id})}">View</a>
+                      <a th:href="@{/trades/{id}/edit(id=${t.id})}">Edit</a>
+                      <form th:action="@{/trades/{id}/delete(id=${t.id})}" method="post"
+                            onsubmit="return confirm('Delete this trade?');">
+                        <button class="trade-action-delete" type="submit">Delete</button>
+                      </form>
+                    </div>
+                  </details>
+                </td>
+              </tr>
+              <tr id="tradeEmptyStateRow" th:if="${#lists.isEmpty(trades)}">
+                <td colspan="9" class="trade-empty-state text-center">
+                  <div class="py-4">
+                    <div class="fw-semibold mb-2">No trades yet</div>
+                    <div class="text-muted mb-3">Start tracking your trading performance.</div>
+                    <a class="btn btn-primary" th:if="${!adminView}" th:href="@{/trades/new}">Add your first trade</a>
+                  </div>
+                </td>
+              </tr>
+              <tr id="tradeFilteredEmptyStateRow" class="d-none">
+                <td colspan="9" class="trade-empty-state text-center">
+                  <div class="py-4">
+                    <div class="fw-semibold mb-2">No trades match the current filters.</div>
+                    <a class="btn btn-outline-secondary btn-sm" th:href="@{/trades}">Reset filters</a>
+                  </div>
+                </td>
+              </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </main>
   </div>
-  </main>
-</div>
 </div>
 
-<script th:src="@{/js/trade-form.js}" src="/js/trade-form.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script th:src="@{/js/sidebar-toggle.js}" src="/js/sidebar-toggle.js"></script>
+<script>
+  function normalizeResultValue(rawValue) {
+    if (!rawValue) return '';
+    const normalized = rawValue.toString().trim().toUpperCase();
+    if (normalized.includes('PARTIAL')) return 'PARTIAL';
+    if (normalized === 'BE' || normalized === 'BREAKEVEN') return 'BE';
+    if (normalized === 'WIN') return 'WIN';
+    if (normalized === 'LOSS') return 'LOSS';
+    return normalized;
+  }
 
-  <script th:src="@{/js/sidebar-toggle.js}" src="/js/sidebar-toggle.js"></script>
+  function formatSignedNumber(value, suffix) {
+    const number = Number(value || 0);
+    const sign = number > 0 ? '+' : '';
+    return sign + number.toFixed(2) + (suffix || '');
+  }
+
+  function updateSignedClass(element, value) {
+    if (!element) return;
+    const number = Number(value || 0);
+    element.classList.remove('is-profit', 'is-loss');
+    if (number > 0) {
+      element.classList.add('is-profit');
+    } else if (number < 0) {
+      element.classList.add('is-loss');
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    const filterForm = document.querySelector('.trade-filter-bar');
+    const tbody = document.getElementById('tradeTableBody');
+    const dataRows = Array.from(document.querySelectorAll('.trade-data-row'));
+    const emptyRow = document.getElementById('tradeEmptyStateRow');
+    const filteredEmptyRow = document.getElementById('tradeFilteredEmptyStateRow');
+    const sortButtons = Array.from(document.querySelectorAll('.trade-sort-btn'));
+    const stickyFilterBar = document.querySelector('.trade-filter-bar');
+    const resultFilter = document.getElementById('resultFilter');
+    const mistakeFilter = document.getElementById('mistakeFilter');
+    const symbolSearch = document.getElementById('symbolSearch');
+    const setupFilter = document.getElementById('setupFilter');
+    const sessionFilter = document.getElementById('sessionFilter');
+    const fromDate = document.getElementById('fromDate');
+    const toDate = document.getElementById('toDate');
+    const dateRangeDisplay = document.getElementById('dateRangeDisplay');
+    const dateRangeDisplayText = document.getElementById('dateRangeDisplayText');
+    const dateRangeInput = document.getElementById('dateRangeInput');
+    const tradesInViewValue = document.getElementById('tradesInViewValue');
+    const winRateValue = document.getElementById('winRateValue');
+    const winRateMeta = document.getElementById('winRateMeta');
+    const netPnlValue = document.getElementById('netPnlValue');
+    const avgRValue = document.getElementById('avgRValue');
+    const expectancyValue = document.getElementById('expectancyValue');
+    const expectancyMeta = document.getElementById('expectancyMeta');
+
+    if (!filterForm || !tbody) return;
+
+    const searchParams = new URLSearchParams(window.location.search);
+    if (resultFilter && searchParams.get('result')) {
+      resultFilter.value = searchParams.get('result').toUpperCase();
+    }
+    if (mistakeFilter && searchParams.get('mistake')) {
+      mistakeFilter.value = searchParams.get('mistake');
+    }
+    let dateRangePicker = null;
+
+    function toDateInputValue(date) {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return year + '-' + month + '-' + day;
+    }
+
+    function parseIsoDate(value) {
+      if (!value) return null;
+      const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+      if (!match) return null;
+      const year = Number(match[1]);
+      const month = Number(match[2]);
+      const day = Number(match[3]);
+      if (!year || !month || !day) return null;
+      const date = new Date(year, month - 1, day);
+      if (Number.isNaN(date.getTime())) return null;
+      return date;
+    }
+
+    function normalizeDateRange() {
+      if (!fromDate || !toDate) return;
+      if (fromDate.value && toDate.value && fromDate.value > toDate.value) {
+        const temp = fromDate.value;
+        fromDate.value = toDate.value;
+        toDate.value = temp;
+      }
+    }
+
+    function formatDisplayDate(value) {
+      const parsed = parseIsoDate(value);
+      if (!parsed) return '';
+      return parsed.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+    }
+
+    function updateDateRangeDisplay() {
+      normalizeDateRange();
+      const fromValue = fromDate && fromDate.value ? fromDate.value : '';
+      const toValue = toDate && toDate.value ? toDate.value : '';
+      const fromText = formatDisplayDate(fromValue);
+      const toText = formatDisplayDate(toValue);
+
+      if (dateRangePicker) {
+        const selectedDates = [];
+        const fromParsed = parseIsoDate(fromValue);
+        const toParsed = parseIsoDate(toValue);
+        if (fromParsed) selectedDates.push(fromParsed);
+        if (toParsed && (!fromParsed || toValue !== fromValue)) selectedDates.push(toParsed);
+        dateRangePicker.setDate(selectedDates, false);
+      } else if (dateRangeInput) {
+        if (fromValue && toValue) {
+          dateRangeInput.value = fromValue + ' to ' + toValue;
+        } else if (fromValue) {
+          dateRangeInput.value = fromValue;
+        } else if (toValue) {
+          dateRangeInput.value = toValue;
+        } else {
+          dateRangeInput.value = '';
+        }
+      }
+      if (dateRangeDisplayText) {
+        if (fromText && toText) {
+          dateRangeDisplayText.textContent = fromText + ' \u2192 ' + toText;
+        } else if (fromText) {
+          dateRangeDisplayText.textContent = fromText + ' \u2192 ...';
+        } else if (toText) {
+          dateRangeDisplayText.textContent = '... \u2192 ' + toText;
+        } else {
+          dateRangeDisplayText.textContent = 'All dates';
+        }
+      }
+    }
+
+    function initDateRangePicker() {
+      if (!window.flatpickr || !dateRangeInput || !fromDate || !toDate) return;
+      dateRangePicker = flatpickr(dateRangeInput, {
+        mode: 'range',
+        dateFormat: 'Y-m-d',
+        defaultDate: [fromDate.value, toDate.value].filter(Boolean),
+        onChange: function (selectedDates) {
+          if (!selectedDates || selectedDates.length === 0) {
+            fromDate.value = '';
+            toDate.value = '';
+          } else {
+            fromDate.value = toDateInputValue(selectedDates[0]);
+            toDate.value = toDateInputValue(selectedDates[selectedDates.length - 1]);
+          }
+          updateDateRangeDisplay();
+          applyFilters();
+        }
+      });
+    }
+
+    function syncStickyOffset() {
+      if (!stickyFilterBar) return;
+      const filterHeight = stickyFilterBar.offsetHeight || 0;
+      document.documentElement.style.setProperty('--trade-filter-height', filterHeight + 'px');
+    }
+
+    function sortRows(key, order) {
+      if (!dataRows.length) return;
+      const multiplier = order === 'asc' ? 1 : -1;
+      dataRows.sort(function (a, b) {
+        const aRaw = a.dataset['sort' + key.charAt(0).toUpperCase() + key.slice(1)] || '0';
+        const bRaw = b.dataset['sort' + key.charAt(0).toUpperCase() + key.slice(1)] || '0';
+        const aValue = Number(aRaw);
+        const bValue = Number(bRaw);
+        if (aValue === bValue) return 0;
+        return aValue > bValue ? multiplier : -multiplier;
+      });
+      dataRows.forEach(function (row) {
+        tbody.appendChild(row);
+      });
+    }
+
+    function updateSortButtons(activeKey, activeOrder) {
+      sortButtons.forEach(function (button) {
+        const indicator = button.querySelector('.trade-sort-indicator');
+        const key = button.dataset.sortKey;
+        button.classList.toggle('is-active', key === activeKey);
+        if (!indicator) return;
+        if (key !== activeKey) {
+          indicator.textContent = '-';
+        } else {
+          indicator.textContent = activeOrder === 'asc' ? '^' : 'v';
+        }
+      });
+    }
+
+    function applyFilters() {
+      const symbolValue = (symbolSearch && symbolSearch.value ? symbolSearch.value : '').trim().toUpperCase();
+      const setupValue = (setupFilter && setupFilter.value ? setupFilter.value : '').trim().toUpperCase();
+      const sessionValue = (sessionFilter && sessionFilter.value ? sessionFilter.value : '').trim().toUpperCase();
+      const resultValue = (resultFilter && resultFilter.value ? resultFilter.value : '').trim().toUpperCase();
+      const mistakeValue = (mistakeFilter && mistakeFilter.value ? mistakeFilter.value : '').trim().toLowerCase();
+      normalizeDateRange();
+      const fromValue = fromDate && fromDate.value ? fromDate.value : '';
+      const toValue = toDate && toDate.value ? toDate.value : '';
+
+      let visibleCount = 0;
+      let visibleWins = 0;
+      let visibleLosses = 0;
+      let visiblePnl = 0;
+      let visibleR = 0;
+      let winRTotal = 0;
+      let lossRAbsTotal = 0;
+
+      dataRows.forEach(function (row) {
+        const rowSymbol = (row.dataset.symbol || '').toUpperCase();
+        const rowSetup = (row.dataset.setup || '').toUpperCase();
+        const rowSession = (row.dataset.session || '').toUpperCase();
+        const rowResult = normalizeResultValue(row.dataset.result || '');
+        const rowMistakes = (row.dataset.mistakes || '').toLowerCase();
+        const rowDate = row.dataset.tradeDate || '';
+
+        const matchesSymbol = !symbolValue || rowSymbol.includes(symbolValue);
+        const matchesSetup = !setupValue || rowSetup === setupValue;
+        const matchesSession = !sessionValue || rowSession === sessionValue;
+        const matchesResult = !resultValue || rowResult === resultValue;
+        const matchesMistake = !mistakeValue || rowMistakes.split('|').some(function (name) {
+          return name.trim() === mistakeValue;
+        });
+        const matchesFrom = !fromValue || (rowDate && rowDate >= fromValue);
+        const matchesTo = !toValue || (rowDate && rowDate <= toValue);
+        const isVisible = matchesSymbol && matchesSetup && matchesSession && matchesResult && matchesMistake && matchesFrom && matchesTo;
+
+        row.classList.toggle('d-none', !isVisible);
+        if (!isVisible) return;
+
+        visibleCount += 1;
+        if (rowResult === 'WIN') {
+          visibleWins += 1;
+          winRTotal += Number(row.dataset.sortR || 0);
+        }
+        if (rowResult === 'LOSS') {
+          visibleLosses += 1;
+          lossRAbsTotal += Math.abs(Number(row.dataset.sortR || 0));
+        }
+        visiblePnl += Number(row.dataset.sortPnl || 0);
+        visibleR += Number(row.dataset.sortR || 0);
+      });
+
+      if (emptyRow) {
+        emptyRow.classList.toggle('d-none', dataRows.length > 0 || visibleCount > 0);
+      }
+      if (filteredEmptyRow) {
+        filteredEmptyRow.classList.toggle('d-none', visibleCount > 0 || dataRows.length === 0);
+      }
+
+      if (tradesInViewValue) tradesInViewValue.textContent = String(visibleCount);
+      if (winRateValue) {
+        const rate = visibleCount > 0 ? (visibleWins * 100) / visibleCount : 0;
+        winRateValue.textContent = rate.toFixed(1) + '%';
+      }
+      if (winRateMeta) winRateMeta.textContent = visibleWins + ' wins';
+      if (netPnlValue) {
+        netPnlValue.textContent = formatSignedNumber(visiblePnl, '');
+        updateSignedClass(netPnlValue, visiblePnl);
+      }
+      if (avgRValue) {
+        const avgR = visibleCount > 0 ? visibleR / visibleCount : 0;
+        avgRValue.textContent = formatSignedNumber(avgR, 'R');
+        updateSignedClass(avgRValue, avgR);
+      }
+      if (expectancyValue) {
+        const winRate = visibleCount > 0 ? visibleWins / visibleCount : 0;
+        const lossRate = visibleCount > 0 ? visibleLosses / visibleCount : 0;
+        const avgWinR = visibleWins > 0 ? winRTotal / visibleWins : 0;
+        const avgLossR = visibleLosses > 0 ? lossRAbsTotal / visibleLosses : 0;
+        let expectancy = (winRate * avgWinR) - (lossRate * avgLossR);
+        // Fallback to average R when filtered set has no WIN/LOSS labels (e.g. only PARTIAL/BE).
+        if (visibleCount > 0 && visibleWins === 0 && visibleLosses === 0) {
+          expectancy = visibleR / visibleCount;
+        }
+        expectancyValue.textContent = formatSignedNumber(expectancy, 'R');
+        updateSignedClass(expectancyValue, expectancy);
+      }
+      if (expectancyMeta) {
+        expectancyMeta.textContent = visibleWins + 'W / ' + visibleLosses + 'L in view';
+      }
+    }
+
+    let activeSortKey = 'date';
+    let activeSortOrder = 'desc';
+
+    sortButtons.forEach(function (button) {
+      button.addEventListener('click', function () {
+        const clickedKey = button.dataset.sortKey;
+        if (!clickedKey) return;
+        if (clickedKey === activeSortKey) {
+          activeSortOrder = activeSortOrder === 'asc' ? 'desc' : 'asc';
+        } else {
+          activeSortKey = clickedKey;
+          activeSortOrder = 'desc';
+        }
+        sortRows(activeSortKey, activeSortOrder);
+        updateSortButtons(activeSortKey, activeSortOrder);
+        applyFilters();
+      });
+    });
+
+    filterForm.addEventListener('submit', function (event) {
+      event.preventDefault();
+      applyFilters();
+    });
+
+    filterForm.querySelectorAll('select').forEach(function (select) {
+      select.addEventListener('change', applyFilters);
+    });
+    [symbolSearch].forEach(function (input) {
+      if (!input) return;
+      input.addEventListener('input', applyFilters);
+    });
+    if (dateRangeDisplay) {
+      dateRangeDisplay.addEventListener('click', function () {
+        if (dateRangePicker) {
+          dateRangePicker.open();
+        } else if (dateRangeInput) {
+          dateRangeInput.focus();
+        }
+      });
+    }
+
+    initDateRangePicker();
+    sortRows(activeSortKey, activeSortOrder);
+    updateSortButtons(activeSortKey, activeSortOrder);
+    updateDateRangeDisplay();
+    applyFilters();
+    syncStickyOffset();
+    window.addEventListener('resize', syncStickyOffset);
+  });
+
+  document.addEventListener('click', function (event) {
+    const row = event.target.closest('.trade-row');
+    if (!row) return;
+    if (event.target.closest('a, button, form, input, select, textarea, label, summary, details')) return;
+
+    const href = row.getAttribute('data-href');
+    if (href) {
+      window.location.href = href;
+    }
+  });
+</script>
 
 </body>
 </html>
-
-
-
 
 

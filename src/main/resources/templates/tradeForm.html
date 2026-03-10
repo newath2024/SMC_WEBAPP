@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title th:text="${editMode} ? 'Edit Trade' : 'Trade Form'">Trade Form</title>
+  <title th:text="${editMode ? 'Edit Trade' : 'New Trade'}">Trade Form</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -12,305 +12,319 @@
   <link th:href="@{/css/sidebar-toggle.css}" href="/css/sidebar-toggle.css" rel="stylesheet">
   <link th:href="@{/css/analytics-dashboard.css}" href="/css/analytics-dashboard.css" rel="stylesheet">
   <link th:href="@{/css/app-page.css}" href="/css/app-page.css" rel="stylesheet">
+  <link th:href="@{/css/trades-page.css}" href="/css/trades-page.css" rel="stylesheet">
 </head>
-<body class="dashboard-body app-page-body">
+<body class="dashboard-body app-page-body trade-page-body">
 
 <div class="container-fluid py-3 px-3 px-lg-4">
   <div class="app-shell collapsible-shell expanded">
     <aside th:replace="~{fragments/sidebar :: appSidebar('trades', @{/dashboard/export.csv(period='ALL')})}"></aside>
 
-    
     <main class="main-content">
-
-    <div class="d-flex align-items-center gap-2 mb-3">
-      <button id="sidebarToggle" class="sidebar-toggle" type="button" aria-label="Toggle navigation">
-        <i class="bi bi-layout-sidebar-inset"></i>
-      </button>
-    </div>
-  <div class="d-flex justify-content-between align-items-center mb-3">
-    <div>
-      <h2 class="m-0" th:text="${editMode} ? 'Edit Trade' : 'Trade Form'">Edit Trade</h2>
-    </div>
-  </div>
-
-  <div class="card shadow-sm">
-    <div class="card-body">
-      <div class="alert alert-danger" th:if="${error != null}" th:text="${error}"></div>
-      <form id="tradeForm" th:action="@{/trades/{id}/edit(id=${trade.id})}" th:object="${trade}" method="post">
-        <div class="row g-3">
-
-          <div class="col-md-3">
-            <label class="form-label">Account</label>
-            <input class="form-control" type="text" th:field="*{accountLabel}">
-            <div class="text-danger small"
-                 th:if="${#fields.hasErrors('accountLabel')}"
-                 th:errors="*{accountLabel}"></div>
-          </div>
-
-          <div class="col-md-3">
-            <label class="form-label">Symbol</label>
-            <select id="symbol" th:field="*{symbol}" class="form-select">
-              <option value="">-- Select Symbol --</option>
-              <option value="XAUUSD">XAUUSD</option>
-              <option value="EURUSD">EURUSD</option>
-              <option value="GBPUSD">GBPUSD</option>
-              <option value="USDJPY">USDJPY</option>
-              <option value="BTCUSD">BTCUSD</option>
-              <option value="ETHUSD">ETHUSD</option>
-            </select>
-            <div class="text-danger small"
-                 th:if="${#fields.hasErrors('symbol')}"
-                 th:errors="*{symbol}"></div>
-          </div>
-
-          <div class="col-md-3">
-            <label class="form-label">Direction</label>
-            <select id="direction" class="form-select" th:field="*{direction}">
-              <option value="">-- Select --</option>
-              <option value="BUY">BUY</option>
-              <option value="SELL">SELL</option>
-            </select>
-            <div class="text-danger small"
-                 th:if="${#fields.hasErrors('direction')}"
-                 th:errors="*{direction}"></div>
-          </div>
-
-          <div class="col-md-3">
-            <label class="form-label">Setup</label>
-            <select class="form-select" th:field="*{setup.id}">
-              <option value="">-- Select setup --</option>
-              <option th:each="s : ${setups}"
-                      th:value="${s.id}"
-                      th:text="${s.name}">
-              </option>
-            </select>
-            <div class="text-danger small"
-                 th:if="${#fields.hasErrors('setup')}"
-                 th:errors="*{setup}"></div>
-          </div>
-
-          <div class="col-md-3">
-            <label class="form-label">HTF</label>
-            <select class="form-select" th:field="*{htf}">
-              <option value="">-- Select --</option>
-              <option value="H4">H4</option>
-              <option value="H1">H1</option>
-              <option value="M30">M30</option>
-              <option value="M15">M15</option>
-              <option value="M5">M5</option>
-              <option value="M1">M1</option>
-            </select>
-            <div class="text-danger small"
-                 th:if="${#fields.hasErrors('htf')}"
-                 th:errors="*{htf}"></div>
-          </div>
-
-          <div class="col-md-3">
-            <label class="form-label">LTF</label>
-            <select class="form-select" th:field="*{ltf}">
-              <option value="">-- Select --</option>
-              <option value="H1">H1</option>
-              <option value="M30">M30</option>
-              <option value="M15">M15</option>
-              <option value="M5">M5</option>
-              <option value="M1">M1</option>
-            </select>
-            <div class="text-danger small"
-                 th:if="${#fields.hasErrors('ltf')}"
-                 th:errors="*{ltf}"></div>
-          </div>
-
-          <div class="col-md-3">
-            <label class="form-label">Session</label>
-            <select class="form-select" th:field="*{session}">
-              <option value="">-- Select --</option>
-              <option value="ASIA">ASIA</option>
-              <option value="LONDON">LONDON</option>
-              <option value="NEW_YORK">NEW_YORK</option>
-              <option value="OTHER">OTHER</option>
-            </select>
-          </div>
-
-          <div class="col-md-3">
-            <label class="form-label">Result</label>
-            <select id="result" class="form-select" th:field="*{result}">
-              <option value="">-- Select --</option>
-              <option value="WIN">WIN</option>
-              <option value="LOSS">LOSS</option>
-              <option value="BE and take partial">BE and take partial</option>
-            </select>
-          </div>
-
-          <div class="col-md-3">
-            <label class="form-label">Entry Time</label>
-            <input class="form-control"
-                   type="datetime-local"
-                   name="entryTime"
-                   th:value="${trade.entryTime != null ? #temporals.format(trade.entryTime, 'yyyy-MM-dd''T''HH:mm') : ''}">
-          </div>
-
-          <div class="col-md-3">
-            <label class="form-label">Exit Time</label>
-            <input class="form-control"
-                   type="datetime-local"
-                   name="exitTime"
-                   th:value="${trade.exitTime != null ? #temporals.format(trade.exitTime, 'yyyy-MM-dd''T''HH:mm') : ''}">
-          </div>
-
-          <div class="col-md-3">
-            <label class="form-label">Entry Price</label>
-            <input id="entryPrice" class="form-control" type="number" step="0.00001" th:field="*{entryPrice}">
-            <div class="text-danger small"
-                 th:if="${#fields.hasErrors('entryPrice')}"
-                 th:errors="*{entryPrice}"></div>
-          </div>
-
-          <div class="col-md-3">
-            <label class="form-label">Stop Loss</label>
-            <input id="stopLoss" class="form-control" type="number" step="0.00001" th:field="*{stopLoss}">
-            <div class="text-danger small"
-                 th:if="${#fields.hasErrors('stopLoss')}"
-                 th:errors="*{stopLoss}"></div>
-          </div>
-
-          <div class="col-md-3">
-            <label class="form-label">Take Profit</label>
-            <input class="form-control" type="number" step="0.00001" th:field="*{takeProfit}">
-          </div>
-
-          <div class="col-md-3">
-            <label class="form-label">Exit Price</label>
-            <input id="exitPrice" class="form-control" type="number" step="0.00001" th:field="*{exitPrice}">
-          </div>
-
-          <div class="col-md-3">
-            <label class="form-label">Position Size</label>
-            <input id="positionSize" class="form-control" type="number" step="0.01" th:field="*{positionSize}">
-            <div id="volumeHint" class="form-text">Unit: lot</div>
-          </div>
-
-          <div class="col-md-3">
-            <label class="form-label">PnL</label>
-            <input id="pnl" class="form-control" type="number" step="0.01" th:field="*{pnl}" readonly>
-          </div>
-
-          <div class="col-md-3">
-            <label class="form-label">R Multiple</label>
-            <input id="rMultiple" class="form-control" type="number" step="0.01" th:field="*{rMultiple}" readonly>
-          </div>
-
-          <div class="col-12">
-            <label class="form-label">Mistakes</label>
-
-            <div class="border rounded p-3 bg-light">
-              <div class="row g-2" th:if="${!#lists.isEmpty(mistakeTags)}">
-                <div class="col-md-4" th:each="m : ${mistakeTags}">
-                  <div class="form-check">
-                    <input class="form-check-input"
-                          type="checkbox"
-                          name="mistakeIds"
-                          th:id="'mistake_' + ${m.id}"
-                          th:value="${m.id}"
-                          th:checked="${trade.mistakes != null and #lists.contains(trade.mistakes.![id], m.id)}">
-                    <label class="form-check-label"
-                          th:for="'mistake_' + ${m.id}"
-                          th:text="${m.name}">
-                    </label>
-                  </div>
-                </div>
-              </div>
-
-              <div class="text-muted small mb-3" th:if="${#lists.isEmpty(mistakeTags)}">
-                No mistake tags available. You can still add custom mistakes below.
-              </div>
-
-              <div class="mt-2">
-                <label class="form-label mb-1">Other mistakes</label>
-                <input class="form-control"
-                      type="text"
-                      name="customMistakes"
-                      placeholder="Example: revenge trade, poor patience, bad news timing">
-                <div class="form-text">
-                  Separate multiple custom mistakes with commas. New ones will be created automatically.
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="col-12">
-            <label class="form-label">Note</label>
-            <textarea class="form-control" rows="4" th:field="*{note}"></textarea>
-          </div>
-
-          <div class="col-12">
-            <label class="form-label">Setup Images</label>
-
-            <div class="border rounded p-3 bg-light mb-2"
-                 th:if="${editMode}">
-              <div class="small fw-semibold mb-2">Current Images</div>
-
-              <div id="existingTradeImages"
-                   class="row g-2"
-                   th:if="${tradeImages != null and !#lists.isEmpty(tradeImages)}">
-                <div class="col-md-3"
-                     th:each="img : ${tradeImages}"
-                     th:id="'tradeImageCard_' + ${img.id}">
-                  <div class="border rounded p-2 bg-white h-100">
-                    <img th:src="${img.imageUrl}" class="img-fluid rounded mb-2" alt="Setup image">
-                    <div class="small text-muted mb-2"
-                         th:text="${img.caption != null && !#strings.isEmpty(img.caption) ? img.caption : 'Setup image'}"></div>
-                    <button type="button"
-                            class="btn btn-sm btn-outline-danger js-delete-trade-image"
-                            th:attr="data-trade-id=${trade.id},data-image-id=${img.id}">
-                      Delete
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              <div id="existingTradeImagesEmpty"
-                   class="text-muted small"
-                   th:if="${tradeImages == null or #lists.isEmpty(tradeImages)}">
-                No setup images yet.
-              </div>
-            </div>
-
-            <input id="setupImagesInput" class="form-control" type="file" name="setupImages" accept="image/*" multiple>
-            <div class="mt-2">
-              <label class="form-label mb-1">Image Type</label>
-              <select id="setupImageType" class="form-select form-select-sm">
-                <option value="BEFORE">BEFORE</option>
-                <option value="AFTER">AFTER</option>
-                <option value="REVIEW">REVIEW</option>
-                <option value="SETUP">SETUP</option>
-              </select>
-            </div>
-            <div id="setupImagesInfo" class="form-text"></div>
-            <div id="setupImagesError" class="text-danger small mt-1 d-none"></div>
-            <div class="form-text">Upload more setup screenshots to this trade.</div>
-          </div>
-
-          <div class="col-12 d-flex gap-2">
-            <button class="btn btn-primary" type="submit">Update Trade</button>
-            <a class="btn btn-outline-secondary" th:href="@{/trades/{id}(id=${trade.id})}">Cancel</a>
-          </div>
-
+<section class="trade-hero trade-form-hero">
+        <div>
+          <p class="trade-eyebrow mb-2" th:text="${editMode ? 'Trade update' : 'Trade capture'}">Trade capture</p>
+          <h2 class="m-0" th:text="${editMode ? 'Edit Trade' : 'New Trade'}">New Trade</h2>
+          <p class="trade-subtitle mb-0">Document execution cleanly with grouped inputs and keep the journal itself focused on review.</p>
         </div>
-      </form>
-    </div>
-  </div>
+        <div class="trade-hero-actions">
+          <a class="btn btn-outline-secondary" th:href="${editMode ? '/trades/' + trade.id : '/trades'}">
+            <i class="bi bi-arrow-left"></i>
+            <span th:text="${editMode ? 'Back to Trade' : 'Back to Trades'}">Back to Trades</span>
+          </a>
+        </div>
+      </section>
+
+      <section class="card shadow-sm trade-form-card">
+        <div class="card-body">
+          <div class="alert alert-danger" th:if="${error != null}" th:text="${error}"></div>
+
+          <form id="tradeForm"
+                th:action="${editMode ? '/trades/' + trade.id + '/edit' : '/trades'}"
+                th:object="${trade}"
+                method="post">
+            <div class="trade-form-layout">
+              <section class="trade-form-section">
+                <div class="trade-form-section-header">
+                  <h5 class="mb-1">Core Setup</h5>
+                  <p class="mb-0">Capture the trade identity and context.</p>
+                </div>
+                <div class="row g-3">
+                  <div class="col-md-4">
+                    <label class="form-label">Account</label>
+                    <input class="form-control" type="text" th:field="*{accountLabel}">
+                    <div class="text-danger small" th:if="${#fields.hasErrors('accountLabel')}" th:errors="*{accountLabel}"></div>
+                  </div>
+
+                  <div class="col-md-4">
+                    <label class="form-label">Symbol</label>
+                    <select id="symbol" th:field="*{symbol}" class="form-select">
+                      <option value="">-- Select Symbol --</option>
+                      <option value="XAUUSD">XAUUSD</option>
+                      <option value="EURUSD">EURUSD</option>
+                      <option value="GBPUSD">GBPUSD</option>
+                      <option value="USDJPY">USDJPY</option>
+                      <option value="BTCUSD">BTCUSD</option>
+                      <option value="ETHUSD">ETHUSD</option>
+                    </select>
+                    <div class="text-danger small" th:if="${#fields.hasErrors('symbol')}" th:errors="*{symbol}"></div>
+                  </div>
+
+                  <div class="col-md-4">
+                    <label class="form-label">Direction</label>
+                    <select id="direction" class="form-select" th:field="*{direction}">
+                      <option value="">-- Select --</option>
+                      <option value="BUY">BUY</option>
+                      <option value="SELL">SELL</option>
+                    </select>
+                    <div class="text-danger small" th:if="${#fields.hasErrors('direction')}" th:errors="*{direction}"></div>
+                  </div>
+
+                  <div class="col-md-4">
+                    <label class="form-label">Setup</label>
+                    <select class="form-select" th:field="*{setup.id}">
+                      <option value="">-- Select setup --</option>
+                      <option th:each="s : ${setups}" th:value="${s.id}" th:text="${s.name}"></option>
+                    </select>
+                    <div class="text-danger small" th:if="${#fields.hasErrors('setup')}" th:errors="*{setup}"></div>
+                  </div>
+
+                  <div class="col-md-4">
+                    <label class="form-label">Session</label>
+                    <select class="form-select" th:field="*{session}">
+                      <option value="">-- Select --</option>
+                      <option value="ASIA">ASIA</option>
+                      <option value="LONDON">LONDON</option>
+                      <option value="NEW_YORK">NEW_YORK</option>
+                      <option value="OTHER">OTHER</option>
+                    </select>
+                  </div>
+
+                  <div class="col-md-4">
+                    <label class="form-label">Result</label>
+                    <select id="result" class="form-select" th:field="*{result}">
+                      <option value="">-- Select --</option>
+                      <option value="WIN">WIN</option>
+                      <option value="LOSS">LOSS</option>
+                      <option value="BE and take partial">BE and take partial</option>
+                    </select>
+                  </div>
+
+                  <div class="col-md-4">
+                    <label class="form-label">HTF</label>
+                    <select class="form-select" th:field="*{htf}">
+                      <option value="">-- Select --</option>
+                      <option value="H4">H4</option>
+                      <option value="H1">H1</option>
+                      <option value="M30">M30</option>
+                      <option value="M15">M15</option>
+                      <option value="M5">M5</option>
+                      <option value="M1">M1</option>
+                    </select>
+                    <div class="text-danger small" th:if="${#fields.hasErrors('htf')}" th:errors="*{htf}"></div>
+                  </div>
+
+                  <div class="col-md-4">
+                    <label class="form-label">LTF</label>
+                    <select class="form-select" th:field="*{ltf}">
+                      <option value="">-- Select --</option>
+                      <option value="H1">H1</option>
+                      <option value="M30">M30</option>
+                      <option value="M15">M15</option>
+                      <option value="M5">M5</option>
+                      <option value="M1">M1</option>
+                    </select>
+                    <div class="text-danger small" th:if="${#fields.hasErrors('ltf')}" th:errors="*{ltf}"></div>
+                  </div>
+                </div>
+              </section>
+
+              <section class="trade-form-section">
+                <div class="trade-form-section-header">
+                  <h5 class="mb-1">Execution</h5>
+                  <p class="mb-0">Prices, timestamps, and auto-calculated outcome fields.</p>
+                </div>
+                <div class="row g-3">
+                  <div class="col-md-4">
+                    <label class="form-label">Entry Time</label>
+                    <input class="form-control"
+                           type="datetime-local"
+                           th:if="${!editMode}"
+                           th:field="*{entryTime}">
+                    <input class="form-control"
+                           type="datetime-local"
+                           th:if="${editMode}"
+                           name="entryTime"
+                           th:value="${trade.entryTime != null ? #temporals.format(trade.entryTime, 'yyyy-MM-dd''T''HH:mm') : ''}">
+                    <div class="text-danger small" th:if="${#fields.hasErrors('entryTime')}" th:errors="*{entryTime}"></div>
+                  </div>
+
+                  <div class="col-md-4">
+                    <label class="form-label">Exit Time</label>
+                    <input class="form-control"
+                           type="datetime-local"
+                           th:if="${!editMode}"
+                           th:field="*{exitTime}">
+                    <input class="form-control"
+                           type="datetime-local"
+                           th:if="${editMode}"
+                           name="exitTime"
+                           th:value="${trade.exitTime != null ? #temporals.format(trade.exitTime, 'yyyy-MM-dd''T''HH:mm') : ''}">
+                  </div>
+
+                  <div class="col-md-4">
+                    <label class="form-label">Position Size</label>
+                    <input id="positionSize" class="form-control" type="number" step="0.01" th:field="*{positionSize}">
+                    <div id="volumeHint" class="form-text">Unit: lot</div>
+                  </div>
+
+                  <div class="col-md-3">
+                    <label class="form-label">Entry Price</label>
+                    <input id="entryPrice" class="form-control" type="number" step="0.00001" th:field="*{entryPrice}">
+                    <div class="text-danger small" th:if="${#fields.hasErrors('entryPrice')}" th:errors="*{entryPrice}"></div>
+                  </div>
+
+                  <div class="col-md-3">
+                    <label class="form-label">Stop Loss</label>
+                    <input id="stopLoss" class="form-control" type="number" step="0.00001" th:field="*{stopLoss}">
+                    <div class="text-danger small" th:if="${#fields.hasErrors('stopLoss')}" th:errors="*{stopLoss}"></div>
+                  </div>
+
+                  <div class="col-md-3">
+                    <label class="form-label">Take Profit</label>
+                    <input class="form-control" type="number" step="0.00001" th:field="*{takeProfit}">
+                  </div>
+
+                  <div class="col-md-3">
+                    <label class="form-label">Exit Price</label>
+                    <input id="exitPrice" class="form-control" type="number" step="0.00001" th:field="*{exitPrice}">
+                  </div>
+
+                  <div class="col-md-3">
+                    <label class="form-label">PnL</label>
+                    <input id="pnl" class="form-control" type="number" step="0.01" th:field="*{pnl}" readonly>
+                  </div>
+
+                  <div class="col-md-3">
+                    <label class="form-label">R Multiple</label>
+                    <input id="rMultiple" class="form-control" type="number" step="0.01" th:field="*{rMultiple}" readonly>
+                  </div>
+                </div>
+              </section>
+
+              <section class="trade-form-section">
+                <div class="trade-form-section-header">
+                  <h5 class="mb-1">Review Notes</h5>
+                  <p class="mb-0">Keep process issues and observations attached to the trade.</p>
+                </div>
+                <div class="row g-3">
+                  <div class="col-12">
+                    <label class="form-label">Mistakes</label>
+                    <div class="border rounded-4 p-3 bg-light-subtle">
+                      <div class="row g-2" th:if="${!#lists.isEmpty(mistakeTags)}">
+                        <div class="col-md-4" th:each="m : ${mistakeTags}">
+                          <div class="form-check">
+                            <input class="form-check-input"
+                                   type="checkbox"
+                                   name="mistakeIds"
+                                   th:id="'mistake_' + ${m.id}"
+                                   th:value="${m.id}"
+                                   th:checked="${trade.mistakes != null and #lists.contains(trade.mistakes.![id], m.id)}">
+                            <label class="form-check-label" th:for="'mistake_' + ${m.id}" th:text="${m.name}"></label>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div class="text-muted small mb-3" th:if="${#lists.isEmpty(mistakeTags)}">
+                        No mistake tags available. You can still add custom mistakes below.
+                      </div>
+
+                      <div class="mt-2">
+                        <label class="form-label mb-1">Other mistakes</label>
+                        <input class="form-control"
+                               type="text"
+                               name="customMistakes"
+                               placeholder="Example: revenge trade, poor patience, bad news timing">
+                        <div class="form-text" th:text="${editMode ? 'Separate multiple custom mistakes with commas. New ones will be created automatically.' : 'Separate multiple custom mistakes with commas.'}"></div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="col-12">
+                    <label class="form-label">Note</label>
+                    <textarea class="form-control" rows="4" th:field="*{note}"></textarea>
+                  </div>
+                </div>
+              </section>
+
+              <section class="trade-form-section">
+                <div class="trade-form-section-header">
+                  <h5 class="mb-1">Setup Images</h5>
+                  <p class="mb-0">Upload and manage chart references for later review.</p>
+                </div>
+                <div class="row g-3">
+                  <div class="col-12" th:if="${editMode}">
+                    <div class="border rounded-4 p-3 bg-light-subtle mb-2">
+                      <div class="small fw-semibold mb-2">Current Images</div>
+
+                      <div id="existingTradeImages" class="row g-2" th:if="${tradeImages != null and !#lists.isEmpty(tradeImages)}">
+                        <div class="col-md-3" th:each="img : ${tradeImages}" th:id="'tradeImageCard_' + ${img.id}">
+                          <div class="border rounded p-2 bg-white h-100">
+                            <img th:src="${img.imageUrl}" class="img-fluid rounded mb-2" alt="Setup image">
+                            <div class="small text-muted mb-2" th:text="${img.caption != null && !#strings.isEmpty(img.caption) ? img.caption : 'Setup image'}"></div>
+                            <button type="button"
+                                    class="btn btn-sm btn-outline-danger js-delete-trade-image"
+                                    th:attr="data-trade-id=${trade.id},data-image-id=${img.id}">
+                              Delete
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div id="existingTradeImagesEmpty" class="text-muted small" th:if="${tradeImages == null or #lists.isEmpty(tradeImages)}">
+                        No setup images yet.
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="col-12">
+                    <input id="setupImagesInput" class="form-control" type="file" name="setupImages" accept="image/*" multiple>
+                  </div>
+
+                  <div class="col-md-4">
+                    <label class="form-label mb-1">Image Type</label>
+                    <select id="setupImageType" class="form-select form-select-sm">
+                      <option value="BEFORE">BEFORE</option>
+                      <option value="AFTER">AFTER</option>
+                      <option value="REVIEW">REVIEW</option>
+                      <option value="SETUP">SETUP</option>
+                    </select>
+                  </div>
+
+                  <div class="col-12">
+                    <div id="setupImagesInfo" class="form-text"></div>
+                    <div id="setupImagesError" class="text-danger small mt-1 d-none"></div>
+                    <div class="form-text" th:text="${editMode ? 'Upload more setup screenshots to this trade.' : 'Save trade first. You can upload setup images after the trade is created.'}"></div>
+                  </div>
+                </div>
+              </section>
+            </div>
+
+            <div class="trade-form-footer">
+              <button class="btn btn-primary" type="submit" th:text="${editMode ? 'Update Trade' : 'Save Trade'}">Save Trade</button>
+              <a class="btn btn-outline-secondary" th:href="${editMode ? '/trades/' + trade.id : '/trades'}">Cancel</a>
+            </div>
+          </form>
+        </div>
+      </section>
     </main>
   </div>
 </div>
 
 <script th:src="@{/js/trade-form.js}" src="/js/trade-form.js"></script>
-
-  <script th:src="@{/js/sidebar-toggle.js}" src="/js/sidebar-toggle.js"></script>
+<script th:src="@{/js/sidebar-toggle.js}" src="/js/sidebar-toggle.js"></script>
 
 </body>
 </html>
-
-
-
 
 
