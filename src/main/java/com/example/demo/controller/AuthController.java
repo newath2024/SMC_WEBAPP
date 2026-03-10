@@ -97,7 +97,7 @@ public class AuthController {
         if (currentUser != null) {
             return redirectAfterAuth(currentUser);
         }
-        return "redirect:/login";
+        return "index";
     }
 
     private String redirectAfterAuth(User user) {

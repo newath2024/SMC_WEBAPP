@@ -1,0 +1,685 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TradeJournal | Review your trades. Track your edge.</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #f4f8ff;
+      --surface: #ffffff;
+      --text: #0f1b3d;
+      --muted: #5f6e92;
+      --primary: #2563eb;
+      --primary-deep: #1d4ed8;
+      --line: #d6e2ff;
+      --shadow-soft: 0 20px 50px rgba(37, 99, 235, 0.12);
+      --shadow-card: 0 12px 28px rgba(14, 35, 82, 0.08);
+      --radius-lg: 26px;
+      --radius-md: 16px;
+      --max-width: 1140px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Manrope", "Segoe UI", sans-serif;
+      color: var(--text);
+      background: #ffffff;
+      line-height: 1.6;
+    }
+
+    a {
+      text-decoration: none;
+      color: inherit;
+    }
+
+    .container {
+      width: min(var(--max-width), calc(100% - 2.5rem));
+      margin: 0 auto;
+    }
+
+    .topbar {
+      padding: 1.2rem 0;
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      backdrop-filter: blur(8px);
+      background: rgba(255, 255, 255, 0.96);
+      border-bottom: 1px solid rgba(214, 226, 255, 0.8);
+    }
+
+    .topbar-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.7rem;
+      font-family: "Space Grotesk", sans-serif;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+
+    .brand-logo {
+      height: 34px;
+      width: auto;
+      display: block;
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 1.25rem;
+      font-weight: 600;
+      color: #2e3f70;
+    }
+
+    .nav-links a:hover {
+      color: var(--primary);
+    }
+
+    .nav-cta {
+      background: linear-gradient(120deg, var(--primary), var(--primary-deep));
+      color: #fff;
+      padding: 0.55rem 0.95rem;
+      border-radius: 999px;
+      box-shadow: 0 10px 20px rgba(37, 99, 235, 0.28);
+    }
+
+    .nav-cta:hover {
+      color: #fff;
+      transform: translateY(-1px);
+    }
+
+    .hero {
+      padding: 4.8rem 0 4rem;
+    }
+
+    .hero-grid {
+      display: grid;
+      grid-template-columns: 1.03fr 1fr;
+      gap: 2.8rem;
+      align-items: center;
+    }
+
+    .eyebrow {
+      margin: 0;
+      color: #3e63ce;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      font-size: 0.8rem;
+    }
+
+    h1 {
+      margin: 0.65rem 0 1rem;
+      font-size: clamp(2rem, 5vw, 3.5rem);
+      line-height: 1.12;
+      font-family: "Space Grotesk", sans-serif;
+      font-weight: 700;
+      letter-spacing: -0.04em;
+      max-width: 16ch;
+    }
+
+    .lead {
+      margin: 0;
+      max-width: 52ch;
+      color: var(--muted);
+      font-size: 1.04rem;
+    }
+
+    .hero-actions {
+      margin-top: 1.8rem;
+      display: flex;
+      gap: 0.9rem;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0.84rem 1.3rem;
+      border-radius: 999px;
+      border: 1px solid transparent;
+      font-weight: 700;
+      transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+    }
+
+    .btn:hover {
+      transform: translateY(-1px);
+    }
+
+    .btn-primary {
+      background: linear-gradient(120deg, var(--primary), var(--primary-deep));
+      color: #fff;
+      box-shadow: 0 14px 28px rgba(37, 99, 235, 0.3);
+    }
+
+    .btn-primary:hover {
+      box-shadow: 0 20px 34px rgba(37, 99, 235, 0.38);
+    }
+
+    .btn-secondary {
+      background: #fff;
+      border-color: var(--line);
+      color: #284188;
+      box-shadow: var(--shadow-card);
+    }
+
+    .dashboard-shot {
+      background: linear-gradient(160deg, #ffffff, #f0f5ff);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      padding: 1.25rem;
+      box-shadow: 0 36px 80px rgba(24, 72, 184, 0.34);
+      animation: floatIn 600ms ease-out;
+      transform: scale(1.12);
+      transform-origin: center right;
+    }
+
+    .shot-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.85rem;
+      color: #516192;
+      font-size: 0.88rem;
+      font-weight: 700;
+    }
+
+    .status-dot {
+      width: 0.54rem;
+      height: 0.54rem;
+      border-radius: 50%;
+      background: #22c55e;
+      box-shadow: 0 0 0 5px rgba(34, 197, 94, 0.14);
+    }
+
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.68rem;
+      margin-bottom: 0.72rem;
+    }
+
+    .stat {
+      background: #fff;
+      border: 1px solid #e3ecff;
+      border-radius: 12px;
+      padding: 0.7rem;
+    }
+
+    .stat .label {
+      display: block;
+      color: #7482a9;
+      font-size: 0.73rem;
+      font-weight: 700;
+      margin-bottom: 0.4rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .stat .value {
+      font-size: 1.05rem;
+      font-weight: 800;
+      color: #1e2f63;
+    }
+
+    .chart {
+      border-radius: 14px;
+      border: 1px solid #dde8ff;
+      background: linear-gradient(180deg, #fbfdff, #f2f7ff);
+      height: 145px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .chart svg {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+    section {
+      padding: 4rem 0;
+    }
+
+    .section-title {
+      margin: 0 0 0.75rem;
+      font-size: clamp(1.65rem, 3.4vw, 2.4rem);
+      letter-spacing: -0.02em;
+      font-family: "Space Grotesk", sans-serif;
+    }
+
+    .section-subtitle {
+      margin: 0;
+      color: var(--muted);
+      max-width: 70ch;
+    }
+
+    .features-grid {
+      margin-top: 2rem;
+      display: grid;
+      gap: 1rem;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .feature-card {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-md);
+      padding: 1.35rem;
+      box-shadow: var(--shadow-card);
+      transition: transform 0.22s ease, box-shadow 0.22s ease;
+    }
+
+    .feature-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+    }
+
+    .icon-wrap {
+      width: 3rem;
+      height: 3rem;
+      border-radius: 0.8rem;
+      background: linear-gradient(135deg, rgba(37, 99, 235, 0.15), rgba(59, 130, 246, 0.27));
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 0.95rem;
+      color: #1944af;
+    }
+
+    .feature-card h3 {
+      margin: 0 0 0.45rem;
+      font-size: 1.08rem;
+    }
+
+    .feature-card p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .preview-card {
+      margin-top: 2rem;
+      background: #fff;
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--line);
+      padding: 1.1rem;
+      box-shadow: 0 24px 56px rgba(28, 72, 180, 0.2);
+    }
+
+    .preview-screen {
+      border-radius: 18px;
+      min-height: 320px;
+      padding: 1rem;
+      background:
+        linear-gradient(to right, rgba(37, 99, 235, 0.09) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(37, 99, 235, 0.09) 1px, transparent 1px),
+        linear-gradient(180deg, #dceaff, #edf4ff 35%, #ffffff);
+      background-size: 28px 28px, 28px 28px, auto;
+      border: 1px solid #c8dcff;
+    }
+
+    .preview-columns {
+      display: grid;
+      grid-template-columns: 1.25fr 0.75fr;
+      gap: 0.8rem;
+      height: 100%;
+    }
+
+    .panel {
+      border: 1px solid #cddfff;
+      border-radius: 14px;
+      background: linear-gradient(180deg, #ffffff, #f7faff);
+      padding: 0.85rem;
+    }
+
+    .mini-bars {
+      display: grid;
+      gap: 0.55rem;
+      margin-top: 0.75rem;
+    }
+
+    .bar {
+      background: #d8e6ff;
+      height: 0.5rem;
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .bar span {
+      display: block;
+      height: 100%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #1d4ed8, #2563eb);
+    }
+
+    .benefits-wrap {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.6rem;
+      align-items: start;
+    }
+
+    .benefits {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-md);
+      padding: 1.25rem 1.35rem;
+      box-shadow: var(--shadow-card);
+    }
+
+    .benefits ul {
+      margin: 0;
+      padding-left: 1.1rem;
+      color: #334574;
+    }
+
+    .benefits li {
+      margin-bottom: 0.65rem;
+    }
+
+    .cta {
+      padding-top: 2rem;
+      padding-bottom: 4.7rem;
+    }
+
+    .cta-box {
+      background: linear-gradient(130deg, #1d4ed8, #2563eb 45%, #3b82f6);
+      color: #fff;
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-soft);
+      padding: 2.2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .cta-box h2 {
+      margin: 0;
+      font-size: clamp(1.35rem, 3vw, 2rem);
+      letter-spacing: -0.02em;
+      font-family: "Space Grotesk", sans-serif;
+    }
+
+    .cta-box .btn {
+      background: #fff;
+      color: #1e40af;
+      border-color: rgba(255, 255, 255, 0.8);
+      box-shadow: 0 12px 24px rgba(15, 29, 78, 0.2);
+      padding: 0.95rem 1.55rem;
+      font-size: 1rem;
+    }
+
+    footer {
+      border-top: 1px solid rgba(188, 205, 244, 0.66);
+      padding: 1.3rem 0 2.1rem;
+      color: #51608a;
+      font-size: 0.93rem;
+    }
+
+    .footer-inner {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .footer-links {
+      display: inline-flex;
+      gap: 1rem;
+    }
+
+    .footer-links a:hover {
+      color: #244bb8;
+    }
+
+    @keyframes floatIn {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @media (max-width: 980px) {
+      .hero {
+        padding-top: 3.6rem;
+      }
+
+      .hero-grid,
+      .benefits-wrap,
+      .preview-columns {
+        grid-template-columns: 1fr;
+      }
+
+      .features-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .nav-links {
+        gap: 0.7rem;
+        font-size: 0.9rem;
+      }
+
+      .dashboard-shot {
+        transform: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="container topbar-inner">
+      <a class="brand" th:href="@{/}" href="/">
+        <img class="brand-logo" th:src="@{/img/tradejournal-logo-full.svg}" src="/img/tradejournal-logo-full.svg" alt="TradeJournal logo">
+      </a>
+      <nav class="nav-links" aria-label="Primary">
+        <a href="#features">Features</a>
+        <a href="#preview">Product</a>
+        <a href="#benefits">Benefits</a>
+        <a th:href="@{/login}" href="/login">Sign In</a>
+        <a class="nav-cta" th:href="@{/register}" href="/register">Sign Up</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="container hero-grid">
+        <div>
+          <p class="eyebrow">Trading Journal SaaS</p>
+          <h1>Review your trades. Track your edge.</h1>
+          <p class="lead">TradeJournal helps traders break down performance, spot behavior patterns, and improve consistency with clear, repeatable review workflows.</p>
+          <div class="hero-actions">
+            <a class="btn btn-primary" th:href="@{/register}" href="/register">Start Journaling</a>
+            <a class="btn btn-secondary" href="#preview">View Demo</a>
+          </div>
+        </div>
+
+        <div class="dashboard-shot" aria-label="Dashboard screenshot preview">
+          <div class="shot-top">
+            <span>Trading Dashboard Snapshot</span>
+            <span class="status-dot"></span>
+          </div>
+          <div class="stats-row">
+            <div class="stat">
+              <span class="label">Win Rate</span>
+              <span class="value">63%</span>
+            </div>
+            <div class="stat">
+              <span class="label">Avg R</span>
+              <span class="value">+1.42R</span>
+            </div>
+            <div class="stat">
+              <span class="label">Net PnL</span>
+              <span class="value">+$3,840</span>
+            </div>
+          </div>
+          <div class="chart">
+            <svg viewBox="0 0 640 180" role="img" aria-label="Equity curve">
+              <defs>
+                <linearGradient id="curveFill" x1="0" x2="0" y1="0" y2="1">
+                  <stop offset="0%" stop-color="#3b82f6" stop-opacity="0.34"></stop>
+                  <stop offset="100%" stop-color="#3b82f6" stop-opacity="0"></stop>
+                </linearGradient>
+              </defs>
+              <path d="M0 150 L80 132 L140 140 L205 102 L280 110 L340 88 L420 74 L480 52 L560 60 L640 36 L640 180 L0 180 Z"
+                    fill="url(#curveFill)"></path>
+              <path d="M0 150 L80 132 L140 140 L205 102 L280 110 L340 88 L420 74 L480 52 L560 60 L640 36"
+                    fill="none"
+                    stroke="#2563eb"
+                    stroke-width="5"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"></path>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="features">
+      <div class="container">
+        <h2 class="section-title">Everything your journal needs</h2>
+        <p class="section-subtitle">A focused toolset for discretionary and systematic traders who want tighter feedback loops.</p>
+
+        <div class="features-grid">
+          <article class="feature-card">
+            <div class="icon-wrap" aria-hidden="true">
+              <svg width="30" height="30" viewBox="0 0 24 24" fill="none">
+                <path d="M4 6.5h16M4 12h16M4 17.5h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
+              </svg>
+            </div>
+            <h3>Track every trade</h3>
+            <p>Capture setup, entry, exit, risk, and notes in a clean workflow built for fast post-trade logging.</p>
+          </article>
+
+          <article class="feature-card">
+            <div class="icon-wrap" aria-hidden="true">
+              <svg width="30" height="30" viewBox="0 0 24 24" fill="none">
+                <path d="M4 18L10 12L14 15L20 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+                <circle cx="4" cy="18" r="2" fill="currentColor"></circle>
+                <circle cx="10" cy="12" r="2" fill="currentColor"></circle>
+                <circle cx="14" cy="15" r="2" fill="currentColor"></circle>
+                <circle cx="20" cy="8" r="2" fill="currentColor"></circle>
+              </svg>
+            </div>
+            <h3>Analyze performance</h3>
+            <p>Understand your edge with metrics by setup, session, and behavior so decisions get sharper over time.</p>
+          </article>
+
+          <article class="feature-card">
+            <div class="icon-wrap" aria-hidden="true">
+              <svg width="30" height="30" viewBox="0 0 24 24" fill="none">
+                <path d="M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3z" stroke="currentColor" stroke-width="2"></path>
+                <path d="M12 8v5m0 4h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
+              </svg>
+            </div>
+            <h3>Identify mistakes</h3>
+            <p>Tag execution errors and recurring patterns to fix leaks and build consistent, process-driven habits.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="preview">
+      <div class="container">
+        <h2 class="section-title">Powerful analytics for serious traders</h2>
+        <p class="section-subtitle">Visualize progress at a glance and drill down by trade quality, risk control, and execution discipline.</p>
+        <div class="preview-card">
+          <div class="preview-screen" aria-label="Large dashboard screenshot">
+            <div class="preview-columns">
+              <div class="panel">
+                <strong>Equity Curve</strong>
+                <div class="chart" style="margin-top: 0.7rem;">
+                  <svg viewBox="0 0 640 180" role="img" aria-label="Detailed equity chart">
+                    <path d="M0 146 L60 142 L120 124 L190 130 L260 98 L330 96 L410 80 L490 70 L560 58 L640 42 L640 180 L0 180 Z"
+                          fill="rgba(29,78,216,0.3)"></path>
+                    <path d="M0 146 L60 142 L120 124 L190 130 L260 98 L330 96 L410 80 L490 70 L560 58 L640 42"
+                          fill="none"
+                          stroke="#1d4ed8"
+                          stroke-width="5"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"></path>
+                  </svg>
+                </div>
+              </div>
+              <div class="panel">
+                <strong>Setup Performance</strong>
+                <div class="mini-bars">
+                  <div class="bar"><span style="width: 84%;"></span></div>
+                  <div class="bar"><span style="width: 72%;"></span></div>
+                  <div class="bar"><span style="width: 61%;"></span></div>
+                  <div class="bar"><span style="width: 78%;"></span></div>
+                  <div class="bar"><span style="width: 67%;"></span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="benefits">
+      <div class="container benefits-wrap">
+        <div>
+          <h2 class="section-title">Why serious traders journal</h2>
+          <p class="section-subtitle">Journaling turns random outcomes into measurable process improvements.</p>
+        </div>
+        <div class="benefits">
+          <ul>
+            <li>Build objective feedback loops after every session.</li>
+            <li>Spot overtrading, revenge entries, and rule drift quickly.</li>
+            <li>Track progress by setup quality, not just PnL swings.</li>
+            <li>Refine risk management with real trade-by-trade evidence.</li>
+            <li>Improve consistency through structured review routines.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="cta">
+      <div class="container">
+        <div class="cta-box">
+          <h2>Start building your trading edge today.</h2>
+          <a class="btn" th:href="@{/register}" href="/register">Create Free Account</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="container footer-inner">
+      <span>&copy; 2026 TradeJournal. All rights reserved.</span>
+      <nav class="footer-links" aria-label="Footer">
+        <a href="#preview">Product</a>
+        <a href="#features">Features</a>
+        <a th:href="@{/register}" href="/register">Pricing</a>
+        <a th:href="@{/login}" href="/login">Sign In</a>
+        <a th:href="@{/register}" href="/register">Sign Up</a>
+      </nav>
+    </div>
+  </footer>
+</body>
+</html>
