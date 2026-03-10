@@ -15,8 +15,13 @@ WORKDIR /app
 
 COPY --from=build /workspace/target/demo-0.0.1-SNAPSHOT.jar app.jar
 COPY --from=build /workspace/application.yml ./application.yml
-COPY --from=build /workspace/data ./data
 
-EXPOSE 8080
+RUN mkdir -p /app/data/uploads
 
-CMD ["sh", "-c", "java -Dserver.port=${PORT:-8080} -jar /app/app.jar"]
+ENV PORT=8081
+
+EXPOSE 8081
+
+VOLUME ["/app/data"]
+
+CMD ["sh", "-c", "java -Dserver.port=${PORT:-8081} -jar /app/app.jar"]

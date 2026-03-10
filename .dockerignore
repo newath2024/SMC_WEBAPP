@@ -1,0 +1,9 @@
+.git
+.gitignore
+.gitattributes
+.vscode
+.m2
+target
+README*
+HELP.md
+Analytics
