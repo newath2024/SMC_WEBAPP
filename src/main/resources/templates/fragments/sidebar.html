@@ -59,13 +59,14 @@
             <i class="bi bi-people sidebar-icon nav-icon"></i>
             <span class="nav-label nav-text">Users</span>
           </a>
-          <a th:href="@{/admin#system-health}"
+          <a th:href="@{/admin/settings}"
              class="sidebar-link nav-item">
             <i class="bi bi-credit-card-2-front sidebar-icon nav-icon"></i>
             <span class="nav-label nav-text">Billing</span>
           </a>
-          <a th:href="@{/admin#system-health}"
-             class="sidebar-link nav-item">
+          <a th:href="@{/admin/settings}"
+             class="sidebar-link nav-item"
+             th:classappend="${activePage == 'admin-settings'} ? ' active' : ''">
             <i class="bi bi-gear-fill sidebar-icon nav-icon"></i>
             <span class="nav-label nav-text">Settings</span>
           </a>

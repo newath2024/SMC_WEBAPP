@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Admin Settings</title>
+  <link rel="icon" type="image/svg+xml" th:href="@{/img/tradejournal-logo-mark.svg}" href="/img/tradejournal-logo-mark.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <link th:href="@{/css/sidebar-toggle.css}" href="/css/sidebar-toggle.css" rel="stylesheet">
+  <link th:href="@{/css/analytics-dashboard.css}" href="/css/analytics-dashboard.css" rel="stylesheet">
+  <link th:href="@{/css/app-page.css}" href="/css/app-page.css" rel="stylesheet">
+  <style>
+    :root{--bg:#eef4fb;--surface:rgba(255,255,255,.94);--border:rgba(15,23,42,.08);--text:#0f172a;--muted:#64748b;--primary:#2563eb;--primary-soft:rgba(37,99,235,.12);--success:#16a34a;--success-soft:rgba(22,163,74,.12);--warning:#d97706;--warning-soft:rgba(217,119,6,.14);--shadow:0 24px 60px rgba(15,23,42,.08)}
+    body.dashboard-body.app-page-body{font-family:"Inter",sans-serif;color:var(--text);background:radial-gradient(circle at top left,rgba(37,99,235,.1),transparent 24%),radial-gradient(circle at top right,rgba(15,118,110,.08),transparent 18%),linear-gradient(180deg,#f8fbff 0%,var(--bg) 100%)}
+    .admin-shell{gap:1.5rem;align-items:stretch}.admin-main{display:grid;gap:1.5rem}
+    .sidebar-card.sidebar-panel{border:1px solid rgba(255,255,255,.5);border-radius:1.5rem;background:linear-gradient(180deg,rgba(15,23,42,.98),rgba(15,23,42,.94));box-shadow:0 30px 60px rgba(15,23,42,.28);color:rgba(255,255,255,.92)}
+    .sidebar-link.nav-item{border-radius:.95rem;color:rgba(226,232,240,.88)}.sidebar-link.nav-item:hover,.sidebar-link.nav-item.active{color:#fff;background:linear-gradient(135deg,rgba(37,99,235,.32),rgba(59,130,246,.18));box-shadow:inset 0 0 0 1px rgba(96,165,250,.2)}
+    .settings-hero,.settings-shell,.tab-panel,.config-card,.maintenance-card,.feature-flag-card,.switch-card{background:var(--surface);border:1px solid var(--border);border-radius:1.4rem;box-shadow:var(--shadow);backdrop-filter:blur(10px)}
+    .settings-hero,.settings-shell,.tab-panel{padding:1.5rem}.hero-kicker,.tab-trigger,.status-pill,.mini-badge{display:inline-flex;align-items:center;gap:.5rem;border-radius:999px;font-weight:700}
+    .hero-kicker{padding:.45rem .8rem;background:var(--primary-soft);color:var(--primary);font-size:.8rem;margin-bottom:.85rem}.hero-title{font-size:clamp(2rem,3vw,2.8rem);line-height:1;letter-spacing:-.04em;margin-bottom:.6rem;font-weight:800}
+    .hero-subtitle,.section-copy,.panel-note,.helper-copy,.config-note,.maintenance-copy{color:var(--muted);margin:0}
+    .section-header,.panel-head,.tab-actions{display:flex;align-items:flex-end;justify-content:space-between;gap:1rem}.section-header,.panel-head{margin-bottom:1rem}
+    .section-title{font-size:1.15rem;font-weight:800;margin:0 0 .15rem}.panel-title{font-size:1.05rem;font-weight:800;margin:0 0 .25rem}
+    .status-pill{padding:.45rem .75rem;font-size:.76rem}.status-pill.success{background:var(--success-soft);color:var(--success)}.status-pill.warning{background:var(--warning-soft);color:var(--warning)}
+    .tab-nav{display:flex;flex-wrap:wrap;gap:.75rem;margin-bottom:1.25rem}.tab-trigger{border:1px solid var(--border);background:#fff;color:var(--muted);padding:.85rem 1rem}.tab-trigger.active{background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;border-color:transparent;box-shadow:0 14px 28px rgba(37,99,235,.24)}
+    .tab-panel{display:none}.tab-panel.active{display:block}
+    .form-label{font-weight:700;color:var(--text);margin-bottom:.45rem}.form-control,.form-select{min-height:3rem;border-radius:.95rem;border-color:var(--border);background:rgba(255,255,255,.94);box-shadow:none}
+    .form-control:focus,.form-select:focus,.form-check-input:focus{border-color:rgba(37,99,235,.45);box-shadow:0 0 0 .2rem rgba(37,99,235,.12)}
+    .switch-card,.feature-flag-card{border-radius:1rem;background:linear-gradient(180deg,#fff,#f8fbff);padding:1rem;height:100%}.form-check-input{width:2.8rem;height:1.5rem;margin-top:.1rem}.form-check-label{font-weight:700;color:var(--text)}.helper-copy{display:block;font-size:.84rem;margin-top:.2rem}
+    .config-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem}.config-card,.maintenance-card{padding:1.1rem;background:linear-gradient(180deg,#fff,#f8fbff)}.mini-badge{padding:.35rem .65rem;font-size:.72rem;background:var(--primary-soft);color:var(--primary);margin-bottom:.9rem}
+    .config-title,.maintenance-title,.feature-flag-title{font-size:1rem;font-weight:800;margin-bottom:.35rem}.maintenance-grid,.feature-flag-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1rem}
+    .maintenance-icon{width:3rem;height:3rem;border-radius:1rem;display:inline-flex;align-items:center;justify-content:center;font-size:1.1rem;margin-bottom:.95rem;background:var(--primary-soft);color:var(--primary)}.maintenance-card.warning .maintenance-icon{background:var(--warning-soft);color:var(--warning)}.maintenance-card.success .maintenance-icon{background:var(--success-soft);color:var(--success)}
+    .feature-flag-card{display:flex;align-items:center;justify-content:space-between;gap:1rem}.tab-actions{margin-top:1.25rem;flex-wrap:wrap}.btn-primary,.btn-outline-secondary,.btn-outline-primary{border-radius:.95rem;font-weight:700;padding-inline:1.15rem}
+    @media (max-width:1199.98px){.config-grid,.maintenance-grid,.feature-flag-grid{grid-template-columns:1fr}}
+    @media (max-width:767.98px){.section-header,.panel-head,.tab-actions{flex-direction:column;align-items:stretch}}
+  </style>
+</head>
+<body class="dashboard-body app-page-body">
+<div class="container-fluid py-3 px-3 px-lg-4">
+  <div class="app-shell collapsible-shell expanded admin-shell">
+    <aside th:replace="~{fragments/sidebar :: appSidebar('admin-settings', @{/dashboard/export.csv(period='ALL')})}"></aside>
+    <main class="main-content admin-main">
+      <section class="settings-hero">
+        <div>
+          <div class="hero-kicker"><i class="bi bi-sliders"></i><span>Platform Configuration</span></div>
+          <h1 class="hero-title">Admin Settings</h1>
+          <p class="hero-subtitle">Configure platform defaults, risk rules, subscription boundaries, security policy, maintenance jobs, and feature rollout controls.</p>
+        </div>
+      </section>
+
+      <section class="settings-shell">
+        <div class="section-header">
+          <div>
+            <h2 class="section-title">Settings Workspace</h2>
+            <p class="section-copy">Each tab saves independently so admins only commit the section they are editing.</p>
+          </div>
+          <span class="status-pill" th:if="${message != null}" th:classappend="${messageTone == 'warning'} ? ' warning' : ' success'">
+            <i class="bi" th:classappend="${messageTone == 'warning'} ? ' bi-tools' : ' bi-check-circle-fill'"></i>
+            <span th:text="${message}">Saved settings.</span>
+          </span>
+        </div>
+
+        <div class="tab-nav" role="tablist" aria-label="Admin settings tabs">
+          <button class="tab-trigger" th:classappend="${activeTab == 'platform'} ? ' active' : ''" type="button" data-tab-target="platform"><i class="bi bi-building"></i><span>Platform</span></button>
+          <button class="tab-trigger" th:classappend="${activeTab == 'trading'} ? ' active' : ''" type="button" data-tab-target="trading"><i class="bi bi-graph-up-arrow"></i><span>Trading</span></button>
+          <button class="tab-trigger" th:classappend="${activeTab == 'subscription'} ? ' active' : ''" type="button" data-tab-target="subscription"><i class="bi bi-stars"></i><span>Subscription</span></button>
+          <button class="tab-trigger" th:classappend="${activeTab == 'security'} ? ' active' : ''" type="button" data-tab-target="security"><i class="bi bi-shield-lock"></i><span>Security</span></button>
+          <button class="tab-trigger" th:classappend="${activeTab == 'maintenance'} ? ' active' : ''" type="button" data-tab-target="maintenance"><i class="bi bi-tools"></i><span>Maintenance</span></button>
+          <button class="tab-trigger" th:classappend="${activeTab == 'feature-flags'} ? ' active' : ''" type="button" data-tab-target="feature-flags"><i class="bi bi-toggles2"></i><span>Feature Flags</span></button>
+        </div>
+
+        <section class="tab-panel" th:classappend="${activeTab == 'platform'} ? ' active' : ''" data-tab-panel="platform">
+          <form method="post" action="/admin/settings">
+            <input type="hidden" name="activeTab" value="platform">
+            <div class="panel-head"><div><h3 class="panel-title">Platform Settings</h3><p class="panel-note">Core application identity, localization, and upload constraints.</p></div></div>
+            <div class="row g-3">
+              <div class="col-md-6"><label class="form-label" for="platformName">Platform name</label><input id="platformName" name="platformName" class="form-control" type="text" th:value="${settings.platformName}"></div>
+              <div class="col-md-6"><label class="form-label" for="supportEmail">Support email</label><input id="supportEmail" name="supportEmail" class="form-control" type="email" th:value="${settings.supportEmail}"></div>
+              <div class="col-md-4"><label class="form-label" for="timezone">Timezone</label><select id="timezone" name="timezone" class="form-select"><option value="UTC" th:selected="${settings.timezone == 'UTC'}">UTC</option><option value="Asia/Bangkok" th:selected="${settings.timezone == 'Asia/Bangkok'}">Asia/Bangkok</option><option value="Europe/London" th:selected="${settings.timezone == 'Europe/London'}">Europe/London</option><option value="America/New_York" th:selected="${settings.timezone == 'America/New_York'}">America/New_York</option></select></div>
+              <div class="col-md-4"><label class="form-label" for="defaultCurrency">Default currency</label><select id="defaultCurrency" name="defaultCurrency" class="form-select"><option value="USD" th:selected="${settings.defaultCurrency == 'USD'}">USD</option><option value="EUR" th:selected="${settings.defaultCurrency == 'EUR'}">EUR</option><option value="GBP" th:selected="${settings.defaultCurrency == 'GBP'}">GBP</option><option value="THB" th:selected="${settings.defaultCurrency == 'THB'}">THB</option></select></div>
+              <div class="col-md-4"><label class="form-label" for="maxUploadSize">Max upload size</label><input id="maxUploadSize" name="maxUploadSize" class="form-control" type="text" th:value="${settings.maxUploadSize}"></div>
+            </div>
+            <div class="tab-actions"><p class="helper-copy">Applies platform identity and default localization values.</p><button class="btn btn-primary" type="submit">Save Platform Settings</button></div>
+          </form>
+        </section>
+
+        <section class="tab-panel" th:classappend="${activeTab == 'trading'} ? ' active' : ''" data-tab-panel="trading">
+          <form method="post" action="/admin/settings">
+            <input type="hidden" name="activeTab" value="trading">
+            <div class="panel-head"><div><h3 class="panel-title">Trading Controls</h3><p class="panel-note">Default sizing, risk mode, and trade journal calculation behavior.</p></div></div>
+            <div class="row g-3">
+              <div class="col-md-4"><label class="form-label" for="defaultRiskPerTrade">Default risk per trade (%)</label><input id="defaultRiskPerTrade" name="defaultRiskPerTrade" class="form-control" type="number" step="0.01" th:value="${settings.defaultRiskPerTrade}"></div>
+              <div class="col-md-4"><label class="form-label" for="defaultAccountSize">Default account size</label><input id="defaultAccountSize" name="defaultAccountSize" class="form-control" type="number" step="0.01" th:value="${settings.defaultAccountSize}"></div>
+              <div class="col-md-4"><label class="form-label">Risk calculation mode</label><div class="d-flex gap-2 flex-wrap"><input class="btn-check" type="radio" name="riskCalculationMode" id="riskModePercent" value="FIXED_PERCENT" th:checked="${settings.riskCalculationMode == 'FIXED_PERCENT'}"><label class="btn btn-outline-primary" for="riskModePercent">Fixed %</label><input class="btn-check" type="radio" name="riskCalculationMode" id="riskModeAmount" value="FIXED_AMOUNT" th:checked="${settings.riskCalculationMode == 'FIXED_AMOUNT'}"><label class="btn btn-outline-primary" for="riskModeAmount">Fixed $</label></div></div>
+              <div class="col-md-6"><div class="switch-card"><div class="form-check form-switch"><input id="autoCalculateRMultiple" name="autoCalculateRMultiple" class="form-check-input" type="checkbox" value="true" th:checked="${settings.autoCalculateRMultiple == 'true'}"><label class="form-check-label" for="autoCalculateRMultiple">Auto calculate R multiple</label></div><span class="helper-copy">Recompute `R` from entry, stop, and realized outcome fields.</span></div></div>
+              <div class="col-md-6"><div class="switch-card"><div class="form-check form-switch"><input id="allowManualPnlEdit" name="allowManualPnlEdit" class="form-check-input" type="checkbox" value="true" th:checked="${settings.allowManualPnlEdit == 'true'}"><label class="form-check-label" for="allowManualPnlEdit">Allow manual pnl edit</label></div><span class="helper-copy">Permit admin override when imported trade outcomes need correction.</span></div></div>
+            </div>
+            <div class="tab-actions"><p class="helper-copy">Applies trade capture defaults and risk calculation behavior.</p><button class="btn btn-primary" type="submit">Save Trading Settings</button></div>
+          </form>
+        </section>
+
+        <section class="tab-panel" th:classappend="${activeTab == 'subscription'} ? ' active' : ''" data-tab-panel="subscription">
+          <form method="post" action="/admin/settings">
+            <input type="hidden" name="activeTab" value="subscription">
+            <div class="panel-head"><div><h3 class="panel-title">Subscription Settings</h3><p class="panel-note">Structured plan configuration for entitlement checks and future backend enforcement.</p></div></div>
+            <div class="config-grid">
+              <article class="config-card">
+                <span class="mini-badge"><i class="bi bi-person"></i><span>Standard plan</span></span>
+                <div class="config-title">Standard plan limits</div>
+                <p class="config-note mb-3">Base entitlement rules for default accounts.</p>
+                <div class="row g-3">
+                  <div class="col-12"><label class="form-label" for="standardMaxTradesPerMonth">Max trades per month</label><input id="standardMaxTradesPerMonth" name="standardMaxTradesPerMonth" class="form-control" type="text" th:value="${settings.standardMaxTradesPerMonth}"></div>
+                  <div class="col-12"><label class="form-label" for="standardMaxSetups">Max setups</label><input id="standardMaxSetups" name="standardMaxSetups" class="form-control" type="text" th:value="${settings.standardMaxSetups}"></div>
+                  <div class="col-12"><label class="form-label" for="standardMaxImagesPerTrade">Max images per trade</label><input id="standardMaxImagesPerTrade" name="standardMaxImagesPerTrade" class="form-control" type="text" th:value="${settings.standardMaxImagesPerTrade}"></div>
+                  <div class="col-12"><label class="form-label" for="standardAnalyticsAccess">Analytics access</label><select id="standardAnalyticsAccess" name="standardAnalyticsAccess" class="form-select"><option value="BASIC" th:selected="${settings.standardAnalyticsAccess == 'BASIC'}">Basic</option><option value="STANDARD" th:selected="${settings.standardAnalyticsAccess == 'STANDARD'}">Standard</option><option value="FULL" th:selected="${settings.standardAnalyticsAccess == 'FULL'}">Full</option></select></div>
+                </div>
+              </article>
+              <article class="config-card">
+                <span class="mini-badge"><i class="bi bi-gem"></i><span>Pro plan</span></span>
+                <div class="config-title">Pro plan limits</div>
+                <p class="config-note mb-3">Premium entitlement rules for advanced accounts.</p>
+                <div class="row g-3">
+                  <div class="col-12"><label class="form-label" for="proMaxTradesPerMonth">Max trades per month</label><input id="proMaxTradesPerMonth" name="proMaxTradesPerMonth" class="form-control" type="text" th:value="${settings.proMaxTradesPerMonth}"></div>
+                  <div class="col-12"><label class="form-label" for="proMaxSetups">Max setups</label><input id="proMaxSetups" name="proMaxSetups" class="form-control" type="text" th:value="${settings.proMaxSetups}"></div>
+                  <div class="col-12"><label class="form-label" for="proMaxImagesPerTrade">Max images per trade</label><input id="proMaxImagesPerTrade" name="proMaxImagesPerTrade" class="form-control" type="text" th:value="${settings.proMaxImagesPerTrade}"></div>
+                  <div class="col-12"><label class="form-label" for="proAnalyticsAccess">Analytics access</label><select id="proAnalyticsAccess" name="proAnalyticsAccess" class="form-select"><option value="BASIC" th:selected="${settings.proAnalyticsAccess == 'BASIC'}">Basic</option><option value="STANDARD" th:selected="${settings.proAnalyticsAccess == 'STANDARD'}">Standard</option><option value="FULL" th:selected="${settings.proAnalyticsAccess == 'FULL'}">Full</option></select></div>
+                </div>
+              </article>
+            </div>
+            <div class="tab-actions"><p class="helper-copy">Applies structured plan rules for future backend entitlement checks.</p><button class="btn btn-primary" type="submit">Save Subscription Settings</button></div>
+          </form>
+        </section>
+
+        <section class="tab-panel" th:classappend="${activeTab == 'security'} ? ' active' : ''" data-tab-panel="security">
+          <form method="post" action="/admin/settings">
+            <input type="hidden" name="activeTab" value="security">
+            <div class="panel-head"><div><h3 class="panel-title">Security Policy</h3><p class="panel-note">Registration controls, account hardening, password policy, and session lifecycle.</p></div></div>
+            <div class="row g-3">
+              <div class="col-md-6"><div class="switch-card"><div class="form-check form-switch"><input id="enableRegistration" name="enableRegistration" class="form-check-input" type="checkbox" value="true" th:checked="${settings.enableRegistration == 'true'}"><label class="form-check-label" for="enableRegistration">Enable registration</label></div><span class="helper-copy">Allow public signups through the registration page.</span></div></div>
+              <div class="col-md-6"><div class="switch-card"><div class="form-check form-switch"><input id="emailVerification" name="emailVerification" class="form-check-input" type="checkbox" value="true" th:checked="${settings.emailVerification == 'true'}"><label class="form-check-label" for="emailVerification">Email verification</label></div><span class="helper-copy">Require ownership confirmation before full account access.</span></div></div>
+              <div class="col-md-4"><label class="form-label" for="loginAttempts">Login attempts</label><input id="loginAttempts" name="loginAttempts" class="form-control" type="number" min="1" th:value="${settings.loginAttempts}"></div>
+              <div class="col-md-4"><label class="form-label" for="sessionTimeout">Session timeout</label><select id="sessionTimeout" name="sessionTimeout" class="form-select"><option value="15_MIN" th:selected="${settings.sessionTimeout == '15_MIN'}">15 min</option><option value="30_MIN" th:selected="${settings.sessionTimeout == '30_MIN'}">30 min</option><option value="1_HOUR" th:selected="${settings.sessionTimeout == '1_HOUR'}">1 hour</option><option value="4_HOURS" th:selected="${settings.sessionTimeout == '4_HOURS'}">4 hours</option></select></div>
+              <div class="col-md-4"><label class="form-label" for="passwordMinimumLength">Password minimum length</label><input id="passwordMinimumLength" name="passwordMinimumLength" class="form-control" type="number" min="6" th:value="${settings.passwordMinimumLength}"></div>
+              <div class="col-md-6"><div class="switch-card"><div class="form-check form-switch"><input id="enableTwoFactorAuth" name="enableTwoFactorAuth" class="form-check-input" type="checkbox" value="true" th:checked="${settings.enableTwoFactorAuth == 'true'}"><label class="form-check-label" for="enableTwoFactorAuth">Enable 2FA</label></div><span class="helper-copy">Require a second verification step for elevated account security.</span></div></div>
+            </div>
+            <div class="tab-actions"><p class="helper-copy">Applies account access policy and password baseline requirements.</p><button class="btn btn-primary" type="submit">Save Security Settings</button></div>
+          </form>
+        </section>
+
+        <section class="tab-panel" th:classappend="${activeTab == 'maintenance'} ? ' active' : ''" data-tab-panel="maintenance">
+          <form method="post" action="/admin/settings">
+            <input type="hidden" name="activeTab" value="maintenance">
+            <div class="panel-head"><div><h3 class="panel-title">Maintenance Jobs</h3><p class="panel-note">Operations are exposed as actions, not runbook notes, so the page reads like an admin console.</p></div></div>
+            <div class="maintenance-grid">
+              <article class="maintenance-card"><div class="maintenance-icon"><i class="bi bi-arrow-repeat"></i></div><div class="maintenance-title">Rebuild analytics</div><p class="maintenance-copy">Recompute dashboard aggregates and performance metrics.</p><button class="btn btn-outline-primary mt-3" type="submit" name="maintenanceAction" value="rebuildAnalytics">Run job</button></article>
+              <article class="maintenance-card warning"><div class="maintenance-icon"><i class="bi bi-images"></i></div><div class="maintenance-title">Clean unused images</div><p class="maintenance-copy">Delete orphan screenshots older than 30 days.</p><button class="btn btn-outline-primary mt-3" type="submit" name="maintenanceAction" value="cleanUnusedImages">Run cleanup</button></article>
+              <article class="maintenance-card success"><div class="maintenance-icon"><i class="bi bi-database-check"></i></div><div class="maintenance-title">Database backup</div><p class="maintenance-copy">Prepare the latest backup package for secure retrieval.</p><button class="btn btn-outline-primary mt-3" type="submit" name="maintenanceAction" value="databaseBackup">Download backup</button></article>
+            </div>
+          </form>
+        </section>
+
+        <section class="tab-panel" th:classappend="${activeTab == 'feature-flags'} ? ' active' : ''" data-tab-panel="feature-flags">
+          <form method="post" action="/admin/settings">
+            <input type="hidden" name="activeTab" value="feature-flags">
+            <div class="panel-head"><div><h3 class="panel-title">Feature Flags</h3><p class="panel-note">Toggle product capabilities independently without mixing them into core settings.</p></div></div>
+            <div class="feature-flag-grid">
+              <div class="feature-flag-card"><div><div class="feature-flag-title">AI Analytics</div><p class="helper-copy">Enable advanced AI-generated insight modules.</p></div><div class="form-check form-switch m-0"><input id="featureAiAnalytics" name="featureAiAnalytics" class="form-check-input" type="checkbox" value="true" th:checked="${settings.featureAiAnalytics == 'true'}"></div></div>
+              <div class="feature-flag-card"><div><div class="feature-flag-title">Trade Image Upload</div><p class="helper-copy">Allow chart screenshots and visual trade evidence uploads.</p></div><div class="form-check form-switch m-0"><input id="featureTradeImageUpload" name="featureTradeImageUpload" class="form-check-input" type="checkbox" value="true" th:checked="${settings.featureTradeImageUpload == 'true'}"></div></div>
+              <div class="feature-flag-card"><div><div class="feature-flag-title">Mistake tagging</div><p class="helper-copy">Expose mistake taxonomy and review tagging workflows.</p></div><div class="form-check form-switch m-0"><input id="featureMistakeTagging" name="featureMistakeTagging" class="form-check-input" type="checkbox" value="true" th:checked="${settings.featureMistakeTagging == 'true'}"></div></div>
+              <div class="feature-flag-card"><div><div class="feature-flag-title">Public profile</div><p class="helper-copy">Allow trader profile exposure outside the private workspace.</p></div><div class="form-check form-switch m-0"><input id="featurePublicProfile" name="featurePublicProfile" class="form-check-input" type="checkbox" value="true" th:checked="${settings.featurePublicProfile == 'true'}"></div></div>
+              <div class="feature-flag-card"><div><div class="feature-flag-title">Community leaderboard</div><p class="helper-copy">Expose shared ranking and competitive performance surfaces.</p></div><div class="form-check form-switch m-0"><input id="featureCommunityLeaderboard" name="featureCommunityLeaderboard" class="form-check-input" type="checkbox" value="true" th:checked="${settings.featureCommunityLeaderboard == 'true'}"></div></div>
+            </div>
+            <div class="tab-actions"><p class="helper-copy">Applies independent product rollout switches for SaaS feature control.</p><button class="btn btn-primary" type="submit">Save Feature Flags</button></div>
+          </form>
+        </section>
+      </section>
+    </main>
+  </div>
+</div>
+<script th:src="@{/js/sidebar-toggle.js}" src="/js/sidebar-toggle.js"></script>
+<script>
+  (function(){const triggers=document.querySelectorAll("[data-tab-target]");const panels=document.querySelectorAll("[data-tab-panel]");function activate(tab){triggers.forEach((trigger)=>trigger.classList.toggle("active",trigger.dataset.tabTarget===tab));panels.forEach((panel)=>panel.classList.toggle("active",panel.dataset.tabPanel===tab));}triggers.forEach((trigger)=>{trigger.addEventListener("click",function(){activate(this.dataset.tabTarget);});});})();
+</script>
+</body>
+</html>

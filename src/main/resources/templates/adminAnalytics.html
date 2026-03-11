@@ -18,7 +18,7 @@
 </head>
 <body class="app-page-body admin-analytics-body">
 <div class="container-fluid py-3 px-3 px-lg-4">
-  <div class="app-shell collapsible-shell expanded admin-analytics-shell">
+  <div class="app-shell collapsible-shell expanded admin-analytics-shell" data-sidebar-static="true">
     <aside th:replace="~{fragments/sidebar :: appSidebar('admin-analytics', @{/dashboard/export.csv(period='ALL')})}"></aside>
 
     <main class="main-content admin-analytics-main">

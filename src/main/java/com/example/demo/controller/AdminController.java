@@ -24,17 +24,22 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Controller
 @RequestMapping("/admin")
 public class AdminController {
+    private static final String ADMIN_SETTINGS_SESSION_KEY = "adminSettings";
 
     private final UserRepository userRepository;
     private final TradeRepository tradeRepository;
@@ -274,6 +279,74 @@ public class AdminController {
         model.addAttribute("userRows", userRows);
 
         return "adminUsers";
+    }
+
+    @GetMapping("/settings")
+    @Transactional(readOnly = true)
+    public String settings(
+            @RequestParam Map<String, String> params,
+            Model model,
+            HttpSession session
+    ) {
+        User admin = userService.getCurrentUser(session);
+
+        if (admin == null) {
+            return "redirect:/login";
+        }
+
+        if (!userService.isAdmin(admin)) {
+            return "redirect:/trades";
+        }
+
+        Map<String, String> settings = getAdminSettings(session);
+
+        model.addAttribute("currentUser", admin);
+        model.addAttribute("settings", settings);
+        model.addAttribute("activeTab", resolveActiveTab(params.get("activeTab")));
+        model.addAttribute("message", params.get("message"));
+        model.addAttribute("messageTone", params.getOrDefault("messageTone", "success"));
+
+        return "adminSettings";
+    }
+
+    @PostMapping("/settings")
+    public String saveSettings(
+            @RequestParam Map<String, String> params,
+            Model model,
+            HttpSession session
+    ) {
+        User admin = userService.getCurrentUser(session);
+
+        if (admin == null) {
+            return "redirect:/login";
+        }
+
+        if (!userService.isAdmin(admin)) {
+            return "redirect:/trades";
+        }
+
+        String activeTab = resolveActiveTab(params.get("activeTab"));
+        Map<String, String> settings = getAdminSettings(session);
+        String message;
+        String messageTone;
+
+        if ("maintenance".equals(activeTab) && params.containsKey("maintenanceAction")) {
+            message = resolveMaintenanceMessage(params.get("maintenanceAction"));
+            messageTone = "warning";
+        } else {
+            applySettingsUpdate(settings, activeTab, params);
+            session.setAttribute(ADMIN_SETTINGS_SESSION_KEY, settings);
+            message = "Saved " + activeTab + " settings.";
+            messageTone = "success";
+        }
+
+        model.addAttribute("currentUser", admin);
+        model.addAttribute("settings", settings);
+        model.addAttribute("activeTab", activeTab);
+        model.addAttribute("message", message);
+        model.addAttribute("messageTone", messageTone);
+
+        return "adminSettings";
     }
 
     @GetMapping("/users/{id}")
@@ -692,6 +765,152 @@ public class AdminController {
 
     private double round2(double value) {
         return Math.round(value * 100.0) / 100.0;
+    }
+
+    @SuppressWarnings("unchecked")
+    private Map<String, String> getAdminSettings(HttpSession session) {
+        Object stored = session.getAttribute(ADMIN_SETTINGS_SESSION_KEY);
+        if (stored instanceof Map<?, ?> storedMap) {
+            Map<String, String> settings = new LinkedHashMap<>(buildDefaultAdminSettings());
+            storedMap.forEach((key, value) -> {
+                if (key instanceof String settingKey && value instanceof String settingValue) {
+                    settings.put(settingKey, settingValue);
+                }
+            });
+            return settings;
+        }
+
+        Map<String, String> defaults = buildDefaultAdminSettings();
+        session.setAttribute(ADMIN_SETTINGS_SESSION_KEY, defaults);
+        return defaults;
+    }
+
+    private Map<String, String> buildDefaultAdminSettings() {
+        Map<String, String> settings = new LinkedHashMap<>();
+        settings.put("platformName", "TradeJournal Pro");
+        settings.put("supportEmail", "support@tradejournal.app");
+        settings.put("timezone", "Asia/Bangkok");
+        settings.put("defaultCurrency", "USD");
+        settings.put("maxUploadSize", "10 MB");
+        settings.put("defaultRiskPerTrade", "1.00");
+        settings.put("defaultAccountSize", "10000");
+        settings.put("riskCalculationMode", "FIXED_PERCENT");
+        settings.put("autoCalculateRMultiple", "true");
+        settings.put("allowManualPnlEdit", "false");
+        settings.put("standardMaxTradesPerMonth", "100");
+        settings.put("standardMaxSetups", "10");
+        settings.put("standardMaxImagesPerTrade", "5");
+        settings.put("standardAnalyticsAccess", "BASIC");
+        settings.put("proMaxTradesPerMonth", "UNLIMITED");
+        settings.put("proMaxSetups", "UNLIMITED");
+        settings.put("proMaxImagesPerTrade", "20");
+        settings.put("proAnalyticsAccess", "FULL");
+        settings.put("enableRegistration", "true");
+        settings.put("emailVerification", "true");
+        settings.put("loginAttempts", "5");
+        settings.put("sessionTimeout", "30_MIN");
+        settings.put("passwordMinimumLength", "8");
+        settings.put("enableTwoFactorAuth", "false");
+        settings.put("rebuildAnalytics", "Recompute dashboard aggregates and performance metrics");
+        settings.put("cleanUnusedImages", "Remove orphaned screenshots older than 30 days");
+        settings.put("databaseBackup", "Daily encrypted backup to secure storage");
+        settings.put("featureAiAnalytics", "true");
+        settings.put("featureTradeImageUpload", "true");
+        settings.put("featureMistakeTagging", "true");
+        settings.put("featurePublicProfile", "false");
+        settings.put("featureCommunityLeaderboard", "false");
+        return settings;
+    }
+
+    private void applySettingsUpdate(Map<String, String> settings, String activeTab, Map<String, String> params) {
+        for (String key : keysForTab(activeTab)) {
+            if (booleanKeys().contains(key)) {
+                settings.put(key, String.valueOf(Objects.equals(params.get(key), "true")));
+                continue;
+            }
+
+            String value = params.get(key);
+            if (value != null) {
+                settings.put(key, value);
+            }
+        }
+    }
+
+    private String resolveActiveTab(String activeTab) {
+        Set<String> validTabs = Set.of("platform", "trading", "subscription", "security", "maintenance", "feature-flags");
+        if (activeTab == null || !validTabs.contains(activeTab)) {
+            return "platform";
+        }
+        return activeTab;
+    }
+
+    private String resolveMaintenanceMessage(String action) {
+        return switch (action) {
+            case "rebuildAnalytics" -> "Analytics rebuild job started.";
+            case "cleanUnusedImages" -> "Unused image cleanup started.";
+            case "databaseBackup" -> "Database backup prepared for download.";
+            default -> "Maintenance action queued.";
+        };
+    }
+
+    private List<String> keysForTab(String activeTab) {
+        return switch (activeTab) {
+            case "platform" -> List.of(
+                    "platformName",
+                    "supportEmail",
+                    "timezone",
+                    "defaultCurrency",
+                    "maxUploadSize"
+            );
+            case "trading" -> List.of(
+                    "defaultRiskPerTrade",
+                    "defaultAccountSize",
+                    "riskCalculationMode",
+                    "autoCalculateRMultiple",
+                    "allowManualPnlEdit"
+            );
+            case "subscription" -> List.of(
+                    "standardMaxTradesPerMonth",
+                    "standardMaxSetups",
+                    "standardMaxImagesPerTrade",
+                    "standardAnalyticsAccess",
+                    "proMaxTradesPerMonth",
+                    "proMaxSetups",
+                    "proMaxImagesPerTrade",
+                    "proAnalyticsAccess"
+            );
+            case "security" -> List.of(
+                    "enableRegistration",
+                    "emailVerification",
+                    "loginAttempts",
+                    "sessionTimeout",
+                    "passwordMinimumLength",
+                    "enableTwoFactorAuth"
+            );
+            case "feature-flags" -> List.of(
+                    "featureAiAnalytics",
+                    "featureTradeImageUpload",
+                    "featureMistakeTagging",
+                    "featurePublicProfile",
+                    "featureCommunityLeaderboard"
+            );
+            default -> List.of();
+        };
+    }
+
+    private Set<String> booleanKeys() {
+        return new HashSet<>(Arrays.asList(
+                "autoCalculateRMultiple",
+                "allowManualPnlEdit",
+                "enableRegistration",
+                "emailVerification",
+                "enableTwoFactorAuth",
+                "featureAiAnalytics",
+                "featureTradeImageUpload",
+                "featureMistakeTagging",
+                "featurePublicProfile",
+                "featureCommunityLeaderboard"
+        ));
     }
 
     private record DailyCountPoint(String label, long count, LocalDate date) {

@@ -1,12 +1,33 @@
 (function () {
   const shell = document.querySelector(".app-shell.collapsible-shell");
   if (!shell) return;
+  if (shell.dataset.sidebarStatic === "true") {
+    const staticSidebar = shell.querySelector(".sidebar");
+    shell.classList.add("expanded");
+    if (staticSidebar) {
+      staticSidebar.classList.remove("collapsed");
+    }
+    return;
+  }
 
   const desktop = window.matchMedia("(min-width: 992px)");
   const sidebar = shell.querySelector(".sidebar");
   const EDGE_TRIGGER_WIDTH = 14;
   const CLOSE_TRIGGER_WIDTH = 320;
+  const TRANSITION_MS = 320;
   let isExpanded = false;
+  let resizeTimerId = null;
+
+  function scheduleLayoutRefresh() {
+    window.requestAnimationFrame(function () {
+      window.dispatchEvent(new Event("resize"));
+    });
+
+    window.clearTimeout(resizeTimerId);
+    resizeTimerId = window.setTimeout(function () {
+      window.dispatchEvent(new Event("resize"));
+    }, TRANSITION_MS);
+  }
 
   function syncSidebarClass(expanded) {
     if (!sidebar) return;
@@ -18,6 +39,7 @@
     isExpanded = nextExpanded;
     shell.classList.toggle("expanded", nextExpanded);
     syncSidebarClass(nextExpanded);
+    scheduleLayoutRefresh();
   }
 
   function applyDesktopMode() {
