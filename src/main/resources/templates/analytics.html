@@ -6,123 +6,324 @@
   <title>Analytics</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" rel="stylesheet">
   <link th:href="@{/css/sidebar-toggle.css}" href="/css/sidebar-toggle.css" rel="stylesheet">
   <link th:href="@{/css/analytics-dashboard.css}" href="/css/analytics-dashboard.css" rel="stylesheet">
   <link th:href="@{/css/app-page.css}" href="/css/app-page.css" rel="stylesheet">
-  <style>
-    .analytics-placeholder-grid {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 18px;
-    }
-
-    .analytics-placeholder {
-      min-height: 220px;
-      border: 1px dashed #cbd5e1;
-      border-radius: 18px;
-      padding: 18px;
-      background: #fbfdff;
-      display: grid;
-      align-content: start;
-      gap: 12px;
-    }
-
-    .analytics-placeholder-title {
-      font-weight: 800;
-      font-size: 1rem;
-      color: #0f172a;
-      margin: 0;
-    }
-
-    .analytics-placeholder-copy {
-      color: #64748b;
-      margin: 0;
-      font-size: 0.92rem;
-    }
-
-    .analytics-pill {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      border: 1px solid #dbe4ef;
-      background: #fff;
-      border-radius: 999px;
-      padding: 7px 10px;
-      font-size: 12px;
-      font-weight: 700;
-      color: #475569;
-      width: fit-content;
-    }
-
-    @media (max-width: 991.98px) {
-      .analytics-placeholder-grid {
-        grid-template-columns: 1fr;
-      }
-    }
-  </style>
+  <link th:href="@{/css/analytics-workspace.css}" href="/css/analytics-workspace.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 </head>
-<body class="dashboard-body app-page-body">
+<body class="app-page-body analytics-workspace-body">
 <div class="container-fluid py-3 px-3 px-lg-4">
-  <div class="app-shell collapsible-shell expanded">
+  <div class="app-shell collapsible-shell expanded analytics-shell">
     <aside th:replace="~{fragments/sidebar :: appSidebar('analytics', @{/dashboard/export.csv(period='ALL')})}"></aside>
 
-    <main class="main-content">
-      <header class="dashboard-header">
-        <div class="header-title-row"><div>
-            <h1 class="page-title">Analytics</h1>
-            <p class="page-subtitle">Deep-dive performance analysis workspace (placeholder structure).</p>
-          </div>
+    <main class="main-content analytics-main">
+      <header class="analytics-hero">
+        <div class="analytics-hero-copy">
+          <span class="hero-kicker">Analytics</span>
+          <h1 class="page-title mb-2">Analytics</h1>
+          <p class="page-subtitle mb-0">Deep performance analysis of your trading behavior and strategy edge.</p>
+        </div>
+        <div class="analytics-hero-panel">
+          <div class="hero-panel-label">Workspace focus</div>
+          <div class="hero-panel-value">Edge, execution, context</div>
+          <p class="hero-panel-copy mb-0">Use filters to isolate which conditions actually produce repeatable edge.</p>
         </div>
       </header>
 
-      <section class="dashboard-card">
-        <div class="section-head">
+      <section class="filter-card">
+        <form class="analytics-filter-grid" th:action="@{/analytics}" method="get">
+          <div class="filter-field filter-field-range">
+            <label class="filter-label" for="dateRange">Date range</label>
+            <div class="filter-range-wrap">
+              <input type="hidden" name="period" value="CUSTOM">
+              <input type="hidden" id="fromDate" name="from" th:value="${from}">
+              <input type="hidden" id="toDate" name="to" th:value="${to}">
+              <input id="dateRange" class="form-control filter-control" type="text" placeholder="Select date range">
+            </div>
+          </div>
+
+          <div class="filter-field">
+            <label class="filter-label" for="symbol">Symbol</label>
+            <select id="symbol" class="form-select filter-control" name="symbol">
+              <option value="ALL" th:selected="${selectedSymbol == 'ALL'}">All symbols</option>
+              <option th:each="symbolOption : ${analyticsReport.availableSymbols}"
+                      th:value="${symbolOption}"
+                      th:selected="${selectedSymbol == symbolOption}"
+                      th:text="${symbolOption}">XAUUSD</option>
+            </select>
+          </div>
+
+          <div class="filter-field">
+            <label class="filter-label" for="setup">Setup</label>
+            <select id="setup" class="form-select filter-control" name="setup">
+              <option value="ALL" th:selected="${selectedSetup == 'ALL'}">All setups</option>
+              <option th:each="setupOption : ${analyticsReport.availableSetups}"
+                      th:value="${setupOption}"
+                      th:selected="${selectedSetup == setupOption}"
+                      th:text="${setupOption}">Liquidity Sweep</option>
+            </select>
+          </div>
+
+          <div class="filter-actions">
+            <button class="btn analytics-btn-primary" type="submit">
+              <i class="bi bi-funnel"></i>
+              <span>Apply filters</span>
+            </button>
+            <a class="btn analytics-btn-secondary" th:href="@{/analytics(period='ALL', symbol='ALL', setup='ALL')}">Reset</a>
+          </div>
+        </form>
+      </section>
+
+      <section class="analytics-section">
+        <div class="section-heading">
           <div>
-            <div class="section-title">Analytics Modules</div>
-            <p class="section-copy">Structure only for now. Metrics and charts will be wired later.</p>
+            <span class="section-kicker">Section 1</span>
+            <h2 class="section-title">Strategy Edge</h2>
+            <p class="section-copy">Check whether your outcome distribution and setup expectancy show a real, repeatable edge.</p>
           </div>
         </div>
 
-        <div class="analytics-placeholder-grid">
-          <article class="analytics-placeholder">
-            <h3 class="analytics-placeholder-title">Setup Performance</h3>
-            <p class="analytics-placeholder-copy">Compare setup quality, win-rate and expectancy by setup type.</p>
-            <span class="analytics-pill"><i class="bi bi-diagram-3"></i> Placeholder component</span>
+        <div class="analytics-grid analytics-grid-2">
+          <article class="analytics-card chart-card">
+            <div class="card-head">
+              <div>
+                <h3 class="card-title">R Multiple Distribution</h3>
+                <p class="card-copy">Distribution of trade outcomes across fixed R buckets.</p>
+              </div>
+            </div>
+            <div class="chart-shell tall">
+              <canvas id="rDistributionChart"></canvas>
+              <div class="chart-empty" id="rDistributionEmpty">No trades in the selected filter set.</div>
+            </div>
           </article>
 
-          <article class="analytics-placeholder">
-            <h3 class="analytics-placeholder-title">Session Performance</h3>
-            <p class="analytics-placeholder-copy">Evaluate London, New York, and Asia session outcomes.</p>
-            <span class="analytics-pill"><i class="bi bi-clock-history"></i> Placeholder component</span>
-          </article>
-
-          <article class="analytics-placeholder">
-            <h3 class="analytics-placeholder-title">Mistake Analysis</h3>
-            <p class="analytics-placeholder-copy">Break down repeat mistakes and their impact on returns.</p>
-            <span class="analytics-pill"><i class="bi bi-exclamation-triangle"></i> Placeholder component</span>
-          </article>
-
-          <article class="analytics-placeholder">
-            <h3 class="analytics-placeholder-title">R Multiple Distribution</h3>
-            <p class="analytics-placeholder-copy">Visualize spread, skew, and concentration of trade outcomes.</p>
-            <span class="analytics-pill"><i class="bi bi-bar-chart"></i> Placeholder component</span>
-          </article>
-
-          <article class="analytics-placeholder">
-            <h3 class="analytics-placeholder-title">Holding Time Analysis</h3>
-            <p class="analytics-placeholder-copy">Inspect holding duration patterns and efficiency by timeframe.</p>
-            <span class="analytics-pill"><i class="bi bi-hourglass-split"></i> Placeholder component</span>
+          <article class="analytics-card chart-card">
+            <div class="card-head">
+              <div>
+                <h3 class="card-title">Expectancy by Setup</h3>
+                <p class="card-copy">Average R per setup to show where the edge actually sits.</p>
+              </div>
+            </div>
+            <div class="chart-shell tall">
+              <canvas id="expectancyBySetupChart"></canvas>
+              <div class="chart-empty" id="expectancyBySetupEmpty">No setup data for the selected range.</div>
+            </div>
           </article>
         </div>
+      </section>
+
+      <section class="analytics-section">
+        <div class="section-heading">
+          <div>
+            <span class="section-kicker">Section 2</span>
+            <h2 class="section-title">Behavior Analysis</h2>
+            <p class="section-copy">Identify behaviors that leak performance and how trade management changes average outcomes.</p>
+          </div>
+        </div>
+
+        <div class="analytics-grid analytics-grid-2">
+          <article class="analytics-card">
+            <div class="card-head">
+              <div>
+                <h3 class="card-title">Mistake Impact</h3>
+                <p class="card-copy">See which mistakes create the largest drag on average R and realized PnL.</p>
+              </div>
+            </div>
+            <div class="table-responsive">
+              <table class="table analytics-table mb-0">
+                <thead>
+                <tr>
+                  <th>Mistake</th>
+                  <th>Trades</th>
+                  <th>Avg R</th>
+                  <th>Total PnL</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="row : ${analyticsReport.mistakeImpact}">
+                  <td th:text="${row.label}">FOMO</td>
+                  <td th:text="${row.trades}">0</td>
+                  <td th:classappend="${row.avgR >= 0} ? ' value-positive' : ' value-negative'"
+                      th:text="${#numbers.formatDecimal(row.avgR, 1, 2) + 'R'}">0.00R</td>
+                  <td th:classappend="${row.totalPnl >= 0} ? ' value-positive' : ' value-negative'"
+                      th:text="${row.totalPnl >= 0 ? '+$' + #numbers.formatDecimal(row.totalPnl, 1, 2) : '-$' + #numbers.formatDecimal(T(java.lang.Math).abs(row.totalPnl), 1, 2)}">+$0.00</td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(analyticsReport.mistakeImpact)}">
+                  <td colspan="4" class="empty-cell">No mistake tags or review flags for this filter.</td>
+                </tr>
+                </tbody>
+              </table>
+            </div>
+          </article>
+
+          <article class="analytics-card chart-card">
+            <div class="card-head">
+              <div>
+                <h3 class="card-title">Holding Time Distribution</h3>
+                <p class="card-copy">Measure how holding duration relates to trade frequency and average R.</p>
+              </div>
+            </div>
+            <div class="holding-meta">
+              <div class="holding-meta-item">
+                <span>Avg R by bucket</span>
+                <strong>Trade timing efficiency</strong>
+              </div>
+            </div>
+            <div class="chart-shell tall">
+              <canvas id="holdingTimeChart"></canvas>
+              <div class="chart-empty" id="holdingTimeEmpty">No trades with holding time available.</div>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="analytics-section">
+        <div class="section-heading">
+          <div>
+            <span class="section-kicker">Section 3</span>
+            <h2 class="section-title">Market Context</h2>
+            <p class="section-copy">Understand when you trade best by session, weekday, and instrument.</p>
+          </div>
+        </div>
+
+        <div class="analytics-grid analytics-grid-3">
+          <article class="analytics-card chart-card">
+            <div class="card-head">
+              <div>
+                <h3 class="card-title">Session Performance</h3>
+                <p class="card-copy">Average R by session to locate your strongest execution window.</p>
+              </div>
+            </div>
+            <div class="chart-shell compact">
+              <canvas id="sessionPerformanceChart"></canvas>
+              <div class="chart-empty" id="sessionPerformanceEmpty">No session data available.</div>
+            </div>
+          </article>
+
+          <article class="analytics-card chart-card">
+            <div class="card-head">
+              <div>
+                <h3 class="card-title">Day of Week Performance</h3>
+                <p class="card-copy">Average R by weekday to reveal when discipline or edge changes.</p>
+              </div>
+            </div>
+            <div class="chart-shell compact">
+              <canvas id="dayOfWeekChart"></canvas>
+              <div class="chart-empty" id="dayOfWeekEmpty">No weekday data available.</div>
+            </div>
+          </article>
+
+          <article class="analytics-card">
+            <div class="card-head">
+              <div>
+                <h3 class="card-title">Symbol Performance</h3>
+                <p class="card-copy">Compare trade count, win rate, and average R across instruments.</p>
+              </div>
+            </div>
+            <div class="table-responsive">
+              <table class="table analytics-table mb-0">
+                <thead>
+                <tr>
+                  <th>Symbol</th>
+                  <th>Trades</th>
+                  <th>Winrate</th>
+                  <th>Avg R</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="row : ${analyticsReport.symbolPerformance}">
+                  <td th:text="${row.label}">XAUUSD</td>
+                  <td th:text="${row.trades}">0</td>
+                  <td th:text="${#numbers.formatDecimal(row.winRate, 1, 0) + '%'}">0%</td>
+                  <td th:classappend="${row.avgR >= 0} ? ' value-positive' : ' value-negative'"
+                      th:text="${#numbers.formatDecimal(row.avgR, 1, 2) + 'R'}">0.00R</td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(analyticsReport.symbolPerformance)}">
+                  <td colspan="4" class="empty-cell">No symbol rows for the current filter.</td>
+                </tr>
+                </tbody>
+              </table>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="analytics-section">
+        <div class="section-heading">
+          <div>
+            <span class="section-kicker">Section 4</span>
+            <h2 class="section-title">Strategy Breakdown</h2>
+            <p class="section-copy">Detailed setup-by-setup view to compare trade count, expectancy, and realized output.</p>
+          </div>
+        </div>
+
+        <article class="analytics-card">
+          <div class="card-head">
+            <div>
+              <h3 class="card-title">Setup Breakdown Table</h3>
+              <p class="card-copy">Use this to decide which setups deserve more size, more reps, or a hard cut.</p>
+            </div>
+          </div>
+          <div class="table-responsive">
+            <table class="table analytics-table analytics-table-wide mb-0">
+              <thead>
+              <tr>
+                <th>Setup</th>
+                <th>Trades</th>
+                <th>Winrate</th>
+                <th>Avg R</th>
+                <th>Expectancy</th>
+                <th>Total PnL</th>
+              </tr>
+              </thead>
+              <tbody>
+              <tr th:each="row : ${analyticsReport.strategyBreakdown}">
+                <td th:text="${row.label}">Liquidity Sweep</td>
+                <td th:text="${row.trades}">0</td>
+                <td th:text="${#numbers.formatDecimal(row.winRate, 1, 0) + '%'}">0%</td>
+                <td th:classappend="${row.avgR >= 0} ? ' value-positive' : ' value-negative'"
+                    th:text="${#numbers.formatDecimal(row.avgR, 1, 2) + 'R'}">0.00R</td>
+                <td th:classappend="${row.expectancy >= 0} ? ' value-positive' : ' value-negative'"
+                    th:text="${#numbers.formatDecimal(row.expectancy, 1, 2) + 'R'}">0.00R</td>
+                <td th:classappend="${row.totalPnl >= 0} ? ' value-positive' : ' value-negative'"
+                    th:text="${row.totalPnl >= 0 ? '+$' + #numbers.formatDecimal(row.totalPnl, 1, 2) : '-$' + #numbers.formatDecimal(T(java.lang.Math).abs(row.totalPnl), 1, 2)}">+$0.00</td>
+              </tr>
+              <tr th:if="${#lists.isEmpty(analyticsReport.strategyBreakdown)}">
+                <td colspan="6" class="empty-cell">No setup breakdown available for the selected filters.</td>
+              </tr>
+              </tbody>
+            </table>
+          </div>
+        </article>
       </section>
     </main>
   </div>
 </div>
 
+<script th:inline="javascript">
+  window.analyticsWorkspaceData = {
+    currentFrom: /*[[${from != null ? from.toString() : null}]]*/ null,
+    currentTo: /*[[${to != null ? to.toString() : null}]]*/ null,
+    rDistributionLabels: /*[[${analyticsReport.rDistribution.![label]}]]*/ [],
+    rDistributionCounts: /*[[${analyticsReport.rDistribution.![count]}]]*/ [],
+    expectancyLabels: /*[[${analyticsReport.expectancyBySetup.![label]}]]*/ [],
+    expectancyValues: /*[[${analyticsReport.expectancyBySetup.![expectancy]}]]*/ [],
+    holdingLabels: /*[[${analyticsReport.holdingTimeDistribution.![label]}]]*/ [],
+    holdingTradeCounts: /*[[${analyticsReport.holdingTimeDistribution.![trades]}]]*/ [],
+    holdingAvgRValues: /*[[${analyticsReport.holdingTimeDistribution.![avgR]}]]*/ [],
+    sessionLabels: /*[[${analyticsReport.sessionPerformance.![label]}]]*/ [],
+    sessionAvgRValues: /*[[${analyticsReport.sessionPerformance.![avgR]}]]*/ [],
+    weekdayLabels: /*[[${analyticsReport.dayOfWeekPerformance.![label]}]]*/ [],
+    weekdayAvgRValues: /*[[${analyticsReport.dayOfWeekPerformance.![avgR]}]]*/ []
+  };
+</script>
+<script th:src="@{/js/analytics-workspace.js}" src="/js/analytics-workspace.js"></script>
 <script th:src="@{/js/sidebar-toggle.js}" src="/js/sidebar-toggle.js"></script>
 </body>
 </html>
-

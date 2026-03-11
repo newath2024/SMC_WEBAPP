@@ -125,14 +125,38 @@ public class AnalyticsController {
     }
 
     @GetMapping("/analytics")
-    public String analyticsPage(Model model, HttpSession session) {
+    public String analyticsPage(
+            @RequestParam(value = "period", required = false, defaultValue = "ALL") String period,
+            @RequestParam(value = "from", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam(value = "to", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
+            @RequestParam(value = "symbol", required = false) String symbol,
+            @RequestParam(value = "setup", required = false) String setup,
+            Model model,
+            HttpSession session
+    ) {
         User currentUser = userService.getCurrentUser(session);
         if (currentUser == null) {
             return "redirect:/login";
         }
+
+        ResolvedRange range = resolveRange(period, from, to);
+        AnalyticsService.AnalyticsWorkspaceReport report = analyticsService.buildWorkspaceReportForUser(
+                currentUser.getId(),
+                range.fromDateTime(),
+                range.toDateTime(),
+                symbol,
+                setup
+        );
+
         model.addAttribute("currentUser", currentUser);
         model.addAttribute("tradeUsage", 0);
         model.addAttribute("tradeUsageLimit", 100);
+        model.addAttribute("period", range.period());
+        model.addAttribute("from", range.fromDate());
+        model.addAttribute("to", range.toDate());
+        model.addAttribute("selectedSymbol", normalizeOptionalFilter(symbol));
+        model.addAttribute("selectedSetup", normalizeOptionalFilter(setup));
+        model.addAttribute("analyticsReport", report);
         return "analytics";
     }
 
@@ -145,6 +169,13 @@ public class AnalyticsController {
             case "7D", "30D", "90D", "CUSTOM", "ALL" -> normalized;
             default -> "ALL";
         };
+    }
+
+    private String normalizeOptionalFilter(String value) {
+        if (value == null || value.isBlank() || "ALL".equalsIgnoreCase(value.trim())) {
+            return "ALL";
+        }
+        return value.trim();
     }
 
     private User resolveTargetUser(User currentUser, String selectedUserId) {

@@ -5,16 +5,21 @@ import com.example.demo.entity.TradeReview;
 import com.example.demo.repository.TradeMistakeTagRepository;
 import com.example.demo.repository.TradeReviewRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
 import java.time.Duration;
+import java.time.DayOfWeek;
 import java.time.LocalDateTime;
+import java.time.format.TextStyle;
 import java.time.format.DateTimeFormatter;
+import java.util.Locale;
 
 @Service
 public class AnalyticsService {
@@ -37,6 +42,7 @@ public class AnalyticsService {
         return buildReportForUser(userId, null, null);
     }
 
+    @Transactional(readOnly = true)
     public AnalyticsReport buildReportForUser(String userId, LocalDateTime from, LocalDateTime to) {
         List<Trade> trades = tradeService.findAllByUser(userId);
         List<Trade> filteredTrades = filterTradesByRange(trades, from, to);
@@ -62,16 +68,67 @@ public class AnalyticsService {
         );
     }
 
+    @Transactional(readOnly = true)
+    public AnalyticsWorkspaceReport buildWorkspaceReportForUser(
+            String userId,
+            LocalDateTime from,
+            LocalDateTime to,
+            String symbol,
+            String setup
+    ) {
+        List<Trade> allTrades = tradeService.findAllByUser(userId);
+        List<Trade> rangedTrades = filterTradesByRange(allTrades, from, to);
+        List<Trade> filteredTrades = filterTrades(rangedTrades, symbol, setup);
+
+        Map<String, TradeReview> reviewMap = buildReviewMap(filteredTrades);
+
+        return new AnalyticsWorkspaceReport(
+                buildRDistribution(filteredTrades),
+                buildExpectancyBySetup(filteredTrades),
+                buildMistakeImpact(filteredTrades, reviewMap),
+                buildHoldingTimeDistribution(filteredTrades),
+                buildSessionPerformance(filteredTrades),
+                buildDayOfWeekPerformance(filteredTrades),
+                buildSymbolPerformance(filteredTrades),
+                buildStrategyBreakdown(filteredTrades),
+                extractDistinctSymbols(allTrades),
+                extractDistinctSetups(allTrades)
+        );
+    }
+
+    @Transactional(readOnly = true)
     public TradeOverview buildOverviewForUser(String userId) {
         List<Trade> trades = tradeService.findAllByUser(userId);
         return buildOverview(trades);
     }
 
+    @Transactional(readOnly = true)
     public List<Trade> findTradesForUser(String userId, LocalDateTime from, LocalDateTime to) {
         List<Trade> trades = tradeService.findAllByUser(userId);
         return filterTradesByRange(trades, from, to);
     }
 
+    private List<Trade> filterTrades(List<Trade> trades, String symbol, String setup) {
+        String normalizedSymbol = normalizeFilter(symbol);
+        String normalizedSetup = normalizeFilter(setup);
+        if (normalizedSymbol == null && normalizedSetup == null) {
+            return trades;
+        }
+
+        List<Trade> filtered = new ArrayList<>();
+        for (Trade trade : trades) {
+            if (normalizedSymbol != null && !normalizedSymbol.equalsIgnoreCase(normalizeLabel(trade.getSymbol()))) {
+                continue;
+            }
+            if (normalizedSetup != null && !normalizedSetup.equalsIgnoreCase(normalizeLabel(trade.getSetupName()))) {
+                continue;
+            }
+            filtered.add(trade);
+        }
+        return filtered;
+    }
+
+    @Transactional(readOnly = true)
     public PeriodComparison buildPeriodComparisonForUser(String userId, LocalDateTime currentFrom, LocalDateTime currentTo) {
         if (currentFrom == null || currentTo == null || currentFrom.isAfter(currentTo)) {
             return null;
@@ -302,6 +359,242 @@ public class AnalyticsService {
                 .toList();
     }
 
+    private List<RDistributionRow> buildRDistribution(List<Trade> trades) {
+        List<RDistributionRow> buckets = new ArrayList<>();
+        List<RRangeBucket> definitions = Arrays.asList(
+                new RRangeBucket("<= -2R", Double.NEGATIVE_INFINITY, -2.0),
+                new RRangeBucket("-2R to -1R", -2.0, -1.0),
+                new RRangeBucket("-1R to 0R", -1.0, 0.0),
+                new RRangeBucket("0R to 1R", 0.0, 1.0),
+                new RRangeBucket("1R to 2R", 1.0, 2.0),
+                new RRangeBucket("2R to 3R", 2.0, 3.0),
+                new RRangeBucket(">= 3R", 3.0, Double.POSITIVE_INFINITY)
+        );
+
+        for (RRangeBucket bucket : definitions) {
+            int count = 0;
+            for (Trade trade : trades) {
+                double value = trade.getRMultiple();
+                if (bucket.matches(value)) {
+                    count++;
+                }
+            }
+            buckets.add(new RDistributionRow(bucket.label(), count));
+        }
+        return buckets;
+    }
+
+    private List<ExpectancyBySetupRow> buildExpectancyBySetup(List<Trade> trades) {
+        List<StrategyBreakdownRow> rows = buildStrategyBreakdown(trades);
+        return rows.stream()
+                .sorted(Comparator.comparingDouble(StrategyBreakdownRow::getExpectancy).reversed())
+                .map(row -> new ExpectancyBySetupRow(
+                        row.getLabel(),
+                        row.getTrades(),
+                        row.getExpectancy(),
+                        row.getTotalPnl()
+                ))
+                .toList();
+    }
+
+    private List<MistakeImpactRow> buildMistakeImpact(List<Trade> trades, Map<String, TradeReview> reviewMap) {
+        if (trades.isEmpty()) {
+            return List.of();
+        }
+
+        Map<String, MetricAccumulator> aggregates = new HashMap<>();
+        List<String> tradeIds = trades.stream()
+                .map(Trade::getId)
+                .filter(id -> id != null && !id.isBlank())
+                .toList();
+
+        if (!tradeIds.isEmpty()) {
+            tradeMistakeTagRepository.findByTradeIdIn(tradeIds).forEach(link -> {
+                Trade trade = link.getTrade();
+                if (trade == null || trade.getId() == null) {
+                    return;
+                }
+                String label = link.getMistakeTag() != null ? link.getMistakeTag().getName() : null;
+                addMetricAggregate(aggregates, normalizeLabel(label), trade);
+            });
+        }
+
+        for (Trade trade : trades) {
+            TradeReview review = reviewMap.get(trade.getId());
+            if (review == null) {
+                continue;
+            }
+            if (Boolean.TRUE.equals(review.getHadFomo())) {
+                addMetricAggregate(aggregates, "FOMO", trade);
+            }
+            if (Boolean.TRUE.equals(review.getEnteredBeforeNews())) {
+                addMetricAggregate(aggregates, "Before News", trade);
+            }
+            Integer timingRating = review.getEntryTimingRating();
+            if (timingRating != null && timingRating <= 2) {
+                addMetricAggregate(aggregates, "Early Entry", trade);
+            }
+            if (Boolean.FALSE.equals(review.getFollowedPlan())) {
+                addMetricAggregate(aggregates, "Plan Violation", trade);
+            }
+        }
+
+        return aggregates.entrySet().stream()
+                .map(entry -> new MistakeImpactRow(
+                        entry.getKey(),
+                        entry.getValue().count,
+                        round2(entry.getValue().averageR()),
+                        round2(entry.getValue().totalPnl)
+                ))
+                .sorted(Comparator.comparingDouble((MistakeImpactRow row) -> Math.abs(row.getTotalPnl())).reversed()
+                        .thenComparing(MistakeImpactRow::getLabel))
+                .toList();
+    }
+
+    private List<HoldingTimeDistributionRow> buildHoldingTimeDistribution(List<Trade> trades) {
+        List<HoldingBucketDefinition> definitions = Arrays.asList(
+                new HoldingBucketDefinition("<5 min", 0, 5),
+                new HoldingBucketDefinition("5-15 min", 5, 15),
+                new HoldingBucketDefinition("15-60 min", 15, 60),
+                new HoldingBucketDefinition("1-4h", 60, 240),
+                new HoldingBucketDefinition(">4h", 240, Long.MAX_VALUE)
+        );
+        List<HoldingTimeDistributionRow> rows = new ArrayList<>();
+
+        for (HoldingBucketDefinition definition : definitions) {
+            MetricAccumulator acc = new MetricAccumulator();
+            for (Trade trade : trades) {
+                Long holdingMinutes = trade.getHoldingMinutes();
+                if (holdingMinutes == null || !definition.matches(holdingMinutes)) {
+                    continue;
+                }
+                acc.add(trade);
+            }
+            rows.add(new HoldingTimeDistributionRow(
+                    definition.label(),
+                    acc.count,
+                    round2(acc.averageR())
+            ));
+        }
+        return rows;
+    }
+
+    private List<SessionPerformanceRow> buildSessionPerformance(List<Trade> trades) {
+        List<BreakdownRow> rows = buildBreakdown(trades, Trade::getSession);
+        return rows.stream()
+                .map(row -> new SessionPerformanceRow(
+                        row.getLabel(),
+                        row.getTotalTrades(),
+                        row.getAvgR(),
+                        row.getTotalPnl()
+                ))
+                .toList();
+    }
+
+    private List<DayOfWeekPerformanceRow> buildDayOfWeekPerformance(List<Trade> trades) {
+        Map<DayOfWeek, MetricAccumulator> aggregates = new LinkedHashMap<>();
+        for (DayOfWeek dayOfWeek : DayOfWeek.values()) {
+            aggregates.put(dayOfWeek, new MetricAccumulator());
+        }
+
+        for (Trade trade : trades) {
+            LocalDateTime timestamp = resolveTradeTimestamp(trade);
+            if (timestamp == null) {
+                continue;
+            }
+            aggregates.get(timestamp.getDayOfWeek()).add(trade);
+        }
+
+        List<DayOfWeekPerformanceRow> rows = new ArrayList<>();
+        for (DayOfWeek dayOfWeek : DayOfWeek.values()) {
+            MetricAccumulator acc = aggregates.get(dayOfWeek);
+            rows.add(new DayOfWeekPerformanceRow(
+                    dayOfWeek.getDisplayName(TextStyle.FULL, Locale.ENGLISH),
+                    dayOfWeek.getValue(),
+                    acc.count,
+                    round2(acc.averageR()),
+                    round2(acc.totalPnl)
+            ));
+        }
+        return rows;
+    }
+
+    private List<SymbolPerformanceRow> buildSymbolPerformance(List<Trade> trades) {
+        List<BreakdownRow> rows = buildBreakdown(trades, Trade::getSymbol);
+        return rows.stream()
+                .map(row -> new SymbolPerformanceRow(
+                        row.getLabel(),
+                        row.getTotalTrades(),
+                        row.getWinRate(),
+                        row.getAvgR(),
+                        row.getTotalPnl()
+                ))
+                .toList();
+    }
+
+    private List<StrategyBreakdownRow> buildStrategyBreakdown(List<Trade> trades) {
+        List<BreakdownRow> rows = buildBreakdown(trades, Trade::getSetupName);
+        return rows.stream()
+                .map(row -> new StrategyBreakdownRow(
+                        row.getLabel(),
+                        row.getTotalTrades(),
+                        row.getWinRate(),
+                        row.getAvgR(),
+                        row.getAvgR(),
+                        row.getTotalPnl()
+                ))
+                .sorted(Comparator.comparingDouble(StrategyBreakdownRow::getExpectancy).reversed())
+                .toList();
+    }
+
+    private Map<String, TradeReview> buildReviewMap(List<Trade> trades) {
+        List<String> tradeIds = trades.stream()
+                .map(Trade::getId)
+                .filter(id -> id != null && !id.isBlank())
+                .toList();
+        if (tradeIds.isEmpty()) {
+            return Map.of();
+        }
+
+        Map<String, TradeReview> reviewMap = new HashMap<>();
+        for (TradeReview review : tradeReviewRepository.findByTradeIdIn(tradeIds)) {
+            if (review.getTrade() != null && review.getTrade().getId() != null) {
+                reviewMap.put(review.getTrade().getId(), review);
+            }
+        }
+        return reviewMap;
+    }
+
+    private void addMetricAggregate(Map<String, MetricAccumulator> aggregates, String label, Trade trade) {
+        MetricAccumulator accumulator = aggregates.computeIfAbsent(label, key -> new MetricAccumulator());
+        accumulator.add(trade);
+    }
+
+    private List<String> extractDistinctSymbols(List<Trade> trades) {
+        return trades.stream()
+                .map(Trade::getSymbol)
+                .map(this::normalizeLabel)
+                .distinct()
+                .sorted()
+                .toList();
+    }
+
+    private List<String> extractDistinctSetups(List<Trade> trades) {
+        return trades.stream()
+                .map(Trade::getSetupName)
+                .map(this::normalizeLabel)
+                .distinct()
+                .sorted()
+                .toList();
+    }
+
+    private String normalizeFilter(String value) {
+        if (value == null || value.isBlank() || "ALL".equalsIgnoreCase(value.trim())) {
+            return null;
+        }
+        return value.trim();
+    }
+
     private RiskMetrics buildRiskMetrics(List<Trade> trades) {
         int totalTrades = trades.size();
         int winTrades = 0;
@@ -497,6 +790,34 @@ public class AnalyticsService {
         private double totalR;
     }
 
+    private static class MetricAccumulator {
+        private int count;
+        private double totalPnl;
+        private double totalR;
+
+        private void add(Trade trade) {
+            count++;
+            totalPnl += trade.getPnl();
+            totalR += trade.getRMultiple();
+        }
+
+        private double averageR() {
+            return count == 0 ? 0.0 : totalR / count;
+        }
+    }
+
+    private record RRangeBucket(String label, double minInclusive, double maxExclusive) {
+        private boolean matches(double value) {
+            return value >= minInclusive && value < maxExclusive;
+        }
+    }
+
+    private record HoldingBucketDefinition(String label, long minInclusive, long maxExclusive) {
+        private boolean matches(long value) {
+            return value >= minInclusive && value < maxExclusive;
+        }
+    }
+
     public static class AnalyticsReport {
         private final TradeOverview overview;
         private final RiskMetrics riskMetrics;
@@ -557,6 +878,329 @@ public class AnalyticsService {
 
         public List<MistakeFrequencyRow> getMistakeFrequency() {
             return mistakeFrequency;
+        }
+    }
+
+    public static class AnalyticsWorkspaceReport {
+        private final List<RDistributionRow> rDistribution;
+        private final List<ExpectancyBySetupRow> expectancyBySetup;
+        private final List<MistakeImpactRow> mistakeImpact;
+        private final List<HoldingTimeDistributionRow> holdingTimeDistribution;
+        private final List<SessionPerformanceRow> sessionPerformance;
+        private final List<DayOfWeekPerformanceRow> dayOfWeekPerformance;
+        private final List<SymbolPerformanceRow> symbolPerformance;
+        private final List<StrategyBreakdownRow> strategyBreakdown;
+        private final List<String> availableSymbols;
+        private final List<String> availableSetups;
+
+        public AnalyticsWorkspaceReport(
+                List<RDistributionRow> rDistribution,
+                List<ExpectancyBySetupRow> expectancyBySetup,
+                List<MistakeImpactRow> mistakeImpact,
+                List<HoldingTimeDistributionRow> holdingTimeDistribution,
+                List<SessionPerformanceRow> sessionPerformance,
+                List<DayOfWeekPerformanceRow> dayOfWeekPerformance,
+                List<SymbolPerformanceRow> symbolPerformance,
+                List<StrategyBreakdownRow> strategyBreakdown,
+                List<String> availableSymbols,
+                List<String> availableSetups
+        ) {
+            this.rDistribution = rDistribution;
+            this.expectancyBySetup = expectancyBySetup;
+            this.mistakeImpact = mistakeImpact;
+            this.holdingTimeDistribution = holdingTimeDistribution;
+            this.sessionPerformance = sessionPerformance;
+            this.dayOfWeekPerformance = dayOfWeekPerformance;
+            this.symbolPerformance = symbolPerformance;
+            this.strategyBreakdown = strategyBreakdown;
+            this.availableSymbols = availableSymbols;
+            this.availableSetups = availableSetups;
+        }
+
+        public List<RDistributionRow> getRDistribution() {
+            return rDistribution;
+        }
+
+        public List<ExpectancyBySetupRow> getExpectancyBySetup() {
+            return expectancyBySetup;
+        }
+
+        public List<MistakeImpactRow> getMistakeImpact() {
+            return mistakeImpact;
+        }
+
+        public List<HoldingTimeDistributionRow> getHoldingTimeDistribution() {
+            return holdingTimeDistribution;
+        }
+
+        public List<SessionPerformanceRow> getSessionPerformance() {
+            return sessionPerformance;
+        }
+
+        public List<DayOfWeekPerformanceRow> getDayOfWeekPerformance() {
+            return dayOfWeekPerformance;
+        }
+
+        public List<SymbolPerformanceRow> getSymbolPerformance() {
+            return symbolPerformance;
+        }
+
+        public List<StrategyBreakdownRow> getStrategyBreakdown() {
+            return strategyBreakdown;
+        }
+
+        public List<String> getAvailableSymbols() {
+            return availableSymbols;
+        }
+
+        public List<String> getAvailableSetups() {
+            return availableSetups;
+        }
+    }
+
+    public static class RDistributionRow {
+        private final String label;
+        private final int count;
+
+        public RDistributionRow(String label, int count) {
+            this.label = label;
+            this.count = count;
+        }
+
+        public String getLabel() {
+            return label;
+        }
+
+        public int getCount() {
+            return count;
+        }
+    }
+
+    public static class ExpectancyBySetupRow {
+        private final String label;
+        private final int trades;
+        private final double expectancy;
+        private final double totalPnl;
+
+        public ExpectancyBySetupRow(String label, int trades, double expectancy, double totalPnl) {
+            this.label = label;
+            this.trades = trades;
+            this.expectancy = expectancy;
+            this.totalPnl = totalPnl;
+        }
+
+        public String getLabel() {
+            return label;
+        }
+
+        public int getTrades() {
+            return trades;
+        }
+
+        public double getExpectancy() {
+            return expectancy;
+        }
+
+        public double getTotalPnl() {
+            return totalPnl;
+        }
+    }
+
+    public static class MistakeImpactRow {
+        private final String label;
+        private final int trades;
+        private final double avgR;
+        private final double totalPnl;
+
+        public MistakeImpactRow(String label, int trades, double avgR, double totalPnl) {
+            this.label = label;
+            this.trades = trades;
+            this.avgR = avgR;
+            this.totalPnl = totalPnl;
+        }
+
+        public String getLabel() {
+            return label;
+        }
+
+        public int getTrades() {
+            return trades;
+        }
+
+        public double getAvgR() {
+            return avgR;
+        }
+
+        public double getTotalPnl() {
+            return totalPnl;
+        }
+    }
+
+    public static class HoldingTimeDistributionRow {
+        private final String label;
+        private final int trades;
+        private final double avgR;
+
+        public HoldingTimeDistributionRow(String label, int trades, double avgR) {
+            this.label = label;
+            this.trades = trades;
+            this.avgR = avgR;
+        }
+
+        public String getLabel() {
+            return label;
+        }
+
+        public int getTrades() {
+            return trades;
+        }
+
+        public double getAvgR() {
+            return avgR;
+        }
+    }
+
+    public static class SessionPerformanceRow {
+        private final String label;
+        private final int trades;
+        private final double avgR;
+        private final double totalPnl;
+
+        public SessionPerformanceRow(String label, int trades, double avgR, double totalPnl) {
+            this.label = label;
+            this.trades = trades;
+            this.avgR = avgR;
+            this.totalPnl = totalPnl;
+        }
+
+        public String getLabel() {
+            return label;
+        }
+
+        public int getTrades() {
+            return trades;
+        }
+
+        public double getAvgR() {
+            return avgR;
+        }
+
+        public double getTotalPnl() {
+            return totalPnl;
+        }
+    }
+
+    public static class DayOfWeekPerformanceRow {
+        private final String label;
+        private final int orderIndex;
+        private final int trades;
+        private final double avgR;
+        private final double totalPnl;
+
+        public DayOfWeekPerformanceRow(String label, int orderIndex, int trades, double avgR, double totalPnl) {
+            this.label = label;
+            this.orderIndex = orderIndex;
+            this.trades = trades;
+            this.avgR = avgR;
+            this.totalPnl = totalPnl;
+        }
+
+        public String getLabel() {
+            return label;
+        }
+
+        public int getOrderIndex() {
+            return orderIndex;
+        }
+
+        public int getTrades() {
+            return trades;
+        }
+
+        public double getAvgR() {
+            return avgR;
+        }
+
+        public double getTotalPnl() {
+            return totalPnl;
+        }
+    }
+
+    public static class SymbolPerformanceRow {
+        private final String label;
+        private final int trades;
+        private final double winRate;
+        private final double avgR;
+        private final double totalPnl;
+
+        public SymbolPerformanceRow(String label, int trades, double winRate, double avgR, double totalPnl) {
+            this.label = label;
+            this.trades = trades;
+            this.winRate = winRate;
+            this.avgR = avgR;
+            this.totalPnl = totalPnl;
+        }
+
+        public String getLabel() {
+            return label;
+        }
+
+        public int getTrades() {
+            return trades;
+        }
+
+        public double getWinRate() {
+            return winRate;
+        }
+
+        public double getAvgR() {
+            return avgR;
+        }
+
+        public double getTotalPnl() {
+            return totalPnl;
+        }
+    }
+
+    public static class StrategyBreakdownRow {
+        private final String label;
+        private final int trades;
+        private final double winRate;
+        private final double avgR;
+        private final double expectancy;
+        private final double totalPnl;
+
+        public StrategyBreakdownRow(String label, int trades, double winRate, double avgR, double expectancy, double totalPnl) {
+            this.label = label;
+            this.trades = trades;
+            this.winRate = winRate;
+            this.avgR = avgR;
+            this.expectancy = expectancy;
+            this.totalPnl = totalPnl;
+        }
+
+        public String getLabel() {
+            return label;
+        }
+
+        public int getTrades() {
+            return trades;
+        }
+
+        public double getWinRate() {
+            return winRate;
+        }
+
+        public double getAvgR() {
+            return avgR;
+        }
+
+        public double getExpectancy() {
+            return expectancy;
+        }
+
+        public double getTotalPnl() {
+            return totalPnl;
         }
     }
 

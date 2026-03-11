@@ -1,6 +1,7 @@
 package com.example.demo.repository;
 
 import com.example.demo.entity.TradeMistakeTag;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -32,8 +33,10 @@ public interface TradeMistakeTagRepository extends JpaRepository<TradeMistakeTag
         java.time.LocalDateTime getEntryTime();
     }
 
+    @EntityGraph(attributePaths = {"trade", "mistakeTag"})
     List<TradeMistakeTag> findByTradeId(String tradeId);
 
+    @EntityGraph(attributePaths = {"trade", "mistakeTag"})
     List<TradeMistakeTag> findByTradeIdIn(List<String> tradeIds);
 
     void deleteByTradeId(String tradeId);

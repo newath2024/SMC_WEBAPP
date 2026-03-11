@@ -1,6 +1,7 @@
 package com.example.demo.repository;
 
 import com.example.demo.entity.Trade;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -10,8 +11,10 @@ import java.util.Optional;
 
 public interface TradeRepository extends JpaRepository<Trade, String> {
 
+    @EntityGraph(attributePaths = {"setup"})
     List<Trade> findByUserIdOrderByEntryTimeDesc(String userId);
 
+    @EntityGraph(attributePaths = {"setup"})
     Optional<Trade> findByIdAndUserId(String id, String userId);
 
     @Query("""
