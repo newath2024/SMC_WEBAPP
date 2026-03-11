@@ -279,6 +279,157 @@ public class AdminController {
         return "adminUsers";
     }
 
+    @GetMapping("/users/{id}")
+    @Transactional(readOnly = true)
+    public String userDetail(@PathVariable String id, Model model, HttpSession session) {
+        User admin = userService.getCurrentUser(session);
+
+        if (admin == null) {
+            return "redirect:/login";
+        }
+
+        if (!userService.isAdmin(admin)) {
+            return "redirect:/trades";
+        }
+
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("User not found: " + id));
+
+        List<Trade> trades = tradeRepository.findByUserIdOrderByEntryTimeDesc(user.getId());
+        List<Setup> setups = setupRepository.findByUserIdOrderByCreatedAtDesc(user.getId());
+        List<TradeMistakeTagRepository.MistakeUsageRow> mistakeUsageRows =
+                tradeMistakeTagRepository.countUsageByMistakeTagForUser(user.getId());
+        List<TradeMistakeTagRepository.RecentMistakeRow> recentMistakes =
+                tradeMistakeTagRepository.findRecentMistakesForUser(user.getId());
+
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime trialCutoff = now.minusDays(7);
+        LocalDateTime recentActivityCutoff = now.minusDays(30);
+        LocalDateTime lastTradeAt = trades.stream()
+                .map(this::resolveTradeCreatedAt)
+                .filter(value -> value != null)
+                .max(LocalDateTime::compareTo)
+                .orElse(null);
+
+        long totalTrades = trades.size();
+        long winningTrades = trades.stream()
+                .filter(trade -> trade.getResult() != null && "WIN".equalsIgnoreCase(trade.getResult()))
+                .count();
+        double winRate = totalTrades == 0 ? 0.0 : (winningTrades * 100.0) / totalTrades;
+        double averageR = totalTrades == 0 ? 0.0 : trades.stream().mapToDouble(Trade::getRMultiple).average().orElse(0.0);
+        double totalPnl = trades.stream().mapToDouble(Trade::getPnl).sum();
+        long mistakesLogged = mistakeUsageRows.stream().mapToLong(TradeMistakeTagRepository.MistakeUsageRow::getUsageCount).sum();
+
+        Map<String, String> mistakeNamesById = mistakeTagRepository.findAll().stream()
+                .collect(Collectors.toMap(MistakeTag::getId, MistakeTag::getName, (left, right) -> left));
+
+        String profilePlan = resolveUserPlan(user, trialCutoff);
+        String profileStatus = resolveUserStatus(user, totalTrades, lastTradeAt, recentActivityCutoff);
+
+        BehaviorStat mostTradedSymbol = topCounts(
+                trades.stream().map(Trade::getSymbol).map(this::normalizeLabel).toList(),
+                1
+        ).stream().findFirst().orElse(new BehaviorStat("N/A", 0));
+
+        BehaviorStat mostUsedSetup = topCounts(
+                trades.stream().map(Trade::getSetupName).map(this::normalizeLabel).toList(),
+                1
+        ).stream().findFirst().orElse(new BehaviorStat("N/A", 0));
+
+        BehaviorStat preferredSession = topCounts(
+                trades.stream().map(Trade::getSession).map(this::normalizeLabel).toList(),
+                1
+        ).stream().findFirst().orElse(new BehaviorStat("N/A", 0));
+
+        BehaviorStat mostCommonMistake = mistakeUsageRows.stream()
+                .map(row -> new BehaviorStat(normalizeLabel(mistakeNamesById.get(row.getMistakeTagId())), row.getUsageCount()))
+                .sorted(Comparator.comparingLong(BehaviorStat::count).reversed().thenComparing(BehaviorStat::label))
+                .findFirst()
+                .orElse(new BehaviorStat("N/A", 0));
+
+        List<UserTradeRow> recentTradeRows = trades.stream()
+                .limit(6)
+                .map(trade -> new UserTradeRow(
+                        normalizeLabel(trade.getSymbol()),
+                        normalizeLabel(trade.getDirection()).toUpperCase(Locale.ENGLISH),
+                        normalizeLabel(trade.getResult()),
+                        formatCurrency(trade.getPnl()),
+                        formatSignedR(trade.getRMultiple()),
+                        formatDateTime(trade.getEntryTime())
+                ))
+                .toList();
+
+        List<TimelineEvent> timeline = new ArrayList<>();
+        if (user.getCreatedAt() != null) {
+            timeline.add(new TimelineEvent("Account created", "User account was registered on the platform.", formatDateTime(user.getCreatedAt()), user.getCreatedAt(), "bi-person-plus", "primary"));
+        }
+        trades.stream()
+                .map(this::resolveTradeCreatedAt)
+                .filter(value -> value != null)
+                .min(LocalDateTime::compareTo)
+                .ifPresent(value -> timeline.add(new TimelineEvent("First trade logged", "Initial trading activity recorded in the journal.", formatDateTime(value), value, "bi-graph-up-arrow", "success")));
+        setups.stream()
+                .map(Setup::getCreatedAt)
+                .filter(value -> value != null)
+                .min(LocalDateTime::compareTo)
+                .ifPresent(value -> timeline.add(new TimelineEvent("Setup created", "User created their first saved setup template.", formatDateTime(value), value, "bi-sliders2", "warning")));
+        recentMistakes.stream()
+                .findFirst()
+                .ifPresent(event -> timeline.add(new TimelineEvent(
+                        "Mistake tagged",
+                        normalizeLabel(event.getMistakeName()) + " was tagged on " + normalizeLabel(event.getSymbol()) + ".",
+                        formatDateTime(event.getEntryTime()),
+                        event.getEntryTime(),
+                        "bi-exclamation-triangle",
+                        "danger"
+                )));
+        if (lastTradeAt != null) {
+            timeline.add(new TimelineEvent("Last login", "Most recent activity is inferred from the latest trade timestamp.", formatDateTime(lastTradeAt), lastTradeAt, "bi-clock-history", "slate"));
+        }
+        timeline.sort(Comparator.comparing(TimelineEvent::eventAt, Comparator.nullsLast(LocalDateTime::compareTo)).reversed());
+
+        List<ModerationItem> moderationItems = List.of(
+                new ModerationItem("Failed login attempts", "0", "No failed-login telemetry is persisted yet.", "success", "bi-shield-lock"),
+                new ModerationItem("Account flags", "1".equals(String.valueOf("Flagged".equals(profileStatus) ? 1 : 0)) ? "1 active flag" : "0 active flags", flaggedReason(profileStatus, totalTrades), "danger", "bi-flag"),
+                new ModerationItem("Role change history", "Not tracked", "Role audit events are not persisted in the current schema.", "warning", "bi-arrow-left-right"),
+                new ModerationItem("Status change history", "Not tracked", "Account status history is inferred from current state only.", "slate", "bi-clock-history")
+        );
+
+        String adminNotes = buildAdminNotes(user, profileStatus, totalTrades, mistakesLogged, lastTradeAt);
+
+        model.addAttribute("currentUser", admin);
+        model.addAttribute("profileUser", user);
+        model.addAttribute("profileRole", normalizeLabel(user.getRole()).toUpperCase(Locale.ENGLISH));
+        model.addAttribute("profileRoleCss", isAdminUser(user) ? "role-admin" : "role-user");
+        model.addAttribute("profilePlan", profilePlan);
+        model.addAttribute("profilePlanCss", "plan-" + profilePlan.toLowerCase(Locale.ENGLISH));
+        model.addAttribute("profileStatus", profileStatus);
+        model.addAttribute("profileStatusCss", "status-" + profileStatus.toLowerCase(Locale.ENGLISH));
+        model.addAttribute("createdAtLabel", formatDateTime(user.getCreatedAt()));
+        model.addAttribute("lastActiveLabel", formatDateTime(lastTradeAt));
+        model.addAttribute("avatarInitial", user.getUsername() != null && !user.getUsername().isBlank()
+                ? user.getUsername().substring(0, 1).toUpperCase(Locale.ENGLISH)
+                : "U");
+
+        model.addAttribute("totalTrades", totalTrades);
+        model.addAttribute("winRate", round2(winRate));
+        model.addAttribute("averageR", round2(averageR));
+        model.addAttribute("totalPnl", formatCurrency(totalPnl));
+        model.addAttribute("lastTradeDate", formatDateTime(lastTradeAt));
+        model.addAttribute("mistakesLogged", mistakesLogged);
+
+        model.addAttribute("recentTradeRows", recentTradeRows);
+        model.addAttribute("mostTradedSymbol", mostTradedSymbol);
+        model.addAttribute("mostUsedSetup", mostUsedSetup);
+        model.addAttribute("mostCommonMistake", mostCommonMistake);
+        model.addAttribute("preferredSession", preferredSession);
+        model.addAttribute("timeline", timeline);
+        model.addAttribute("adminNotes", adminNotes);
+        model.addAttribute("moderationItems", moderationItems);
+
+        return "adminUserDetail";
+    }
+
     @PostMapping("/users/{id}/toggle-active")
     public String toggleUserActive(@PathVariable String id, HttpSession session) {
         User admin = userService.getCurrentUser(session);
@@ -468,6 +619,52 @@ public class AdminController {
         return value.format(DateTimeFormatter.ofPattern("MMM dd, yyyy", Locale.ENGLISH));
     }
 
+    private String formatDateTime(LocalDateTime value) {
+        if (value == null) {
+            return "-";
+        }
+        return value.format(DateTimeFormatter.ofPattern("MMM dd, yyyy HH:mm", Locale.ENGLISH));
+    }
+
+    private String formatCurrency(double value) {
+        String prefix = value > 0 ? "+$" : (value < 0 ? "-$" : "$");
+        return prefix + String.format(Locale.ENGLISH, "%,.2f", Math.abs(value));
+    }
+
+    private String formatSignedR(double value) {
+        if (value > 0) {
+            return "+" + round2(value) + "R";
+        }
+        if (value < 0) {
+            return round2(value) + "R";
+        }
+        return "0.0R";
+    }
+
+    private String flaggedReason(String profileStatus, long totalTrades) {
+        if ("Flagged".equals(profileStatus)) {
+            return totalTrades == 0
+                    ? "Account is flagged because no trades have been logged yet."
+                    : "Account is flagged based on low-confidence activity signals.";
+        }
+        return "No current moderation flags are inferred for this user.";
+    }
+
+    private String buildAdminNotes(User user, String profileStatus, long totalTrades, long mistakesLogged, LocalDateTime lastTradeAt) {
+        StringBuilder note = new StringBuilder();
+        note.append("Admin summary for ").append(normalizeLabel(user.getUsername())).append(". ");
+        note.append("Current status is ").append(profileStatus.toLowerCase(Locale.ENGLISH)).append(". ");
+        note.append("Total trades logged: ").append(totalTrades).append(". ");
+        note.append("Mistakes tagged: ").append(mistakesLogged).append(". ");
+        if (lastTradeAt != null) {
+            note.append("Most recent activity was ").append(formatAdminDate(lastTradeAt)).append(". ");
+        } else {
+            note.append("No trade activity has been recorded yet. ");
+        }
+        note.append("Internal admin notes are not persisted yet in the current data model.");
+        return note.toString();
+    }
+
     private double round2(double value) {
         return Math.round(value * 100.0) / 100.0;
     }
@@ -498,6 +695,35 @@ public class AdminController {
             String lastActiveLabel,
             String createdAtLabel,
             boolean active
+    ) {
+    }
+
+    private record UserTradeRow(
+            String symbol,
+            String direction,
+            String result,
+            String pnl,
+            String rMultiple,
+            String entryTime
+    ) {
+    }
+
+    private record TimelineEvent(
+            String title,
+            String note,
+            String timeLabel,
+            LocalDateTime eventAt,
+            String icon,
+            String tone
+    ) {
+    }
+
+    private record ModerationItem(
+            String label,
+            String value,
+            String note,
+            String tone,
+            String icon
     ) {
     }
 }

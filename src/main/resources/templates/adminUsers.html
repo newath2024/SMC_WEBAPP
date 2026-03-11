@@ -646,7 +646,7 @@
                 <td th:text="${userRow.createdAtLabel}">-</td>
                 <td class="actions-cell">
                   <a class="btn btn-outline-primary btn-sm view-profile-btn"
-                     th:href="@{/admin#recent-activity}">View Profile</a>
+                     th:href="@{'/admin/users/' + ${userRow.id}}">View Profile</a>
                   <div class="btn-group">
                     <button class="btn btn-outline-secondary btn-sm dropdown-toggle action-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">Actions</button>
                     <ul class="dropdown-menu dropdown-menu-end">
