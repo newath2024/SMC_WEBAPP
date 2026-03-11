@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
 <head>
   <meta charset="utf-8">
@@ -21,7 +21,7 @@
     <aside th:replace="~{fragments/sidebar :: appSidebar('trades', @{/dashboard/export.csv(period='ALL')})}"></aside>
 
     <main class="main-content">
-<section class="trade-hero trade-form-hero">
+      <section class="trade-hero trade-form-hero">
         <div>
           <p class="trade-eyebrow mb-2" th:text="${editMode ? 'Trade update' : 'Trade capture'}">Trade capture</p>
           <h2 class="m-0" th:text="${editMode ? 'Edit Trade' : 'New Trade'}">New Trade</h2>
@@ -326,5 +326,3 @@
 
 </body>
 </html>
-
-

@@ -1,0 +1,487 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Admin Analytics</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <link th:href="@{/css/sidebar-toggle.css}" href="/css/sidebar-toggle.css" rel="stylesheet">
+  <link th:href="@{/css/analytics-dashboard.css}" href="/css/analytics-dashboard.css" rel="stylesheet">
+  <link th:href="@{/css/app-page.css}" href="/css/app-page.css" rel="stylesheet">
+  <link th:href="@{/css/admin-analytics.css}" href="/css/admin-analytics.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+</head>
+<body class="app-page-body admin-analytics-body">
+<div class="container-fluid py-3 px-3 px-lg-4">
+  <div class="app-shell collapsible-shell expanded admin-analytics-shell">
+    <aside th:replace="~{fragments/sidebar :: appSidebar('admin-analytics', @{/dashboard/export.csv(period='ALL')})}"></aside>
+
+    <main class="main-content admin-analytics-main">
+      <section class="analytics-hero-card">
+        <div class="hero-copy">
+          <span class="hero-kicker">Platform Intelligence</span>
+          <h1 class="hero-title">Admin Analytics</h1>
+          <p class="hero-subtitle">Deep platform usage and trading behavior insights.</p>
+        </div>
+
+        <div class="hero-toolbar">
+          <div class="toolbar-card">
+            <div class="toolbar-label">Workspace filters</div>
+            <div class="toolbar-chip-group" data-range-toolbar>
+              <button class="toolbar-chip" type="button" data-range="30">30D</button>
+              <button class="toolbar-chip" type="button" data-range="60">60D</button>
+              <button class="toolbar-chip is-active" type="button" data-range="90">90D</button>
+              <button class="toolbar-chip" type="button" data-range="ALL">All</button>
+            </div>
+          </div>
+
+          <div class="hero-insights">
+            <article class="insight-card">
+              <span class="insight-label">DAU</span>
+              <strong class="insight-value" th:text="${analyticsSummary.dau}">0</strong>
+            </article>
+            <article class="insight-card">
+              <span class="insight-label">WAU</span>
+              <strong class="insight-value" th:text="${analyticsSummary.wau}">0</strong>
+            </article>
+            <article class="insight-card">
+              <span class="insight-label">MAU</span>
+              <strong class="insight-value" th:text="${analyticsSummary.mau}">0</strong>
+            </article>
+            <article class="insight-card">
+              <span class="insight-label">Top user volume</span>
+              <strong class="insight-value" th:text="${analyticsSummary.topUserTrades}">0</strong>
+            </article>
+            <article class="insight-card danger">
+              <span class="insight-label">Suspicious accounts</span>
+              <strong class="insight-value" th:text="${analyticsSummary.suspiciousUsers}">0</strong>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="analytics-section">
+        <div class="section-heading">
+          <div>
+            <span class="section-kicker">Section 1</span>
+            <h2 class="section-title">User Engagement Analytics</h2>
+            <p class="section-copy">Measure active usage depth, retention quality, and how trading frequency distributes across the platform.</p>
+          </div>
+        </div>
+
+        <div class="analytics-grid analytics-grid-engagement">
+          <article class="analytics-card chart-card chart-card-wide">
+            <div class="card-head">
+              <div>
+                <h3 class="card-title">Active Users Trend</h3>
+                <p class="card-copy">Daily, trailing weekly, and trailing monthly active traders.</p>
+              </div>
+              <span class="badge-soft primary">Engagement</span>
+            </div>
+            <div class="chart-shell chart-shell-tall">
+              <canvas id="activeUsersTrendChart"></canvas>
+            </div>
+          </article>
+
+          <article class="analytics-card chart-card">
+            <div class="card-head">
+              <div>
+                <h3 class="card-title">Trades Per User Distribution</h3>
+                <p class="card-copy">Histogram of user trade counts across the platform.</p>
+              </div>
+            </div>
+            <div class="chart-shell">
+              <canvas id="tradeDistributionChart"></canvas>
+            </div>
+          </article>
+
+          <article class="analytics-card cohort-card">
+            <div class="card-head">
+              <div>
+                <h3 class="card-title">User Retention</h3>
+                <p class="card-copy">Signup-week cohorts with retained activity by week.</p>
+              </div>
+            </div>
+            <div class="cohort-table">
+              <div class="cohort-row cohort-head">
+                <div class="cohort-cell cohort-label-cell">Signup week</div>
+                <div class="cohort-cell cohort-size-cell">Users</div>
+                <div class="cohort-cell" th:each="header : ${retentionHeaders}" th:text="${header}">Week 0</div>
+              </div>
+              <div class="cohort-row" th:each="row : ${cohortRows}">
+                <div class="cohort-cell cohort-label-cell" th:text="${row.cohort}">Mar 11</div>
+                <div class="cohort-cell cohort-size-cell" th:text="${row.users}">0</div>
+                <div class="cohort-cell cohort-value-cell"
+                     th:each="value : ${row.values}"
+                     th:attr="data-pct=${value}"
+                     th:text="${value + '%'}">0%</div>
+              </div>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="analytics-section">
+        <div class="section-heading">
+          <div>
+            <span class="section-kicker">Section 2</span>
+            <h2 class="section-title">Trading Behavior</h2>
+            <p class="section-copy">See what users trade, which setups dominate, and where behavioral mistakes cluster.</p>
+          </div>
+        </div>
+
+        <div class="analytics-grid analytics-grid-3">
+          <article class="analytics-card chart-card">
+            <div class="card-head">
+              <div>
+                <h3 class="card-title">Symbol Popularity</h3>
+                <p class="card-copy">Most traded instruments across users.</p>
+              </div>
+            </div>
+            <div class="chart-shell">
+              <canvas id="symbolPopularityChart"></canvas>
+            </div>
+          </article>
+
+          <article class="analytics-card chart-card">
+            <div class="card-head">
+              <div>
+                <h3 class="card-title">Setup Popularity</h3>
+                <p class="card-copy">Most frequently executed setups.</p>
+              </div>
+            </div>
+            <div class="chart-shell">
+              <canvas id="setupPopularityChart"></canvas>
+            </div>
+          </article>
+
+          <article class="analytics-card chart-card">
+            <div class="card-head">
+              <div>
+                <h3 class="card-title">Mistake Frequency</h3>
+                <p class="card-copy">Behavioral breakdown of tagged execution errors.</p>
+              </div>
+            </div>
+            <div class="chart-shell">
+              <canvas id="mistakeFrequencyChart"></canvas>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="analytics-section">
+        <div class="section-heading">
+          <div>
+            <span class="section-kicker">Section 3</span>
+            <h2 class="section-title">Platform Trading Performance</h2>
+            <p class="section-copy">Aggregate outcome quality across all trading activity, including result mix, R distribution, and session edge.</p>
+          </div>
+        </div>
+
+        <div class="analytics-grid analytics-grid-performance">
+          <article class="analytics-card performance-card">
+            <div class="card-head">
+              <div>
+                <h3 class="card-title">Result Distribution</h3>
+                <p class="card-copy">Win, loss, and break-even trade split.</p>
+              </div>
+            </div>
+            <div class="result-layout">
+              <div class="donut-shell">
+                <canvas id="resultDistributionChart"></canvas>
+                <div class="donut-center">
+                  <span class="donut-total"
+                        th:text="${analyticsSummary.totalTrades}">0</span>
+                  <span class="donut-caption">Trades</span>
+                </div>
+              </div>
+              <div class="legend-stack">
+                <div class="legend-row" th:each="slice : ${resultDistribution}">
+                  <span class="legend-label">
+                    <span class="legend-swatch" th:style="|background:${slice.color}|"></span>
+                    <span th:text="${slice.label}">Win trades</span>
+                  </span>
+                  <strong th:text="${slice.value}">0</strong>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <article class="analytics-card chart-card">
+            <div class="card-head">
+              <div>
+                <h3 class="card-title">R Multiple Distribution</h3>
+                <p class="card-copy">Histogram of realized R multiples across the platform.</p>
+              </div>
+            </div>
+            <div class="chart-shell">
+              <canvas id="rDistributionChart"></canvas>
+            </div>
+          </article>
+
+          <article class="analytics-card chart-card">
+            <div class="card-head">
+              <div>
+                <h3 class="card-title">Session Performance</h3>
+                <p class="card-copy">Toggle between average R and total PnL by trading session.</p>
+              </div>
+              <div class="toolbar-chip-group" data-session-toolbar>
+                <button class="toolbar-chip is-active" type="button" data-session-view="avgR">Avg R</button>
+                <button class="toolbar-chip" type="button" data-session-view="totalPnl">Total PnL</button>
+              </div>
+            </div>
+            <div class="chart-shell">
+              <canvas id="sessionPerformanceChart"></canvas>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="analytics-section">
+        <div class="section-heading">
+          <div>
+            <span class="section-kicker">Section 4</span>
+            <h2 class="section-title">User Segmentation</h2>
+            <p class="section-copy">Compare the users driving volume versus users falling out of the platform.</p>
+          </div>
+        </div>
+
+        <div class="analytics-grid analytics-grid-2">
+          <article class="analytics-card table-card">
+            <div class="card-head">
+              <div>
+                <h3 class="card-title">Top Active Users</h3>
+                <p class="card-copy">Highest trade volume accounts with recent platform activity.</p>
+              </div>
+            </div>
+            <div class="table-responsive">
+              <table class="table analytics-table mb-0">
+                <thead>
+                <tr>
+                  <th>User</th>
+                  <th class="numeric-cell">Trades</th>
+                  <th class="numeric-cell">Winrate</th>
+                  <th class="numeric-cell">PnL</th>
+                  <th>Last Active</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="row : ${topActiveUsers}">
+                  <td class="row-user" th:text="${row.user}">user</td>
+                  <td class="numeric-cell" th:text="${row.trades}">0</td>
+                  <td class="numeric-cell" th:text="${#numbers.formatDecimal(row.winRate, 1, 2) + '%'}">0%</td>
+                  <td class="numeric-cell" th:classappend="${row.pnl >= 0} ? 'value-positive' : 'value-negative'"
+                      th:text="${row.pnl >= 0 ? '+$' + #numbers.formatDecimal(row.pnl, 1, 2) : '-$' + #numbers.formatDecimal(T(java.lang.Math).abs(row.pnl), 1, 2)}">+$0.00</td>
+                  <td th:text="${row.lastActive}">-</td>
+                </tr>
+                </tbody>
+              </table>
+            </div>
+          </article>
+
+          <article class="analytics-card table-card">
+            <div class="card-head">
+              <div>
+                <h3 class="card-title">Inactive Users</h3>
+                <p class="card-copy">Accounts without recent trading activity. Last login is not tracked by the current schema.</p>
+              </div>
+            </div>
+            <div class="table-responsive">
+              <table class="table analytics-table mb-0">
+                <thead>
+                <tr>
+                  <th>User</th>
+                  <th>Last Login</th>
+                  <th>Last Trade</th>
+                  <th>Account Status</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="row : ${inactiveUsers}">
+                  <td class="row-user" th:text="${row.user}">user</td>
+                  <td th:text="${row.lastLogin}">Not tracked</td>
+                  <td th:text="${row.lastTrade}">-</td>
+                  <td><span class="status-badge" th:text="${row.accountStatus}">Active</span></td>
+                </tr>
+                </tbody>
+              </table>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="analytics-section">
+        <div class="section-heading">
+          <div>
+            <span class="section-kicker">Section 5</span>
+            <h2 class="section-title">Risk and Abuse Monitoring</h2>
+            <p class="section-copy">Heuristic monitoring for behavioral outliers, trading spikes, suspicious patterns, and disabled accounts.</p>
+          </div>
+        </div>
+
+        <div class="analytics-grid analytics-grid-2">
+          <article class="analytics-card table-card">
+            <div class="card-head">
+              <div>
+                <h3 class="card-title">Users with abnormal trade activity</h3>
+                <p class="card-copy">Volume outliers based on total trade count deviation.</p>
+              </div>
+            </div>
+            <div class="table-responsive">
+              <table class="table analytics-table mb-0">
+                <thead>
+                <tr>
+                  <th>User</th>
+                  <th>Reason</th>
+                  <th>Metric</th>
+                  <th>Last Active</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="row : ${abnormalUsers}">
+                  <td class="row-user" th:text="${row.user}">user</td>
+                  <td th:text="${row.reason}">Trade volume outlier</td>
+                  <td th:text="${row.metric}">0 trades</td>
+                  <td th:text="${row.lastActive}">-</td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(abnormalUsers)}">
+                  <td colspan="4" class="empty-cell">No abnormal activity outliers detected by the current heuristic.</td>
+                </tr>
+                </tbody>
+              </table>
+            </div>
+          </article>
+
+          <article class="analytics-card table-card">
+            <div class="card-head">
+              <div>
+                <h3 class="card-title">Users with excessive daily trades</h3>
+                <p class="card-copy">Accounts with concentrated same-day trade spikes.</p>
+              </div>
+            </div>
+            <div class="table-responsive">
+              <table class="table analytics-table mb-0">
+                <thead>
+                <tr>
+                  <th>User</th>
+                  <th>Reason</th>
+                  <th>Metric</th>
+                  <th>Last Active</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="row : ${excessiveDailyTradeUsers}">
+                  <td class="row-user" th:text="${row.user}">user</td>
+                  <td th:text="${row.reason}">Excessive daily trades</td>
+                  <td th:text="${row.metric}">0 trades/day</td>
+                  <td th:text="${row.lastActive}">-</td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(excessiveDailyTradeUsers)}">
+                  <td colspan="4" class="empty-cell">No daily trade spikes crossed the configured threshold.</td>
+                </tr>
+                </tbody>
+              </table>
+            </div>
+          </article>
+
+          <article class="analytics-card table-card">
+            <div class="card-head">
+              <div>
+                <h3 class="card-title">Accounts flagged for suspicious activity</h3>
+                <p class="card-copy">Loss concentration and mistake density heuristics.</p>
+              </div>
+            </div>
+            <div class="table-responsive">
+              <table class="table analytics-table mb-0">
+                <thead>
+                <tr>
+                  <th>User</th>
+                  <th>Reason</th>
+                  <th>Metric</th>
+                  <th>Last Active</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="row : ${suspiciousUsers}">
+                  <td class="row-user" th:text="${row.user}">user</td>
+                  <td th:text="${row.reason}">High mistake density</td>
+                  <td th:text="${row.metric}">0%</td>
+                  <td th:text="${row.lastActive}">-</td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(suspiciousUsers)}">
+                  <td colspan="4" class="empty-cell">No accounts are currently flagged by the monitoring rules.</td>
+                </tr>
+                </tbody>
+              </table>
+            </div>
+          </article>
+
+          <article class="analytics-card table-card">
+            <div class="card-head">
+              <div>
+                <h3 class="card-title">Disabled users</h3>
+                <p class="card-copy">Current blocked accounts with latest change timestamps.</p>
+              </div>
+            </div>
+            <div class="table-responsive">
+              <table class="table analytics-table mb-0">
+                <thead>
+                <tr>
+                  <th>User</th>
+                  <th>Updated</th>
+                  <th>Last Trade</th>
+                  <th>Status</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="row : ${disabledUsers}">
+                  <td class="row-user" th:text="${row.user}">user</td>
+                  <td th:text="${row.updatedAt}">-</td>
+                  <td th:text="${row.lastTrade}">-</td>
+                  <td><span class="status-badge danger" th:text="${row.status}">Disabled</span></td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(disabledUsers)}">
+                  <td colspan="4" class="empty-cell">No disabled users.</td>
+                </tr>
+                </tbody>
+              </table>
+            </div>
+          </article>
+        </div>
+      </section>
+    </main>
+  </div>
+</div>
+
+<script th:inline="javascript">
+  window.adminAnalyticsData = {
+    engagementLabels: /*[[${engagementTrend.![label]}]]*/ [],
+    dauValues: /*[[${engagementTrend.![dau]}]]*/ [],
+    wauValues: /*[[${engagementTrend.![wau]}]]*/ [],
+    mauValues: /*[[${engagementTrend.![mau]}]]*/ [],
+    tradeDistributionLabels: /*[[${tradeDistribution.![label]}]]*/ [],
+    tradeDistributionValues: /*[[${tradeDistribution.![value]}]]*/ [],
+    symbolLabels: /*[[${symbolPopularity.![label]}]]*/ [],
+    symbolValues: /*[[${symbolPopularity.![value]}]]*/ [],
+    setupLabels: /*[[${setupPopularity.![label]}]]*/ [],
+    setupValues: /*[[${setupPopularity.![value]}]]*/ [],
+    mistakeLabels: /*[[${mistakeFrequency.![label]}]]*/ [],
+    mistakeValues: /*[[${mistakeFrequency.![value]}]]*/ [],
+    resultLabels: /*[[${resultDistribution.![label]}]]*/ [],
+    resultValues: /*[[${resultDistribution.![value]}]]*/ [],
+    resultColors: /*[[${resultDistribution.![color]}]]*/ [],
+    rLabels: /*[[${rDistribution.![label]}]]*/ [],
+    rValues: /*[[${rDistribution.![value]}]]*/ [],
+    sessionLabels: /*[[${sessionPerformance.![label]}]]*/ [],
+    sessionAvgRValues: /*[[${sessionPerformance.![avgR]}]]*/ [],
+    sessionTotalPnlValues: /*[[${sessionPerformance.![totalPnl]}]]*/ []
+  };
+</script>
+<script th:src="@{/js/admin-analytics.js}" src="/js/admin-analytics.js"></script>
+<script th:src="@{/js/sidebar-toggle.js}" src="/js/sidebar-toggle.js"></script>
+</body>
+</html>

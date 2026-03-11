@@ -12,831 +12,122 @@
   <link th:href="@{/css/sidebar-toggle.css}" href="/css/sidebar-toggle.css" rel="stylesheet">
   <link th:href="@{/css/analytics-dashboard.css}" href="/css/analytics-dashboard.css" rel="stylesheet">
   <link th:href="@{/css/app-page.css}" href="/css/app-page.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
   <style>
-    :root {
-      --admin-bg: #f4f7fb;
-      --admin-card: #ffffff;
-      --admin-border: #e6ebf2;
-      --admin-text: #0f172a;
-      --admin-muted: #64748b;
-      --admin-primary: #2563eb;
-      --admin-primary-soft: rgba(37, 99, 235, 0.12);
-      --admin-success-soft: rgba(22, 163, 74, 0.12);
-      --admin-warning-soft: rgba(245, 158, 11, 0.16);
-      --admin-danger-soft: rgba(220, 38, 38, 0.12);
-      --admin-shadow: 0 20px 45px rgba(15, 23, 42, 0.06);
-    }
-
-    body.dashboard-body.app-page-body {
-      background:
-        radial-gradient(circle at top left, rgba(37, 99, 235, 0.08), transparent 24%),
-        linear-gradient(180deg, #f8fbff 0%, var(--admin-bg) 100%);
-      color: var(--admin-text);
-      font-family: "Inter", sans-serif;
-    }
-
-    .app-shell {
-      gap: 1.5rem;
-      align-items: stretch;
-    }
-
-    .main-content {
-      display: flex;
-      flex-direction: column;
-      gap: 1.5rem;
-    }
-
-    .sidebar-card.sidebar-panel {
-      border: 1px solid rgba(255, 255, 255, 0.55);
-      border-radius: 1.5rem;
-      background: linear-gradient(180deg, rgba(15, 23, 42, 0.98), rgba(15, 23, 42, 0.94));
-      box-shadow: 0 28px 50px rgba(15, 23, 42, 0.28);
-      color: rgba(255, 255, 255, 0.92);
-    }
-
-    .sidebar-brand {
-      display: flex;
-      align-items: center;
-      margin-bottom: 1.5rem;
-      padding-bottom: 1.25rem;
-      border-bottom: 1px solid rgba(148, 163, 184, 0.18);
-    }
-
-    .sidebar-group-title.sidebar-title {
-      color: rgba(148, 163, 184, 0.78);
-      letter-spacing: 0.08em;
-      font-size: 0.72rem;
-      margin-bottom: 0.65rem;
-    }
-
-    .sidebar-link.nav-item {
-      border-radius: 0.95rem;
-      color: rgba(226, 232, 240, 0.86);
-      margin-bottom: 0.3rem;
-      transition: all 0.2s ease;
-    }
-
-    .sidebar-link.nav-item:hover,
-    .sidebar-link.nav-item.active {
-      color: #fff;
-      background: linear-gradient(135deg, rgba(37, 99, 235, 0.34), rgba(59, 130, 246, 0.18));
-      box-shadow: inset 0 0 0 1px rgba(96, 165, 250, 0.24);
-    }
-
-    .sidebar-plan {
-      border: 1px solid rgba(148, 163, 184, 0.14);
-      background: rgba(255, 255, 255, 0.04);
-      border-radius: 1.1rem;
-    }
-
-    .sidebar-user.user-pill {
-      background: rgba(255, 255, 255, 0.06);
-      border: 1px solid rgba(148, 163, 184, 0.16);
-      border-radius: 1rem;
-    }
-
-    .sidebar-avatar {
-      background: linear-gradient(135deg, #3b82f6, #1d4ed8);
-      color: #fff;
-    }
-
-    .sidebar-logout-btn {
-      border-radius: 0.95rem;
-      background: rgba(255, 255, 255, 0.06);
-      color: #fff;
-      border: 1px solid rgba(148, 163, 184, 0.18);
-    }
-
-    .sidebar-logout-btn:hover {
-      background: rgba(239, 68, 68, 0.16);
-      border-color: rgba(239, 68, 68, 0.28);
-    }
-
-    .admin-hero,
-    .admin-card,
-    .metric-card {
-      border: 1px solid var(--admin-border);
-      background: var(--admin-card);
-      border-radius: 1.35rem;
-      box-shadow: var(--admin-shadow);
-    }
-
-    .admin-hero {
-      padding: 1.5rem;
-      display: flex;
-      justify-content: space-between;
-      gap: 1rem;
-      align-items: flex-start;
-    }
-
-    .admin-kicker {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.45rem;
-      font-size: 0.8rem;
-      font-weight: 700;
-      color: var(--admin-primary);
-      background: var(--admin-primary-soft);
-      border-radius: 999px;
-      padding: 0.45rem 0.8rem;
-      margin-bottom: 0.9rem;
-    }
-
-    .admin-title {
-      font-size: clamp(1.8rem, 2.5vw, 2.5rem);
-      font-weight: 800;
-      letter-spacing: -0.03em;
-      margin-bottom: 0.5rem;
-    }
-
-    .admin-subtitle {
-      max-width: 760px;
-      color: var(--admin-muted);
-      margin-bottom: 0;
-    }
-
-    .admin-hero-meta {
-      min-width: 260px;
-      display: grid;
-      gap: 0.85rem;
-    }
-
-    .hero-meta-card {
-      border-radius: 1rem;
-      padding: 1rem 1.1rem;
-      background: linear-gradient(180deg, #fbfdff, #f8fafc);
-      border: 1px solid var(--admin-border);
-    }
-
-    .hero-meta-label {
-      color: var(--admin-muted);
-      font-size: 0.78rem;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      margin-bottom: 0.3rem;
-    }
-
-    .hero-meta-value {
-      font-weight: 700;
-      font-size: 1.05rem;
-    }
-
-    .metric-card {
-      padding: 1.25rem;
-      transition: transform 0.2s ease, box-shadow 0.2s ease;
-      height: 100%;
-    }
-
-    .metric-card:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 24px 48px rgba(15, 23, 42, 0.1);
-    }
-
-    .metric-icon {
-      width: 2.9rem;
-      height: 2.9rem;
-      border-radius: 1rem;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.2rem;
-      margin-bottom: 1.1rem;
-    }
-
-    .metric-icon.primary { background: var(--admin-primary-soft); color: var(--admin-primary); }
-    .metric-icon.success { background: var(--admin-success-soft); color: #15803d; }
-    .metric-icon.warning { background: var(--admin-warning-soft); color: #b45309; }
-    .metric-icon.info { background: rgba(14, 165, 233, 0.12); color: #0369a1; }
-
-    .metric-label {
-      font-size: 0.9rem;
-      font-weight: 600;
-      color: var(--admin-muted);
-      margin-bottom: 0.55rem;
-    }
-
-    .metric-value {
-      font-size: 2rem;
-      line-height: 1;
-      font-weight: 800;
-      letter-spacing: -0.04em;
-      margin-bottom: 0.45rem;
-    }
-
-    .metric-note {
-      color: var(--admin-muted);
-      font-size: 0.88rem;
-      margin-bottom: 0;
-    }
-
-    .admin-card {
-      overflow: hidden;
-    }
-
-    .admin-card-header {
-      padding: 1.25rem 1.25rem 0;
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: 1rem;
-    }
-
-    .admin-card-title {
-      font-size: 1.05rem;
-      font-weight: 700;
-      margin-bottom: 0.35rem;
-    }
-
-    .admin-card-description {
-      color: var(--admin-muted);
-      font-size: 0.9rem;
-      margin-bottom: 0;
-    }
-
-    .chart-surface {
-      padding: 1.25rem;
-    }
-
-    .chart-placeholder {
-      min-height: 280px;
-      border: 1px dashed #cbd5e1;
-      border-radius: 1.15rem;
-      background:
-        linear-gradient(180deg, rgba(248, 250, 252, 0.95), rgba(241, 245, 249, 0.95)),
-        repeating-linear-gradient(
-          90deg,
-          transparent,
-          transparent 58px,
-          rgba(148, 163, 184, 0.08) 58px,
-          rgba(148, 163, 184, 0.08) 59px
-        );
-      position: relative;
-      overflow: hidden;
-      padding: 1.25rem;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-    }
-
-    .chart-lines {
-      position: absolute;
-      inset: auto 1.25rem 3.6rem 1.25rem;
-      height: 120px;
-      border-bottom: 1px solid rgba(148, 163, 184, 0.28);
-    }
-
-    .chart-lines::before,
-    .chart-lines::after {
-      content: "";
-      position: absolute;
-      left: 0;
-      right: 0;
-      border-top: 1px solid rgba(148, 163, 184, 0.2);
-    }
-
-    .chart-lines::before { top: 33%; }
-    .chart-lines::after { top: 66%; }
-
-    .chart-area {
-      position: relative;
-      height: 120px;
-      margin-top: auto;
-      border-radius: 1rem;
-      background:
-        linear-gradient(180deg, rgba(37, 99, 235, 0.22), rgba(37, 99, 235, 0.02));
-      clip-path: polygon(0 70%, 12% 62%, 24% 66%, 36% 42%, 48% 48%, 60% 22%, 72% 30%, 84% 14%, 100% 0, 100% 100%, 0 100%);
-    }
-
-    .chart-area::after {
-      content: "";
-      position: absolute;
-      inset: auto 0 0 0;
-      height: 3px;
-      border-radius: 999px;
-      background: linear-gradient(90deg, #60a5fa, #2563eb);
-      clip-path: polygon(0 100%, 12% 72%, 24% 82%, 36% 42%, 48% 50%, 60% 12%, 72% 24%, 84% 0, 100% 0, 100% 100%);
-    }
-
-    .donut-placeholder {
-      width: 180px;
-      height: 180px;
-      margin: 0 auto;
-      border-radius: 50%;
-      background: conic-gradient(#2563eb 0 58%, #f59e0b 58% 81%, #cbd5e1 81% 100%);
-      position: relative;
-    }
-
-    .donut-placeholder::after {
-      content: "";
-      position: absolute;
-      inset: 28px;
-      background: #fff;
-      border-radius: 50%;
-      box-shadow: inset 0 0 0 1px var(--admin-border);
-    }
-
-    .donut-label {
-      position: absolute;
-      inset: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-direction: column;
-      z-index: 1;
-      font-weight: 700;
-    }
-
-    .donut-label small {
-      color: var(--admin-muted);
-      font-weight: 600;
-    }
-
-    .chart-legend {
-      display: grid;
-      gap: 0.75rem;
-      margin-top: 1.25rem;
-    }
-
-    .legend-item {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 1rem;
-      font-size: 0.92rem;
-    }
-
-    .legend-label {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.55rem;
-      color: var(--admin-muted);
-    }
-
-    .legend-dot {
-      width: 0.7rem;
-      height: 0.7rem;
-      border-radius: 999px;
-    }
-
-    .table-wrap {
-      padding: 0 1.25rem 1.25rem;
-    }
-
-    .table {
-      --bs-table-bg: transparent;
-      --bs-table-striped-bg: rgba(148, 163, 184, 0.05);
-      --bs-table-hover-bg: rgba(37, 99, 235, 0.04);
-      margin-bottom: 0;
-    }
-
-    .table thead th {
-      border-bottom-width: 1px;
-      border-color: var(--admin-border);
-      color: var(--admin-muted);
-      font-size: 0.78rem;
-      letter-spacing: 0.04em;
-      text-transform: uppercase;
-      font-weight: 700;
-      padding: 1rem 1rem;
-      white-space: nowrap;
-    }
-
-    .table tbody td {
-      border-color: var(--admin-border);
-      padding: 1rem;
-      vertical-align: middle;
-    }
-
-    .table-user {
-      min-width: 220px;
-    }
-
-    .table-symbol {
-      font-weight: 700;
-      text-decoration: none;
-      color: var(--admin-primary);
-    }
-
-    .table-symbol:hover {
-      color: #1d4ed8;
-      text-decoration: underline;
-    }
-
-    .subtext {
-      display: block;
-      color: var(--admin-muted);
-      font-size: 0.82rem;
-      margin-top: 0.18rem;
-    }
-
-    .badge-soft {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.35rem;
-      border-radius: 999px;
-      padding: 0.45rem 0.7rem;
-      font-weight: 700;
-      font-size: 0.75rem;
-      letter-spacing: 0.01em;
-    }
-
-    .badge-soft-primary { background: var(--admin-primary-soft); color: var(--admin-primary); }
-    .badge-soft-success { background: var(--admin-success-soft); color: #15803d; }
-    .badge-soft-warning { background: var(--admin-warning-soft); color: #b45309; }
-    .badge-soft-secondary { background: rgba(148, 163, 184, 0.16); color: #475569; }
-    .badge-soft-danger { background: var(--admin-danger-soft); color: #b91c1c; }
-
-    .numeric-cell {
-      text-align: right;
-      font-variant-numeric: tabular-nums;
-      white-space: nowrap;
-    }
-
-    .pnl-positive { color: #15803d; font-weight: 700; }
-    .pnl-negative { color: #dc2626; font-weight: 700; }
-    .pnl-neutral { color: #475569; font-weight: 700; }
-
-    .btn-table {
-      border-radius: 0.8rem;
-      font-weight: 600;
-      padding: 0.55rem 0.8rem;
-    }
-
-    .dropdown-menu-admin {
-      min-width: 12rem;
-      border-radius: 1rem;
-      border: 1px solid var(--admin-border);
-      box-shadow: 0 20px 35px rgba(15, 23, 42, 0.12);
-      padding: 0.5rem;
-    }
-
-    .dropdown-menu-admin .dropdown-item,
-    .dropdown-menu-admin .dropdown-item-form button {
-      border-radius: 0.75rem;
-      font-size: 0.92rem;
-      padding: 0.65rem 0.8rem;
-    }
-
-    .dropdown-item-form {
-      margin: 0;
-    }
-
-    .dropdown-item-form button {
-      width: 100%;
-      text-align: left;
-      background: transparent;
-      border: 0;
-      color: inherit;
-    }
-
-    .empty-state {
-      padding: 2.5rem 1rem;
-      color: var(--admin-muted);
-      text-align: center;
-    }
-
-    @media (max-width: 991.98px) {
-      .admin-hero {
-        flex-direction: column;
-      }
-
-      .admin-hero-meta {
-        width: 100%;
-        min-width: 0;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-      }
-    }
+    :root{--admin-bg:#eff3f8;--admin-surface:rgba(255,255,255,.94);--admin-border:rgba(15,23,42,.08);--admin-text:#0f172a;--admin-muted:#64748b;--admin-primary:#2563eb;--admin-primary-soft:rgba(37,99,235,.12);--admin-success:#16a34a;--admin-success-soft:rgba(22,163,74,.12);--admin-warning:#d97706;--admin-warning-soft:rgba(217,119,6,.14);--admin-danger:#dc2626;--admin-danger-soft:rgba(220,38,38,.12);--admin-shadow:0 22px 60px rgba(15,23,42,.08)}
+    body.dashboard-body.app-page-body{font-family:"Inter",sans-serif;color:var(--admin-text);background:radial-gradient(circle at top left,rgba(37,99,235,.10),transparent 24%),radial-gradient(circle at top right,rgba(15,118,110,.08),transparent 18%),linear-gradient(180deg,#f8fbff 0%,var(--admin-bg) 100%)}
+    .main-content.admin-main{display:grid;gap:1.5rem}.admin-shell{gap:1.5rem;align-items:stretch}
+    .sidebar-card.sidebar-panel{border:1px solid rgba(255,255,255,.5);border-radius:1.5rem;background:linear-gradient(180deg,rgba(15,23,42,.98),rgba(15,23,42,.94));box-shadow:0 30px 60px rgba(15,23,42,.28);color:rgba(255,255,255,.92)}
+    .sidebar-link.nav-item{border-radius:.95rem;color:rgba(226,232,240,.88)}.sidebar-link.nav-item:hover,.sidebar-link.nav-item.active{color:#fff;background:linear-gradient(135deg,rgba(37,99,235,.32),rgba(59,130,246,.18));box-shadow:inset 0 0 0 1px rgba(96,165,250,.2)}
+    .admin-hero,.admin-card,.kpi-card{background:var(--admin-surface);border:1px solid var(--admin-border);border-radius:1.4rem;box-shadow:var(--admin-shadow);backdrop-filter:blur(10px)}
+    .admin-hero{display:grid;grid-template-columns:minmax(0,1.9fr) minmax(280px,.95fr);gap:1rem;padding:1.5rem}
+    .hero-kicker{display:inline-flex;align-items:center;gap:.5rem;border-radius:999px;padding:.45rem .8rem;background:var(--admin-primary-soft);color:var(--admin-primary);font-size:.8rem;font-weight:700;margin-bottom:.9rem}
+    .hero-title{font-size:clamp(2rem,3vw,2.8rem);line-height:1;letter-spacing:-.04em;margin-bottom:.55rem;font-weight:800}.hero-subtitle{margin:0;color:var(--admin-muted);max-width:60rem}
+    .hero-panel{display:grid;gap:.9rem}.hero-panel-card,.health-card{border-radius:1.1rem;border:1px solid var(--admin-border);background:linear-gradient(180deg,#fff,#f8fbff);padding:1rem 1.1rem}
+    .hero-panel-label,.health-label{font-size:.75rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--admin-muted);margin-bottom:.35rem}.hero-panel-value{font-size:1.05rem;font-weight:700}
+    .section-header{display:flex;align-items:flex-end;justify-content:space-between;gap:1rem;margin-bottom:1rem}.section-title{font-size:1.15rem;font-weight:800;margin:0 0 .2rem}.section-copy,.admin-card-copy,.row-subtext,.health-note{margin:0;color:var(--admin-muted)}
+    .kpi-card{height:100%;padding:1.2rem;transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease}.kpi-card:hover,.admin-card:hover{transform:translateY(-2px);border-color:rgba(37,99,235,.16);box-shadow:0 26px 60px rgba(15,23,42,.11)}
+    .kpi-card-primary{padding:1.45rem;min-height:100%}.kpi-card-primary .kpi-value{font-size:2.45rem}.kpi-card-primary .kpi-note{max-width:20rem}
+    .kpi-card-secondary{padding:1rem 1.1rem;border-radius:1.2rem}.kpi-card-secondary .kpi-icon{width:2.55rem;height:2.55rem;margin-bottom:.85rem}.kpi-card-secondary .kpi-value{font-size:1.6rem}
+    .kpi-icon,.health-icon{width:2.9rem;height:2.9rem;border-radius:1rem;display:inline-flex;align-items:center;justify-content:center;font-size:1.1rem;margin-bottom:1rem}.kpi-icon.primary{background:var(--admin-primary-soft);color:var(--admin-primary)}.kpi-icon.success,.health-icon.success{background:var(--admin-success-soft);color:var(--admin-success)}.kpi-icon.warning,.health-icon.warning{background:var(--admin-warning-soft);color:var(--admin-warning)}.kpi-icon.danger{background:var(--admin-danger-soft);color:var(--admin-danger)}.health-icon.secondary{background:rgba(148,163,184,.14);color:#475569}
+    .kpi-label{color:var(--admin-muted);font-size:.88rem;font-weight:600;margin-bottom:.5rem}.kpi-value{font-size:2rem;line-height:1;font-weight:800;letter-spacing:-.05em;margin-bottom:.4rem}.kpi-note{margin:0;color:var(--admin-muted);font-size:.88rem}
+    .admin-card{overflow:hidden}.admin-card-head{padding:1.25rem 1.25rem 0;display:flex;align-items:flex-start;justify-content:space-between;gap:1rem}.admin-card-title{font-size:1.05rem;font-weight:700;margin-bottom:.25rem}.admin-card-body,.chart-card-body{padding:1.25rem}.chart-card-body{padding-top:0}
+    .badge-soft{display:inline-flex;align-items:center;gap:.4rem;border-radius:999px;padding:.45rem .75rem;font-size:.76rem;font-weight:700}.badge-soft.primary{background:var(--admin-primary-soft);color:var(--admin-primary)}.badge-soft.success{background:var(--admin-success-soft);color:var(--admin-success)}.badge-soft.warning{background:var(--admin-warning-soft);color:var(--admin-warning)}.badge-soft.secondary{background:rgba(148,163,184,.14);color:#475569}
+    .chart-toolbar{display:inline-flex;gap:.5rem;flex-wrap:wrap}.chart-filter-btn{border:1px solid var(--admin-border);background:#fff;color:var(--admin-muted);border-radius:999px;padding:.45rem .8rem;font-size:.82rem;font-weight:700}.chart-filter-btn.active{background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;border-color:transparent;box-shadow:0 12px 24px rgba(37,99,235,.24)}
+    .chart-wrap{position:relative;min-height:290px;padding-top:1rem}.chart-empty{min-height:290px;display:none;align-items:center;justify-content:center;text-align:center;color:var(--admin-muted);border:1px dashed var(--admin-border);border-radius:1rem;background:rgba(248,250,252,.8)}.chart-empty.is-visible{display:flex}
+    .distribution-layout{display:grid;grid-template-columns:minmax(180px,220px) minmax(0,1fr);gap:1.2rem;align-items:center}.legend-list,.behavior-grid{display:grid;gap:.8rem}.legend-row{display:flex;align-items:center;justify-content:space-between;gap:1rem;font-size:.92rem}.legend-label{display:inline-flex;align-items:center;gap:.55rem;color:var(--admin-muted)}.legend-swatch{width:.72rem;height:.72rem;border-radius:999px}
+    .donut-wrap{position:relative;min-height:220px;display:grid;place-items:center}.donut-center{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none;text-align:center}.donut-total{font-size:1.45rem;font-weight:800;letter-spacing:-.04em;line-height:1}.donut-caption{font-size:.78rem;color:var(--admin-muted);font-weight:700;text-transform:uppercase;letter-spacing:.08em}
+    .status-dot{width:.55rem;height:.55rem;border-radius:999px;display:inline-block}.status-dot.healthy{background:var(--admin-success)}.status-dot.warning{background:var(--admin-warning)}.status-dot.critical{background:var(--admin-danger)}
+    .health-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1rem}.health-top{display:flex;justify-content:space-between;gap:.8rem;margin-bottom:.8rem}.health-value{font-size:1.35rem;font-weight:800;letter-spacing:-.04em;margin-bottom:.35rem}
+    .table-wrap{padding:0 1.25rem 1.25rem}.table{--bs-table-bg:transparent;--bs-table-striped-bg:rgba(148,163,184,.05);--bs-table-hover-bg:rgba(37,99,235,.04);margin:0}.table thead th{border-bottom-width:1px;border-color:var(--admin-border);color:var(--admin-muted);font-size:.76rem;text-transform:uppercase;letter-spacing:.06em;white-space:nowrap;padding:.95rem 1rem}.table tbody td{border-color:var(--admin-border);padding:1rem;vertical-align:middle}
+    .row-user{font-weight:700}.row-subtext{font-size:.82rem;margin-top:.15rem}.numeric-cell{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}.pnl-positive{color:var(--admin-success);font-weight:700}.pnl-negative{color:var(--admin-danger);font-weight:700}.pnl-neutral{color:#475569;font-weight:700}.empty-state{padding:2rem 1rem;text-align:center;color:var(--admin-muted)}
+    .admin-section-anchor{scroll-margin-top:1.5rem}
+    @media (max-width:1399.98px){.health-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media (max-width:1199.98px){.admin-hero,.distribution-layout{grid-template-columns:1fr}}@media (max-width:991.98px){.health-grid{grid-template-columns:1fr}}
   </style>
 </head>
 <body class="dashboard-body app-page-body">
-
 <div class="container-fluid py-3 px-3 px-lg-4">
-  <div class="app-shell collapsible-shell expanded">
-    <aside th:replace="~{fragments/sidebar :: appSidebar('admin', @{/dashboard/export.csv(period='ALL')})}"></aside>
-
-    <main class="main-content">
+  <div class="app-shell collapsible-shell expanded admin-shell">
+    <aside th:replace="~{fragments/sidebar :: appSidebar('admin-dashboard', @{/dashboard/export.csv(period='ALL')})}"></aside>
+    <main class="main-content admin-main">
       <section class="admin-hero">
         <div>
-          <div class="admin-kicker">
-            <i class="bi bi-shield-check"></i>
-            <span>Administrative Workspace</span>
-          </div>
-          <h1 class="admin-title">Admin Dashboard</h1>
-          <p class="admin-subtitle">Monitor users, trade activity, and platform health from one clean control panel built for day-to-day trading journal operations.</p>
+          <div class="hero-kicker"><i class="bi bi-shield-check"></i><span>Platform Control</span></div>
+          <h1 class="hero-title">Admin Dashboard</h1>
+          <p class="hero-subtitle">Monitor users, trade activity, and platform health from one control panel.</p>
         </div>
-
-        <div class="admin-hero-meta">
-          <div class="hero-meta-card" th:if="${currentUser != null}">
-            <div class="hero-meta-label">Signed in as</div>
-            <div class="hero-meta-value" th:text="${currentUser.username}">admin</div>
-            <div class="text-muted small" th:text="${currentUser.role != null ? currentUser.role : 'ADMIN'}">ADMIN</div>
-          </div>
-          <div class="hero-meta-card">
-            <div class="hero-meta-label">Coverage</div>
-            <div class="hero-meta-value">Users and trades</div>
-            <div class="text-muted small">Live server-side snapshot of platform activity</div>
-          </div>
+        <div class="hero-panel">
+          <div class="hero-panel-card"><div class="hero-panel-label">Signed In As</div><div class="hero-panel-value" th:text="${currentUser != null ? currentUser.username : 'Admin'}">Admin</div></div>
+          <div class="hero-panel-card"><div class="hero-panel-label">Workspace Scope</div><div class="hero-panel-value">Users, trade flow, and system health</div></div>
         </div>
       </section>
 
-      <section class="row g-3">
-        <div class="col-12 col-md-6 col-xl-3">
-          <article class="metric-card">
-            <div class="metric-icon primary">
-              <i class="bi bi-people"></i>
-            </div>
-            <div class="metric-label">Total Users</div>
-            <div class="metric-value" th:text="${totalUsers}">0</div>
-            <p class="metric-note">All registered traders across the platform.</p>
-          </article>
-        </div>
-        <div class="col-12 col-md-6 col-xl-3">
-          <article class="metric-card">
-            <div class="metric-icon success">
-              <i class="bi bi-person-check"></i>
-            </div>
-            <div class="metric-label">Active Users</div>
-            <div class="metric-value" th:text="${activeUsers}">0</div>
-            <p class="metric-note">Accounts currently enabled for access.</p>
-          </article>
-        </div>
-        <div class="col-12 col-md-6 col-xl-3">
-          <article class="metric-card">
-            <div class="metric-icon warning">
-              <i class="bi bi-person-dash"></i>
-            </div>
-            <div class="metric-label">Inactive Users</div>
-            <div class="metric-value" th:text="${inactiveUsers}">0</div>
-            <p class="metric-note">Users blocked or paused from using the app.</p>
-          </article>
-        </div>
-        <div class="col-12 col-md-6 col-xl-3">
-          <article class="metric-card">
-            <div class="metric-icon info">
-              <i class="bi bi-graph-up-arrow"></i>
-            </div>
-            <div class="metric-label">Total Trades</div>
-            <div class="metric-value" th:text="${totalTrades}">0</div>
-            <p class="metric-note">Trade records stored in the journal database.</p>
-          </article>
+      <section class="admin-section-anchor" id="platform-kpis">
+        <div class="section-header"><div><h2 class="section-title">Platform KPIs</h2><p class="section-copy">Immediate snapshot of adoption, usage, and trading activity.</p></div></div>
+        <div class="row g-3">
+          <div class="col-12 col-lg-4"><article class="kpi-card kpi-card-primary"><div class="kpi-icon primary"><i class="bi bi-people"></i></div><div class="kpi-label">Total Users</div><div class="kpi-value" th:text="${totalUsers}">0</div><p class="kpi-note">All registered users on the platform.</p></article></div>
+          <div class="col-12 col-lg-4"><article class="kpi-card kpi-card-primary"><div class="kpi-icon primary"><i class="bi bi-bar-chart-line"></i></div><div class="kpi-label">Total Trades</div><div class="kpi-value" th:text="${totalTrades}">0</div><p class="kpi-note">Trade records stored in the journal database.</p></article></div>
+          <div class="col-12 col-lg-4"><article class="kpi-card kpi-card-primary"><div class="kpi-icon danger"><i class="bi bi-lightning-charge"></i></div><div class="kpi-label">Trades Today</div><div class="kpi-value" th:text="${tradesToday}">0</div><p class="kpi-note">Trade entries created on the current day.</p></article></div>
+          <div class="col-12 col-md-4"><article class="kpi-card kpi-card-secondary"><div class="kpi-icon success"><i class="bi bi-person-check"></i></div><div class="kpi-label">Active Users</div><div class="kpi-value" th:text="${activeUsers}">0</div><p class="kpi-note">Accounts currently enabled for access.</p></article></div>
+          <div class="col-12 col-md-4"><article class="kpi-card kpi-card-secondary"><div class="kpi-icon warning"><i class="bi bi-person-plus"></i></div><div class="kpi-label">New Users (7d)</div><div class="kpi-value" th:text="${newUsersLast7Days}">0</div><p class="kpi-note">Accounts created in the last 7 days.</p></article></div>
+          <div class="col-12 col-md-4"><article class="kpi-card kpi-card-secondary"><div class="kpi-icon success"><i class="bi bi-calculator"></i></div><div class="kpi-label">Avg Trades per User</div><div class="kpi-value" th:text="${#numbers.formatDecimal(averageTradesPerUser, 1, 2)}">0.00</div><p class="kpi-note">Average journal activity per user account.</p></article></div>
         </div>
       </section>
 
-      <section class="row g-3">
-        <div class="col-12 col-xl-8">
-          <article class="admin-card h-100">
-            <div class="admin-card-header">
-              <div>
-                <h2 class="admin-card-title">Trades Over Time</h2>
-                <p class="admin-card-description">Placeholder visualization ready for future Chart.js time-series trade volume integration.</p>
-              </div>
-              <span class="badge-soft badge-soft-primary">
-                <i class="bi bi-bar-chart-line"></i>
-                Trend view
-              </span>
-            </div>
-            <div class="chart-surface">
-              <div class="chart-placeholder">
-                <div class="d-flex justify-content-between align-items-start">
-                  <div>
-                    <div class="fw-semibold">Trade activity</div>
-                    <div class="text-muted small">Last 30 periods</div>
-                  </div>
-                  <div class="text-muted small">Placeholder area</div>
-                </div>
-                <div class="chart-lines"></div>
-                <div class="chart-area"></div>
-                <div class="d-flex justify-content-between text-muted small">
-                  <span>Week 1</span>
-                  <span>Week 2</span>
-                  <span>Week 3</span>
-                  <span>Week 4</span>
-                  <span>Week 5</span>
-                </div>
-              </div>
-            </div>
-          </article>
+      <section class="admin-section-anchor" id="activity-trends">
+        <div class="section-header">
+          <div><h2 class="section-title">Activity Trends</h2><p class="section-copy">Track user growth and trade creation over time.</p></div>
+          <div class="chart-toolbar" data-range-toolbar>
+            <button class="chart-filter-btn" type="button" data-range="7">7 days</button>
+            <button class="chart-filter-btn active" type="button" data-range="30">30 days</button>
+            <button class="chart-filter-btn" type="button" data-range="90">90 days</button>
+            <button class="chart-filter-btn" type="button" data-range="ALL">All time</button>
+          </div>
         </div>
-
-        <div class="col-12 col-xl-4">
-          <article class="admin-card h-100">
-            <div class="admin-card-header">
-              <div>
-                <h2 class="admin-card-title">User Status Distribution</h2>
-                <p class="admin-card-description">Placeholder distribution card for active and inactive account segmentation.</p>
-              </div>
-              <span class="badge-soft badge-soft-secondary">
-                <i class="bi bi-pie-chart"></i>
-                Status mix
-              </span>
-            </div>
-            <div class="chart-surface">
-              <div class="chart-placeholder justify-content-center">
-                <div class="donut-placeholder">
-                  <div class="donut-label">
-                    <span th:text="${totalUsers}">0</span>
-                    <small>Total users</small>
-                  </div>
-                </div>
-                <div class="chart-legend">
-                  <div class="legend-item">
-                    <span class="legend-label">
-                      <span class="legend-dot" style="background:#2563eb;"></span>
-                      Active
-                    </span>
-                    <strong th:text="${activeUsers}">0</strong>
-                  </div>
-                  <div class="legend-item">
-                    <span class="legend-label">
-                      <span class="legend-dot" style="background:#f59e0b;"></span>
-                      Inactive
-                    </span>
-                    <strong th:text="${inactiveUsers}">0</strong>
-                  </div>
-                  <div class="legend-item">
-                    <span class="legend-label">
-                      <span class="legend-dot" style="background:#cbd5e1;"></span>
-                      Remaining ring
-                    </span>
-                    <strong>Visual</strong>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </article>
+        <div class="row g-3">
+          <div class="col-12 col-xl-6"><article class="admin-card h-100"><div class="admin-card-head"><div><h3 class="admin-card-title">User Growth</h3><p class="admin-card-copy">New users created over time.</p></div><span class="badge-soft primary"><i class="bi bi-graph-up"></i>Growth</span></div><div class="chart-card-body"><div class="chart-wrap"><canvas id="userGrowthChart"></canvas><div class="chart-empty" id="userGrowthEmpty">No user growth data available.</div></div></div></article></div>
+          <div class="col-12 col-xl-6"><article class="admin-card h-100"><div class="admin-card-head"><div><h3 class="admin-card-title">Trades Over Time</h3><p class="admin-card-copy">Trades created per day across the platform.</p></div><span class="badge-soft success"><i class="bi bi-activity"></i>Volume</span></div><div class="chart-card-body"><div class="chart-wrap"><canvas id="tradeVolumeChart"></canvas><div class="chart-empty" id="tradeVolumeEmpty">No trade activity data available.</div></div></div></article></div>
         </div>
       </section>
 
-      <section class="admin-card">
-        <div class="admin-card-header">
-          <div>
-            <h2 class="admin-card-title">Users Management</h2>
-            <p class="admin-card-description">Review account access, roles, and account creation history. Administrative actions remain unchanged.</p>
-          </div>
-          <span class="badge-soft badge-soft-primary" th:text="${totalUsers} + ' total users'">0 total users</span>
-        </div>
-
-        <div class="table-wrap">
-          <div class="table-responsive">
-            <table class="table table-striped table-hover align-middle">
-              <thead>
-              <tr>
-                <th>User</th>
-                <th>Role</th>
-                <th>Status</th>
-                <th>Created</th>
-                <th class="text-end">Actions</th>
-              </tr>
-              </thead>
-              <tbody>
-              <tr th:each="u : ${users}">
-                <td class="table-user">
-                  <div class="fw-semibold" th:text="${u.username}">username</div>
-                  <span class="subtext" th:text="${u.email}">email@example.com</span>
-                </td>
-                <td>
-                  <span class="badge-soft badge-soft-primary" th:text="${u.role != null ? u.role : 'USER'}">USER</span>
-                </td>
-                <td>
-                  <span class="badge-soft badge-soft-success" th:if="${u.active}">
-                    <i class="bi bi-check-circle-fill"></i>
-                    Active
-                  </span>
-                  <span class="badge-soft badge-soft-warning" th:if="${!u.active}">
-                    <i class="bi bi-pause-circle-fill"></i>
-                    Inactive
-                  </span>
-                </td>
-                <td>
-                  <span th:text="${u.createdAt != null ? #temporals.format(u.createdAt, 'yyyy-MM-dd HH:mm') : '-'}">-</span>
-                </td>
-                <td class="text-end">
-                  <div class="dropdown">
-                    <button class="btn btn-outline-secondary btn-sm btn-table dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                      Manage
-                    </button>
-                    <div class="dropdown-menu dropdown-menu-end dropdown-menu-admin">
-                      <form class="dropdown-item-form" th:action="@{/admin/users/{id}/toggle-active(id=${u.id})}" method="post">
-                        <button type="submit">
-                          <i class="bi me-2" th:classappend="${u.active} ? 'bi-person-dash' : 'bi-person-check'"></i>
-                          <span th:text="${u.active} ? 'Disable account' : 'Enable account'">Toggle account</span>
-                        </button>
-                      </form>
-                      <form class="dropdown-item-form"
-                            th:if="${u.id != currentUser.id}"
-                            th:action="@{/admin/users/{id}/delete(id=${u.id})}"
-                            method="post"
-                            onsubmit="return confirm('Delete this user?');">
-                        <button type="submit" class="text-danger">
-                          <i class="bi bi-trash3 me-2"></i>
-                          Delete user
-                        </button>
-                      </form>
-                      <div class="dropdown-item text-muted" th:if="${u.id == currentUser.id}">
-                        <i class="bi bi-lock me-2"></i>
-                        Current admin account
-                      </div>
-                    </div>
-                  </div>
-                </td>
-              </tr>
-              <tr th:if="${#lists.isEmpty(users)}">
-                <td colspan="5" class="empty-state">No users found.</td>
-              </tr>
-              </tbody>
-            </table>
-          </div>
+      <section class="admin-section-anchor" id="platform-distribution">
+        <div class="section-header"><div><h2 class="section-title">Platform Distribution</h2><p class="section-copy">Understand account mix and current user segmentation.</p></div></div>
+        <div class="row g-3">
+          <div class="col-12 col-xl-6"><article class="admin-card h-100"><div class="admin-card-head"><div><h3 class="admin-card-title">User Status Distribution</h3><p class="admin-card-copy">Active, inactive, admin, and disabled account mix.</p></div></div><div class="admin-card-body"><div class="distribution-layout"><div class="donut-wrap"><canvas id="userStatusChart"></canvas><div class="donut-center"><div><div class="donut-total" th:text="${totalUsers}">0</div><div class="donut-caption">Total Users</div></div></div></div><div class="legend-list"><div class="legend-row" th:each="item, iter : ${userStatusDistribution}"><span class="legend-label"><span class="legend-swatch" th:style="${'background:' + (iter.index == 0 ? '#2563eb' : (iter.index == 1 ? '#94a3b8' : (iter.index == 2 ? '#16a34a' : '#dc2626')))}"></span><span th:text="${item.label}">Active users</span></span><strong th:text="${item.count}">0</strong></div></div></div></div></article></div>
+          <div class="col-12 col-xl-6"><article class="admin-card h-100"><div class="admin-card-head"><div><h3 class="admin-card-title">Plan Distribution</h3><p class="admin-card-copy">Current account segmentation across free, pro, and trial buckets.</p></div></div><div class="admin-card-body"><div class="distribution-layout"><div class="donut-wrap"><canvas id="planDistributionChart"></canvas><div class="donut-center"><div><div class="donut-total" th:text="${totalUsers}">0</div><div class="donut-caption">Accounts</div></div></div></div><div class="legend-list"><div class="legend-row" th:each="item, iter : ${planDistribution}"><span class="legend-label"><span class="legend-swatch" th:style="${'background:' + (iter.index == 0 ? '#0f766e' : (iter.index == 1 ? '#2563eb' : '#f59e0b'))}"></span><span th:text="${item.label}">Free plan</span></span><strong th:text="${item.count}">0</strong></div></div></div></div></article></div>
         </div>
       </section>
 
-      <section class="admin-card">
-        <div class="admin-card-header">
-          <div>
-            <h2 class="admin-card-title">Trades Management</h2>
-            <p class="admin-card-description">Audit trade records across all users, inspect performance fields, and remove invalid entries when required.</p>
-          </div>
-          <span class="badge-soft badge-soft-secondary" th:text="${totalTrades} + ' trades logged'">0 trades logged</span>
+      <section class="admin-section-anchor" id="platform-behavior">
+        <div class="section-header"><div><h2 class="section-title">Platform Behavior</h2><p class="section-copy">See what users trade most, what setups they use, and where execution breaks down.</p></div></div>
+        <div class="row g-3">
+          <div class="col-12 col-xl-4"><article class="admin-card h-100"><div class="admin-card-head"><div><h3 class="admin-card-title">Top Traded Symbols</h3><p class="admin-card-copy">Most frequently traded instruments.</p></div></div><div class="admin-card-body"><div class="chart-wrap" style="min-height:250px;padding-top:0;"><canvas id="topSymbolsChart"></canvas></div></div></article></div>
+          <div class="col-12 col-xl-4"><article class="admin-card h-100"><div class="admin-card-head"><div><h3 class="admin-card-title">Most Used Setups</h3><p class="admin-card-copy">Setups with the highest trade volume.</p></div></div><div class="admin-card-body"><div class="chart-wrap" style="min-height:250px;padding-top:0;"><canvas id="topSetupsChart"></canvas></div></div></article></div>
+          <div class="col-12 col-xl-4"><article class="admin-card h-100"><div class="admin-card-head"><div><h3 class="admin-card-title">Most Common Mistakes</h3><p class="admin-card-copy">Mistakes tagged most often across trades.</p></div></div><div class="admin-card-body"><div class="chart-wrap" style="min-height:250px;padding-top:0;"><canvas id="topMistakesChart"></canvas></div></div></article></div>
         </div>
+      </section>
 
-        <div class="table-wrap">
-          <div class="table-responsive">
-            <table class="table table-striped table-hover align-middle">
-              <thead>
-              <tr>
-                <th>User</th>
-                <th>Symbol</th>
-                <th>Direction</th>
-                <th>Entry Time</th>
-                <th>Result</th>
-                <th class="numeric-cell">PnL</th>
-                <th class="numeric-cell">R</th>
-                <th class="text-end">Actions</th>
-              </tr>
-              </thead>
-              <tbody>
-              <tr th:each="t : ${trades}">
-                <td>
-                  <div class="fw-semibold" th:text="${t.user != null ? t.user.username : '-'}">-</div>
-                </td>
-                <td>
-                  <a class="table-symbol" th:href="@{/trades/{id}(id=${t.id})}" th:text="${t.symbol}">EURUSD</a>
-                </td>
-                <td>
-                  <span class="badge-soft badge-soft-secondary" th:text="${t.direction != null ? t.direction : '-'}">BUY</span>
-                </td>
-                <td>
-                  <span th:text="${t.entryTime != null ? #temporals.format(t.entryTime, 'yyyy-MM-dd HH:mm') : '-'}">-</span>
-                </td>
-                <td>
-                  <span class="badge-soft badge-soft-success" th:if="${t.result != null and #strings.equalsIgnoreCase(t.result, 'WIN')}" th:text="${t.result}">WIN</span>
-                  <span class="badge-soft badge-soft-danger" th:if="${t.result != null and #strings.equalsIgnoreCase(t.result, 'LOSS')}" th:text="${t.result}">LOSS</span>
-                  <span class="badge-soft badge-soft-warning" th:if="${t.result == null or (!#strings.equalsIgnoreCase(t.result, 'WIN') and !#strings.equalsIgnoreCase(t.result, 'LOSS'))}" th:text="${t.result != null ? t.result : '-'}">BE</span>
-                </td>
-                <td class="numeric-cell">
-                  <span th:if="${t.pnl != null}"
-                        th:text="${#numbers.formatDecimal(t.pnl,1,2)}"
-                        th:classappend="${t.pnl > 0} ? ' pnl-positive' : (${t.pnl < 0} ? ' pnl-negative' : ' pnl-neutral')">0.00</span>
-                  <span th:if="${t.pnl == null}" class="pnl-neutral">-</span>
-                </td>
-                <td class="numeric-cell">
-                  <span th:if="${t.rMultiple != null}" th:text="${#numbers.formatDecimal(t.rMultiple,1,2)}">0.00</span>
-                  <span th:if="${t.rMultiple == null}">-</span>
-                </td>
-                <td class="text-end">
-                  <div class="dropdown">
-                    <button class="btn btn-outline-secondary btn-sm btn-table dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                      Actions
-                    </button>
-                    <div class="dropdown-menu dropdown-menu-end dropdown-menu-admin">
-                      <a class="dropdown-item" th:href="@{/trades/{id}(id=${t.id})}">
-                        <i class="bi bi-box-arrow-up-right me-2"></i>
-                        Open trade
-                      </a>
-                      <form class="dropdown-item-form"
-                            th:action="@{/admin/trades/{id}/delete(id=${t.id})}"
-                            method="post"
-                            onsubmit="return confirm('Delete this trade?');">
-                        <button type="submit" class="text-danger">
-                          <i class="bi bi-trash3 me-2"></i>
-                          Delete trade
-                        </button>
-                      </form>
-                    </div>
-                  </div>
-                </td>
-              </tr>
-              <tr th:if="${#lists.isEmpty(trades)}">
-                <td colspan="8" class="empty-state">No trades found.</td>
-              </tr>
-              </tbody>
-            </table>
-          </div>
+      <section class="admin-section-anchor" id="recent-activity">
+        <div class="section-header"><div><h2 class="section-title">Recent Activity</h2><p class="section-copy">Latest trades and registrations across the platform.</p></div></div>
+        <div class="row g-3">
+          <div class="col-12 col-xl-7"><article class="admin-card h-100"><div class="admin-card-head"><div><h3 class="admin-card-title">Recent Trades</h3><p class="admin-card-copy">Most recent trade records created by users.</p></div></div><div class="table-wrap"><div class="table-responsive"><table class="table table-hover align-middle"><thead><tr><th>User</th><th>Symbol</th><th>Direction</th><th>Result</th><th class="numeric-cell">PnL</th><th>Created time</th></tr></thead><tbody><tr th:each="trade : ${recentTrades}"><td><div class="row-user" th:text="${trade.user != null ? trade.user.username : '-'}">username</div></td><td><span class="row-user" th:text="${trade.symbol}">XAUUSD</span></td><td><span class="badge-soft secondary" th:text="${trade.direction != null ? trade.direction : '-'}">BUY</span></td><td><span class="badge-soft success" th:if="${trade.result != null and #strings.equalsIgnoreCase(trade.result, 'WIN')}" th:text="${trade.result}">WIN</span><span class="badge-soft warning" th:if="${trade.result != null and !#strings.equalsIgnoreCase(trade.result, 'WIN') and !#strings.equalsIgnoreCase(trade.result, 'LOSS')}" th:text="${trade.result}">BE</span><span class="badge-soft secondary" th:if="${trade.result == null}" th:text="'-'">-</span><span class="badge-soft" style="background:rgba(220,38,38,.12);color:#dc2626;" th:if="${trade.result != null and #strings.equalsIgnoreCase(trade.result, 'LOSS')}" th:text="${trade.result}">LOSS</span></td><td class="numeric-cell"><span th:classappend="${trade.pnl > 0} ? 'pnl-positive' : (${trade.pnl < 0} ? 'pnl-negative' : 'pnl-neutral')" th:text="${trade.pnl >= 0 ? '+$' + #numbers.formatDecimal(trade.pnl, 1, 2) : '-$' + #numbers.formatDecimal(T(java.lang.Math).abs(trade.pnl), 1, 2)}">+$0.00</span></td><td th:text="${trade.createdAt != null ? #temporals.format(trade.createdAt, 'yyyy-MM-dd HH:mm') : '-'}">-</td></tr><tr th:if="${#lists.isEmpty(recentTrades)}"><td colspan="6" class="empty-state">No recent trades found.</td></tr></tbody></table></div></div></article></div>
+          <div class="col-12 col-xl-5"><article class="admin-card h-100 admin-section-anchor" id="recent-registrations"><div class="admin-card-head"><div><h3 class="admin-card-title">Recent Registrations</h3><p class="admin-card-copy">Newest accounts created on the platform.</p></div></div><div class="table-wrap"><div class="table-responsive"><table class="table table-hover align-middle"><thead><tr><th>User</th><th>Email</th><th>Created time</th><th>Status</th></tr></thead><tbody><tr th:each="user : ${recentRegistrations}"><td><span class="row-user" th:text="${user.username}">username</span></td><td th:text="${user.email}">mail@example.com</td><td th:text="${user.createdAt != null ? #temporals.format(user.createdAt, 'yyyy-MM-dd HH:mm') : '-'}">-</td><td><span class="badge-soft success" th:if="${user.active}"><i class="bi bi-check-circle-fill"></i>Active</span><span class="badge-soft warning" th:if="${!user.active}"><i class="bi bi-slash-circle-fill"></i>Disabled</span></td></tr><tr th:if="${#lists.isEmpty(recentRegistrations)}"><td colspan="4" class="empty-state">No recent registrations found.</td></tr></tbody></table></div></div></article></div>
         </div>
+      </section>
+
+      <section class="admin-section-anchor" id="system-health">
+        <div class="section-header"><div><h2 class="section-title">System Health</h2><p class="section-copy">Operational readout for access and platform state.</p></div></div>
+        <div class="health-grid"><article class="health-card" th:each="metric : ${healthMetrics}"><div class="health-top"><div class="health-icon" th:classappend="${' ' + metric.tone}"><i th:class="${'bi ' + metric.icon}"></i></div><span class="badge-soft" th:classappend="${' ' + metric.tone}"><span class="status-dot" th:classappend="${' ' + (metric.tone == 'success' ? 'healthy' : (metric.tone == 'warning' ? 'warning' : 'critical'))}"></span><span th:text="${metric.tone == 'success' ? 'Healthy' : (metric.tone == 'warning' ? 'Warning' : 'Critical')}">Healthy</span></span></div><div class="health-label" th:text="${metric.label}">Failed logins (24h)</div><div class="health-value" th:text="${metric.value}">0</div><p class="health-note" th:text="${metric.note}">No failed-login tracking is stored yet.</p></article></div>
       </section>
     </main>
   </div>
 </div>
-
+<script th:inline="javascript">
+  window.adminDashboardData={userGrowthLabels:/*[[${userGrowthSeries.![label]}]]*/[],userGrowthValues:/*[[${userGrowthSeries.![count]}]]*/[],tradeVolumeLabels:/*[[${tradeVolumeSeries.![label]}]]*/[],tradeVolumeValues:/*[[${tradeVolumeSeries.![count]}]]*/[],userStatusLabels:/*[[${userStatusDistribution.![label]}]]*/[],userStatusValues:/*[[${userStatusDistribution.![count]}]]*/[],planDistributionLabels:/*[[${planDistribution.![label]}]]*/[],planDistributionValues:/*[[${planDistribution.![count]}]]*/[],topSymbolsLabels:/*[[${topSymbols.![label]}]]*/[],topSymbolsValues:/*[[${topSymbols.![count]}]]*/[],topSetupsLabels:/*[[${topSetups.![label]}]]*/[],topSetupsValues:/*[[${topSetups.![count]}]]*/[],topMistakesLabels:/*[[${topMistakes.![label]}]]*/[],topMistakesValues:/*[[${topMistakes.![count]}]]*/[]};
+</script>
+<script>
+  (function(){const d=window.adminDashboardData||{};const base={maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{color:"#64748b"}},y:{beginAtZero:true,ticks:{precision:0,color:"#64748b"},grid:{color:"rgba(148,163,184,.16)"}}}};const slice=(labels,values,range)=>{if(range==="ALL")return{labels,values};const count=Number(range);if(!count||labels.length<=count)return{labels,values};return{labels:labels.slice(-count),values:values.slice(-count)}};const toggleEmpty=(canvasId,emptyId,labels)=>{const canvas=document.getElementById(canvasId);const empty=document.getElementById(emptyId);if(!canvas||!empty)return;const hasData=Array.isArray(labels)&&labels.length>0;canvas.style.display=hasData?"block":"none";empty.classList.toggle("is-visible",!hasData)};const line=(id,color)=>{const el=document.getElementById(id);if(!el)return null;return new Chart(el,{type:"line",data:{labels:[],datasets:[{data:[],borderColor:color,backgroundColor:color==="#2563eb"?"rgba(37,99,235,.12)":"rgba(22,163,74,.12)",fill:true,tension:.35,borderWidth:3,pointRadius:0,pointHoverRadius:4}]},options:base})};const doughnut=(id,labels,values,colors)=>{const el=document.getElementById(id);if(!el)return;new Chart(el,{type:"doughnut",data:{labels,datasets:[{data:values,backgroundColor:colors,borderWidth:0,hoverOffset:6}]},options:{maintainAspectRatio:false,cutout:"68%",plugins:{legend:{display:false}}}})};const bar=(id,labels,values,color)=>{const el=document.getElementById(id);if(!el)return;new Chart(el,{type:"bar",data:{labels,datasets:[{data:values,backgroundColor:color,borderRadius:12,borderSkipped:false,maxBarThickness:34}]},options:{...base,indexAxis:"y"}})};const userChart=line("userGrowthChart","#2563eb");const tradeChart=line("tradeVolumeChart","#16a34a");const update=(range)=>{const users=slice(d.userGrowthLabels||[],d.userGrowthValues||[],range);const trades=slice(d.tradeVolumeLabels||[],d.tradeVolumeValues||[],range);toggleEmpty("userGrowthChart","userGrowthEmpty",users.labels);toggleEmpty("tradeVolumeChart","tradeVolumeEmpty",trades.labels);if(userChart){userChart.data.labels=users.labels;userChart.data.datasets[0].data=users.values;userChart.update()}if(tradeChart){tradeChart.data.labels=trades.labels;tradeChart.data.datasets[0].data=trades.values;tradeChart.update()}};update("30");document.querySelectorAll("[data-range-toolbar] .chart-filter-btn").forEach(btn=>btn.addEventListener("click",()=>{document.querySelectorAll("[data-range-toolbar] .chart-filter-btn").forEach(i=>i.classList.remove("active"));btn.classList.add("active");update(btn.dataset.range||"30")}));doughnut("userStatusChart",d.userStatusLabels||[],d.userStatusValues||[],["#2563eb","#94a3b8","#16a34a","#dc2626"]);doughnut("planDistributionChart",d.planDistributionLabels||[],d.planDistributionValues||[],["#0f766e","#2563eb","#f59e0b"]);bar("topSymbolsChart",d.topSymbolsLabels||[],d.topSymbolsValues||[],"#2563eb");bar("topSetupsChart",d.topSetupsLabels||[],d.topSetupsValues||[],"#0f766e");bar("topMistakesChart",d.topMistakesLabels||[],d.topMistakesValues||[],"#dc2626")})();
+</script>
 <script th:src="@{/js/sidebar-toggle.js}" src="/js/sidebar-toggle.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
