@@ -1,6 +1,7 @@
 package com.example.demo.controller;
 
 import com.example.demo.entity.MistakeTag;
+import com.example.demo.repository.TradeMistakeTagRepository;
 import com.example.demo.entity.User;
 import com.example.demo.service.MistakeTagService;
 import com.example.demo.service.UserService;
@@ -9,15 +10,25 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Locale;
+
 @Controller
 @RequestMapping("/mistakes")
 public class MistakeTagController {
 
     private final MistakeTagService mistakeTagService;
+    private final TradeMistakeTagRepository tradeMistakeTagRepository;
     private final UserService userService;
 
-    public MistakeTagController(MistakeTagService mistakeTagService, UserService userService) {
+    public MistakeTagController(
+            MistakeTagService mistakeTagService,
+            TradeMistakeTagRepository tradeMistakeTagRepository,
+            UserService userService
+    ) {
         this.mistakeTagService = mistakeTagService;
+        this.tradeMistakeTagRepository = tradeMistakeTagRepository;
         this.userService = userService;
     }
 
@@ -29,7 +40,106 @@ public class MistakeTagController {
         }
 
         model.addAttribute("currentUser", currentUser);
-        model.addAttribute("mistakes", mistakeTagService.findAll());
+
+        var usageByTagId = tradeMistakeTagRepository.countUsageByMistakeTagForUser(currentUser.getId())
+                .stream()
+                .collect(java.util.stream.Collectors.toMap(
+                        TradeMistakeTagRepository.MistakeUsageRow::getMistakeTagId,
+                        TradeMistakeTagRepository.MistakeUsageRow::getUsageCount
+                ));
+
+        var tableRows = mistakeTagService.findAll().stream()
+                .map(tag -> new MistakeRowView(
+                        tag,
+                        usageByTagId.getOrDefault(tag.getId(), 0L)
+                ))
+                .toList();
+
+        long totalCount = tableRows.size();
+        long activeCount = tableRows.stream().filter(MistakeRowView::active).count();
+        long disabledCount = totalCount - activeCount;
+
+        var rankedMistakes = tableRows.stream()
+                .sorted(java.util.Comparator.comparingLong(MistakeRowView::usageCount).reversed()
+                        .thenComparing(MistakeRowView::name, String.CASE_INSENSITIVE_ORDER))
+                .toList();
+        long totalUsageCount = rankedMistakes.stream().mapToLong(MistakeRowView::usageCount).sum();
+        long topUsageCount = rankedMistakes.isEmpty() ? 0L : rankedMistakes.get(0).usageCount();
+
+        String mostFrequentMistakeName = rankedMistakes.isEmpty() || rankedMistakes.get(0).usageCount() == 0
+                ? "N/A"
+                : rankedMistakes.get(0).name();
+        long mostFrequentMistakeUsage = rankedMistakes.isEmpty() ? 0L : rankedMistakes.get(0).usageCount();
+        long mostFrequentUsagePercent = toPercent(mostFrequentMistakeUsage, totalUsageCount);
+
+        List<DistributionRowView> distributionMistakes = rankedMistakes.stream()
+                .filter(item -> item.usageCount() > 0)
+                .limit(5)
+                .map(item -> new DistributionRowView(
+                        item.code(),
+                        item.usageCount(),
+                        toPercent(item.usageCount(), totalUsageCount),
+                        toPercent(item.usageCount(), topUsageCount)
+                ))
+                .toList();
+
+        long sessionMaxUsage = tradeMistakeTagRepository.summarizeBySessionForUser(currentUser.getId())
+                .stream()
+                .mapToLong(TradeMistakeTagRepository.MistakeSessionRow::getUsageCount)
+                .max()
+                .orElse(0L);
+
+        List<SessionUsageView> sessionUsage = tradeMistakeTagRepository.summarizeBySessionForUser(currentUser.getId())
+                .stream()
+                .limit(5)
+                .map(item -> new SessionUsageView(
+                        formatSessionLabel(item.getSession()),
+                        item.getUsageCount(),
+                        toPercent(item.getUsageCount(), sessionMaxUsage)
+                ))
+                .toList();
+
+        long symbolMaxUsage = tradeMistakeTagRepository.summarizeBySymbolForUser(currentUser.getId())
+                .stream()
+                .mapToLong(TradeMistakeTagRepository.MistakeSymbolRow::getUsageCount)
+                .max()
+                .orElse(0L);
+
+        List<SymbolUsageView> symbolUsage = tradeMistakeTagRepository.summarizeBySymbolForUser(currentUser.getId())
+                .stream()
+                .limit(5)
+                .map(item -> new SymbolUsageView(
+                        item.getSymbol(),
+                        item.getUsageCount(),
+                        toPercent(item.getUsageCount(), symbolMaxUsage)
+                ))
+                .toList();
+
+        List<RecentMistakeView> recentMistakes = tradeMistakeTagRepository.findRecentMistakesForUser(currentUser.getId())
+                .stream()
+                .limit(5)
+                .map(item -> new RecentMistakeView(
+                        item.getTradeId(),
+                        shortTradeRef(item.getTradeId()),
+                        item.getMistakeName(),
+                        formatSessionLabel(item.getSession()),
+                        normalizeLabel(item.getSymbol()),
+                        item.getEntryTime()
+                ))
+                .toList();
+
+        model.addAttribute("mistakes", tableRows);
+        model.addAttribute("topMistakes", rankedMistakes.stream().limit(5).toList());
+        model.addAttribute("distributionMistakes", distributionMistakes);
+        model.addAttribute("totalMistakeCount", totalCount);
+        model.addAttribute("activeMistakeCount", activeCount);
+        model.addAttribute("disabledMistakeCount", disabledCount);
+        model.addAttribute("mostFrequentMistakeName", mostFrequentMistakeName);
+        model.addAttribute("mostFrequentMistakeUsage", mostFrequentMistakeUsage);
+        model.addAttribute("mostFrequentUsagePercent", mostFrequentUsagePercent);
+        model.addAttribute("sessionUsage", sessionUsage);
+        model.addAttribute("symbolUsage", symbolUsage);
+        model.addAttribute("recentMistakes", recentMistakes);
 
         return "mistakes";
     }
@@ -146,5 +256,75 @@ public class MistakeTagController {
 
         mistakeTagService.delete(id);
         return "redirect:/mistakes";
+    }
+
+    public record MistakeRowView(
+            String id,
+            String code,
+            String name,
+            String description,
+            boolean active,
+            long usageCount
+    ) {
+        public MistakeRowView(MistakeTag tag, long usageCount) {
+            this(
+                    tag.getId(),
+                    tag.getCode(),
+                    tag.getName(),
+                    tag.getDescription(),
+                    tag.isActive(),
+                    usageCount
+            );
+        }
+    }
+
+    public record DistributionRowView(String code, long usageCount, long usagePercent, long widthPercent) {}
+
+    public record SessionUsageView(String label, long usageCount, long widthPercent) {}
+
+    public record SymbolUsageView(String symbol, long usageCount, long widthPercent) {}
+
+    public record RecentMistakeView(
+            String tradeId,
+            String tradeRef,
+            String mistakeName,
+            String session,
+            String symbol,
+            LocalDateTime entryTime
+    ) {}
+
+    private String shortTradeRef(String tradeId) {
+        if (tradeId == null || tradeId.isBlank()) {
+            return "N/A";
+        }
+        return tradeId.length() <= 8 ? tradeId : tradeId.substring(0, 8);
+    }
+
+    private String formatSessionLabel(String session) {
+        if (session == null || session.isBlank()) {
+            return "Unknown";
+        }
+        String normalized = session.trim().toUpperCase(Locale.ROOT);
+        return switch (normalized) {
+            case "NEW_YORK" -> "New York";
+            case "LONDON" -> "London";
+            case "ASIA" -> "Asia";
+            case "UNKNOWN" -> "Unknown";
+            default -> normalized.charAt(0) + normalized.substring(1).toLowerCase(Locale.ROOT);
+        };
+    }
+
+    private String normalizeLabel(String value) {
+        if (value == null || value.isBlank()) {
+            return "Unknown";
+        }
+        return value.trim();
+    }
+
+    private long toPercent(long value, long total) {
+        if (value <= 0 || total <= 0) {
+            return 0L;
+        }
+        return Math.round((value * 100.0) / total);
     }
 }

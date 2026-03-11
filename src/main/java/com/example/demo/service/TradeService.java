@@ -340,3 +340,4 @@ public class TradeService {
         return rawSetup.getId().trim();
     }
 }
+
