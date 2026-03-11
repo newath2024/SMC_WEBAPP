@@ -482,6 +482,31 @@ public class AdminController {
         return "redirect:/admin/users";
     }
 
+    @PostMapping("/users/{id}/upgrade-to-pro")
+    public String upgradeUserToPro(@PathVariable String id, HttpSession session) {
+        User admin = userService.getCurrentUser(session);
+
+        if (admin == null) {
+            return "redirect:/login";
+        }
+
+        if (!userService.isAdmin(admin)) {
+            return "redirect:/trades";
+        }
+
+        User target = userRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("User not found: " + id));
+
+        if (isAdminUser(target) || target.getPlanType() == PlanType.ADMIN) {
+            return "redirect:/admin/users";
+        }
+
+        target.setPlanType(PlanType.PRO);
+        userRepository.save(target);
+
+        return "redirect:/admin/users";
+    }
+
     @PostMapping("/trades/{id}/delete")
     public String deleteTrade(@PathVariable String id, HttpSession session) {
         User admin = userService.getCurrentUser(session);

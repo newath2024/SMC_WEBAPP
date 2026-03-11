@@ -1,18 +1,22 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="84" height="84" viewBox="0 0 84 84" role="img" aria-label="TradeJournal mark">
   <defs>
     <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#3b82f6"/>
-      <stop offset="100%" stop-color="#1d4ed8"/>
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#1e3a8a"/>
     </linearGradient>
-    <linearGradient id="barGrad" x1="0%" y1="100%" x2="0%" y2="0%">
-      <stop offset="0%" stop-color="#34d399"/>
-      <stop offset="100%" stop-color="#84cc16"/>
+    <linearGradient id="accentGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#22d3ee"/>
+      <stop offset="100%" stop-color="#38bdf8"/>
     </linearGradient>
   </defs>
-  <rect x="1" y="1" width="82" height="82" rx="18" fill="url(#bgGrad)"/>
-  <path d="M16 48L35 29L47 40L66 21" fill="none" stroke="#ffffff" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M61 21H66V26" fill="none" stroke="#ffffff" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
-  <rect x="20" y="50" width="10" height="22" rx="2" fill="url(#barGrad)"/>
-  <rect x="36" y="44" width="10" height="28" rx="2" fill="url(#barGrad)"/>
-  <rect x="52" y="36" width="10" height="36" rx="2" fill="url(#barGrad)"/>
+  <rect x="2" y="2" width="80" height="80" rx="20" fill="url(#bgGrad)"/>
+  <path d="M21 59H63" fill="none" stroke="#93c5fd" stroke-width="4" stroke-linecap="round"/>
+  <path d="M26 53V35" fill="none" stroke="#f8fafc" stroke-width="4" stroke-linecap="round"/>
+  <path d="M42 61V25" fill="none" stroke="#f8fafc" stroke-width="4" stroke-linecap="round"/>
+  <path d="M58 49V31" fill="none" stroke="#f8fafc" stroke-width="4" stroke-linecap="round"/>
+  <rect x="22" y="41" width="8" height="12" rx="2" fill="#22c55e"/>
+  <rect x="38" y="33" width="8" height="20" rx="2" fill="#38bdf8"/>
+  <rect x="54" y="37" width="8" height="12" rx="2" fill="#f59e0b"/>
+  <path d="M24 28L38 18L50 26L62 16" fill="none" stroke="url(#accentGrad)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M57 16H62V21" fill="none" stroke="url(#accentGrad)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>

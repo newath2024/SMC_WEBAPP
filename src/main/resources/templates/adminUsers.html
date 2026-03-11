@@ -661,6 +661,11 @@
                         </form>
                       </li>
                       <li><a class="dropdown-item" href="#">Enable account</a></li>
+                      <li th:if="${userRow.plan != 'Pro' and userRow.plan != 'Admin'}">
+                        <form th:action="@{'/admin/users/' + ${userRow.id} + '/upgrade-to-pro'}" method="post">
+                          <button class="dropdown-item" type="submit">Update to Pro</button>
+                        </form>
+                      </li>
                       <li><a class="dropdown-item" href="#">Promote to Admin</a></li>
                       <li><a class="dropdown-item" href="#">Downgrade to User</a></li>
                       <li><a class="dropdown-item" href="#">Reset password</a></li>

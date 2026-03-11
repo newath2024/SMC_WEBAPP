@@ -1,24 +1,28 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="580" height="120" viewBox="0 0 580 120" role="img" aria-label="TradeJournal">
   <defs>
     <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#3b82f6"/>
-      <stop offset="100%" stop-color="#1d4ed8"/>
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#1e3a8a"/>
     </linearGradient>
-    <linearGradient id="barGrad" x1="0%" y1="100%" x2="0%" y2="0%">
-      <stop offset="0%" stop-color="#34d399"/>
-      <stop offset="100%" stop-color="#84cc16"/>
+    <linearGradient id="accentGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#22d3ee"/>
+      <stop offset="100%" stop-color="#38bdf8"/>
     </linearGradient>
     <linearGradient id="wordGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" stop-color="#60a5fa"/>
+      <stop offset="0%" stop-color="#38bdf8"/>
       <stop offset="100%" stop-color="#1d4ed8"/>
     </linearGradient>
   </defs>
   <rect x="4" y="4" width="112" height="112" rx="24" fill="url(#bgGrad)"/>
-  <path d="M24 66L50 40L65 55L91 29" fill="none" stroke="#ffffff" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M84 29H91V36" fill="none" stroke="#ffffff" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
-  <rect x="30" y="70" width="14" height="30" rx="3" fill="url(#barGrad)"/>
-  <rect x="52" y="62" width="14" height="38" rx="3" fill="url(#barGrad)"/>
-  <rect x="74" y="52" width="14" height="48" rx="3" fill="url(#barGrad)"/>
+  <path d="M30 82H90" fill="none" stroke="#93c5fd" stroke-width="5" stroke-linecap="round"/>
+  <path d="M38 74V49" fill="none" stroke="#f8fafc" stroke-width="6" stroke-linecap="round"/>
+  <path d="M60 86V34" fill="none" stroke="#f8fafc" stroke-width="6" stroke-linecap="round"/>
+  <path d="M82 69V43" fill="none" stroke="#f8fafc" stroke-width="6" stroke-linecap="round"/>
+  <rect x="32" y="57" width="12" height="17" rx="3" fill="#22c55e"/>
+  <rect x="54" y="46" width="12" height="28" rx="3" fill="#38bdf8"/>
+  <rect x="76" y="52" width="12" height="17" rx="3" fill="#f59e0b"/>
+  <path d="M34 40L54 26L70 38L90 24" fill="none" stroke="url(#accentGrad)" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M83 24H90V31" fill="none" stroke="url(#accentGrad)" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
   <text x="136" y="78" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="66" font-weight="700" fill="#173f75">Trade</text>
   <text x="308" y="78" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="66" font-weight="600" fill="url(#wordGrad)">Journal</text>
 </svg>
