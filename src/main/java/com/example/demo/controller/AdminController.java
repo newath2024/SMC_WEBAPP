@@ -1,6 +1,7 @@
 package com.example.demo.controller;
 
 import com.example.demo.entity.MistakeTag;
+import com.example.demo.entity.PlanType;
 import com.example.demo.entity.Setup;
 import com.example.demo.entity.Trade;
 import com.example.demo.entity.User;
@@ -99,16 +100,12 @@ public class AdminController {
                 .count();
         double averageTradesPerUser = totalUsers == 0 ? 0.0 : (double) totalTrades / totalUsers;
 
-        long activeNonAdminUsers = users.stream()
-                .filter(User::isActive)
-                .filter(user -> user.getRole() == null || !"ADMIN".equalsIgnoreCase(user.getRole()))
-                .count();
+        long proUsers = users.stream().filter(user -> user.getPlanType() == PlanType.PRO).count();
+        long standardUsers = users.stream().filter(user -> user.getPlanType() == null || user.getPlanType() == PlanType.STANDARD).count();
         long trialUsers = users.stream()
-                .filter(User::isActive)
-                .filter(user -> user.getRole() == null || !"ADMIN".equalsIgnoreCase(user.getRole()))
+                .filter(user -> user.getPlanType() == null || user.getPlanType() == PlanType.STANDARD)
                 .filter(user -> user.getCreatedAt() != null && !user.getCreatedAt().isBefore(sevenDaysAgo))
                 .count();
-        long freeUsers = Math.max(0, activeNonAdminUsers - trialUsers);
 
         List<DailyCountPoint> userGrowthSeries = buildDailySeries(
                 users.stream()
@@ -128,8 +125,8 @@ public class AdminController {
                 new DistributionSlice("Disabled users", disabledUsers)
         );
         List<DistributionSlice> planDistribution = List.of(
-                new DistributionSlice("Free plan", freeUsers),
-                new DistributionSlice("Pro plan", adminUsers),
+                new DistributionSlice("Free plan", Math.max(0, standardUsers - trialUsers)),
+                new DistributionSlice("Pro plan", proUsers),
                 new DistributionSlice("Trial users", trialUsers)
         );
 
@@ -570,7 +567,10 @@ public class AdminController {
     }
 
     private String resolveUserPlan(User user, LocalDateTime trialCutoff) {
-        if (isAdminUser(user)) {
+        if (user.getPlanType() == PlanType.ADMIN) {
+            return "Admin";
+        }
+        if (user.getPlanType() == PlanType.PRO) {
             return "Pro";
         }
         if (user.getCreatedAt() != null && !user.getCreatedAt().isBefore(trialCutoff)) {

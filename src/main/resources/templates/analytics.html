@@ -80,7 +80,22 @@
         </form>
       </section>
 
-      <section class="analytics-section">
+      <section class="premium-grid" th:if="${!hasProAccess}">
+        <article class="locked-card">
+          <div class="locked-title">Setup Performance <i class="bi bi-lock-fill"></i></div>
+          <p>Upgrade to unlock setup edge analytics.</p>
+        </article>
+        <article class="locked-card">
+          <div class="locked-title">Mistake Impact <i class="bi bi-lock-fill"></i></div>
+          <p>Upgrade to see which mistakes create the largest drag on performance.</p>
+        </article>
+        <article class="locked-card">
+          <div class="locked-title">Session Performance <i class="bi bi-lock-fill"></i></div>
+          <p>Upgrade to unlock session edge, R distribution, and advanced segmentation.</p>
+        </article>
+      </section>
+
+      <section class="analytics-section" th:if="${hasProAccess}">
         <div class="section-heading">
           <div>
             <span class="section-kicker">Section 1</span>
@@ -118,7 +133,7 @@
         </div>
       </section>
 
-      <section class="analytics-section">
+      <section class="analytics-section" th:if="${hasProAccess}">
         <div class="section-heading">
           <div>
             <span class="section-kicker">Section 2</span>
@@ -183,7 +198,7 @@
         </div>
       </section>
 
-      <section class="analytics-section">
+      <section class="analytics-section" th:if="${hasProAccess}">
         <div class="section-heading">
           <div>
             <span class="section-kicker">Section 3</span>
@@ -254,7 +269,7 @@
         </div>
       </section>
 
-      <section class="analytics-section">
+      <section class="analytics-section" th:if="${hasProAccess}">
         <div class="section-heading">
           <div>
             <span class="section-kicker">Section 4</span>

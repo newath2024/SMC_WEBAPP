@@ -55,6 +55,9 @@ public class TradeController {
         model.addAttribute("currentUser", currentUser);
         model.addAttribute("setups", setupService.findActiveByUser(currentUser.getId()));
         model.addAttribute("mistakeTags", mistakeTagService.findActive());
+        model.addAttribute("tradeUsage", Math.min(tradeService.findAllByUser(currentUser.getId()).size(), userService.resolveTradeLimit(currentUser)));
+        model.addAttribute("tradeUsageLimit", userService.hasProAccess(currentUser) ? 0 : userService.resolveTradeLimit(currentUser));
+        model.addAttribute("hasProAccess", userService.hasProAccess(currentUser));
     }
 
     private void fillTradeListData(
@@ -143,6 +146,9 @@ public class TradeController {
 
         model.addAttribute("trade", new Trade());
         model.addAttribute("editMode", false);
+        if (!userService.hasProAccess(currentUser) && tradeService.findAllByUser(currentUser.getId()).size() >= userService.resolveTradeLimit(currentUser)) {
+            model.addAttribute("error", "You reached the free plan limit (100 trades). Upgrade to Pro for unlimited trade tracking.");
+        }
         fillTradeFormData(model, currentUser);
         return "tradeForm";
     }
@@ -162,6 +168,13 @@ public class TradeController {
         }
         if (userService.isAdmin(currentUser)) {
             return "redirect:/admin";
+        }
+        if (!userService.hasProAccess(currentUser) && tradeService.findAllByUser(currentUser.getId()).size() >= userService.resolveTradeLimit(currentUser)) {
+            model.addAttribute("editMode", false);
+            fillTradeFormData(model, currentUser);
+            model.addAttribute("trade", trade);
+            model.addAttribute("error", "You reached the free plan limit (100 trades). Upgrade to Pro for unlimited trade tracking.");
+            return "tradeForm";
         }
 
         if (trade.getSetup() == null || trade.getSetup().getId() == null || trade.getSetup().getId().isBlank()) {

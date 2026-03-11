@@ -1,5 +1,6 @@
 package com.example.demo.service;
 
+import com.example.demo.entity.PlanType;
 import com.example.demo.entity.User;
 import com.example.demo.repository.UserRepository;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -35,6 +36,7 @@ public class AuthService {
         user.setEmail(normalizedEmail);
         user.setPasswordHash(passwordEncoder.encode(rawPassword));
         user.setRole("USER");
+        user.setPlanType(PlanType.STANDARD);
         user.setActive(true);
 
         return userRepository.save(user);

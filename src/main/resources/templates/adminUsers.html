@@ -362,6 +362,11 @@
       color: var(--admin-danger);
     }
 
+    .soft-badge.plan-admin {
+      background: var(--admin-warning-soft);
+      color: var(--admin-warning);
+    }
+
     .soft-badge.plan-free {
       background: var(--admin-primary-soft);
       color: var(--admin-primary);
@@ -647,9 +652,9 @@
                 <td class="actions-cell">
                   <a class="btn btn-outline-primary btn-sm view-profile-btn"
                      th:href="@{'/admin/users/' + ${userRow.id}}">View Profile</a>
-                  <div class="btn-group">
+                  <div class="btn-group dropstart">
                     <button class="btn btn-outline-secondary btn-sm dropdown-toggle action-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">Actions</button>
-                    <ul class="dropdown-menu dropdown-menu-end">
+                    <ul class="dropdown-menu">
                       <li>
                         <form th:action="@{'/admin/users/' + ${userRow.id} + '/toggle-active'}" method="post">
                           <button class="dropdown-item" type="submit" th:text="${userRow.active ? 'Disable account' : 'Enable account'}">Disable account</button>

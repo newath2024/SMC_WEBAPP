@@ -114,9 +114,17 @@
             <i class="bi bi-file-earmark-text sidebar-icon nav-icon"></i>
             <span class="nav-label nav-text">Reports</span>
           </a>
-          <a th:href="${exportHref}" class="sidebar-link nav-item">
+          <a th:if="${currentUser != null and (currentUser.role != null and #strings.equalsIgnoreCase(currentUser.role, 'ADMIN') or currentUser.planType != null and (currentUser.planType.name() == 'PRO' or currentUser.planType.name() == 'ADMIN'))}"
+             th:href="${exportHref}"
+             class="sidebar-link nav-item">
             <i class="bi bi-box-arrow-down sidebar-icon nav-icon"></i>
             <span class="nav-label nav-text">Export CSV</span>
+          </a>
+          <a th:if="${currentUser == null or ((currentUser.role == null or !#strings.equalsIgnoreCase(currentUser.role, 'ADMIN')) and (currentUser.planType == null or (currentUser.planType.name() != 'PRO' and currentUser.planType.name() != 'ADMIN')))}"
+             th:href="@{/dashboard(period=${period != null ? period : 'ALL'}, from=${from}, to=${to}, userId=${selectedUserId})}"
+             class="sidebar-link nav-item disabled">
+            <i class="bi bi-box-arrow-down sidebar-icon nav-icon"></i>
+            <span class="nav-label nav-text">Export CSV (Pro)</span>
           </a>
         </nav>
 
@@ -137,17 +145,24 @@
 
       <div class="sidebar-plan"
            th:if="${currentUser == null or currentUser.role == null or !#strings.equalsIgnoreCase(currentUser.role, 'ADMIN')}">
-        <div class="sidebar-plan-name">Free Plan</div>
-        <div class="sidebar-plan-usage">
+        <div class="sidebar-plan-name"
+             th:text="${currentUser != null and currentUser.planType != null and currentUser.planType.name() == 'PRO'} ? 'Pro Plan' : 'Standard Plan'">Standard Plan</div>
+        <div class="sidebar-plan-usage"
+             th:if="${currentUser == null or currentUser.planType == null or currentUser.planType.name() != 'PRO'}">
           <span th:text="${tradeUsage != null ? tradeUsage : 0}">0</span>
           <span>/</span>
           <span th:text="${tradeUsageLimit != null ? tradeUsageLimit : 100}">100</span>
           <span>trades used</span>
         </div>
+        <div class="sidebar-plan-usage"
+             th:if="${currentUser != null and currentUser.planType != null and currentUser.planType.name() == 'PRO'}">
+          <span>Unlimited trades</span>
+        </div>
         <div class="sidebar-plan-bar">
-          <span th:style="'width:' + ${(tradeUsageLimit != null and tradeUsageLimit > 0) ? T(java.lang.Math).min(100, (tradeUsage != null ? tradeUsage : 0) * 100 / tradeUsageLimit) : 0} + '%'"></span>
+          <span th:style="'width:' + ${(tradeUsageLimit != null and tradeUsageLimit > 0) ? T(java.lang.Math).min(100, (tradeUsage != null ? tradeUsage : 0) * 100 / tradeUsageLimit) : 100} + '%'"></span>
         </div>
         <a class="sidebar-upgrade"
+           th:if="${currentUser == null or currentUser.planType == null or currentUser.planType.name() != 'PRO'}"
            th:href="@{/dashboard(period=${period != null ? period : 'ALL'}, from=${from}, to=${to}, userId=${selectedUserId})}">
           Upgrade to Pro
         </a>
@@ -158,7 +173,8 @@
           <div class="sidebar-avatar" th:text="${#strings.substring(currentUser.username, 0, 1).toUpperCase()}">U</div>
           <div class="sidebar-user-copy">
             <div class="sidebar-user-name" th:text="${currentUser.username}">username</div>
-            <div class="sidebar-user-role" th:text="${currentUser.role != null ? currentUser.role : 'Trader'}">Trader</div>
+            <div class="sidebar-user-role"
+                 th:text="${currentUser.planType != null ? currentUser.planType.name() : (currentUser.role != null ? currentUser.role : 'Trader')}">Trader</div>
           </div>
         </div>
         <form method="post" action="/logout">

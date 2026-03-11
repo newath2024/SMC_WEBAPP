@@ -53,6 +53,16 @@ public class TradeImageApiController {
                     ? tradeService.findByIdForAdmin(id)
                     : tradeService.findEditableByIdForUser(id, currentUser.getId());
 
+            int imageLimit = userService.resolveImageLimitPerTrade(currentUser);
+            int existingImages = tradeImageService.findByTradeId(trade.getId()).size();
+            int requestedImages = (int) java.util.Arrays.stream(files)
+                    .filter(file -> file != null && !file.isEmpty())
+                    .count();
+            if (!userService.hasProAccess(currentUser) && existingImages + requestedImages > imageLimit) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(Map.of("message", "Standard plan allows 1 image per trade. Upgrade to Pro for unlimited screenshots."));
+            }
+
             tradeImageService.saveSetupImages(trade, files, imageType);
 
             List<TradeImage> images = tradeImageService.findByTradeId(trade.getId());

@@ -29,10 +29,16 @@
           </div>
 
           <div class="header-actions">
-            <a class="header-btn" th:href="@{/dashboard/export.csv(period=${period}, from=${from}, to=${to}, userId=${selectedUserId})}">
+            <a class="header-btn"
+               th:if="${hasProAccess}"
+               th:href="@{/dashboard/export.csv(period=${period}, from=${from}, to=${to}, userId=${selectedUserId})}">
               <i class="bi bi-download"></i>
               <span>Export CSV</span>
             </a>
+            <button class="header-btn" th:if="${!hasProAccess}" type="button" disabled>
+              <i class="bi bi-lock-fill"></i>
+              <span>Export CSV (Pro)</span>
+            </button>
             <a class="header-icon-btn" href="#settings" aria-label="Settings">
               <i class="bi bi-gear"></i>
             </a>
@@ -92,7 +98,7 @@
         </form>
       </header>
 
-      <section class="upgrade-banner">
+      <section class="upgrade-banner" th:if="${!hasProAccess}">
         <div>
           <div class="eyebrow">Unlock advanced analytics</div>
           <h2>Session heatmap, strategy edge score, and AI trade review.</h2>
@@ -147,6 +153,15 @@
         </article>
       </section>
 
+      <section class="upgrade-banner" th:if="${tradeLimitReached}">
+        <div>
+          <div class="eyebrow">Trade limit reached</div>
+          <h2>You reached the free plan limit (100 trades).</h2>
+          <p>Upgrade to Pro for unlimited trade tracking, export, and advanced analytics.</p>
+        </div>
+        <a class="upgrade-banner-btn" href="#billing">Upgrade to Pro</a>
+      </section>
+
       <section class="hero-card">
         <div class="section-head">
           <div>
@@ -168,7 +183,7 @@
         </div>
       </section>
 
-      <section class="analytics-grid">
+      <section class="analytics-grid" th:if="${hasProAccess}">
         <article class="dashboard-card">
           <div class="section-head">
             <div>
@@ -268,7 +283,7 @@
         </div>
       </section>
 
-      <section class="premium-grid">
+      <section class="premium-grid" th:if="${!hasProAccess}">
         <article class="locked-card">
           <div class="locked-title">Session Heatmap <i class="bi bi-lock-fill"></i></div>
           <p>Upgrade to Pro to unlock time-of-day edge visibility.</p>
@@ -283,7 +298,7 @@
         </article>
       </section>
 
-      <section class="dashboard-card detail-card" id="detailTabs">
+      <section class="dashboard-card detail-card" id="detailTabs" th:if="${hasProAccess}">
         <div class="section-head">
           <div>
             <div class="section-title">Detail Tables</div>

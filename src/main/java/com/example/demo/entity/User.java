@@ -1,6 +1,14 @@
 package com.example.demo.entity;
 
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.Id;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
+import jakarta.persistence.Table;
+
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -22,7 +30,11 @@ public class User {
     private String passwordHash;
 
     @Column(nullable = false)
-    private String role; // USER hoặc ADMIN
+    private String role;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "plan_type", nullable = false, length = 20)
+    private PlanType planType = PlanType.STANDARD;
 
     @Column(nullable = false)
     private boolean active = true;
@@ -33,17 +45,24 @@ public class User {
 
     @PrePersist
     public void prePersist() {
-        if (id == null) id = UUID.randomUUID().toString();
-        if (createdAt == null) createdAt = LocalDateTime.now();
-        if (updatedAt == null) updatedAt = LocalDateTime.now();
+        if (id == null) {
+            id = UUID.randomUUID().toString();
+        }
+        if (planType == null) {
+            planType = "ADMIN".equalsIgnoreCase(role) ? PlanType.ADMIN : PlanType.STANDARD;
+        }
+        if (createdAt == null) {
+            createdAt = LocalDateTime.now();
+        }
+        if (updatedAt == null) {
+            updatedAt = LocalDateTime.now();
+        }
     }
 
     @PreUpdate
     public void preUpdate() {
         updatedAt = LocalDateTime.now();
     }
-
-    // -------- GETTER / SETTER --------
 
     public String getId() {
         return id;
@@ -83,6 +102,19 @@ public class User {
 
     public void setRole(String role) {
         this.role = role;
+        if ("ADMIN".equalsIgnoreCase(role)) {
+            this.planType = PlanType.ADMIN;
+        } else if (this.planType == null || this.planType == PlanType.ADMIN) {
+            this.planType = PlanType.STANDARD;
+        }
+    }
+
+    public PlanType getPlanType() {
+        return planType;
+    }
+
+    public void setPlanType(PlanType planType) {
+        this.planType = planType;
     }
 
     public boolean isActive() {

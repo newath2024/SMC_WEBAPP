@@ -50,6 +50,9 @@ public class AnalyticsController {
             return "redirect:/login";
         }
 
+        boolean hasProAccess = userService.hasProAccess(currentUser);
+        int tradeLimit = userService.resolveTradeLimit(currentUser);
+
         boolean adminView = userService.isAdmin(currentUser);
         List<User> managedUsers = adminView
                 ? userRepository.findAll(Sort.by(Sort.Direction.ASC, "username"))
@@ -82,8 +85,10 @@ public class AnalyticsController {
         model.addAttribute("period", range.period());
         model.addAttribute("from", range.fromDate());
         model.addAttribute("to", range.toDate());
-        model.addAttribute("tradeUsage", Math.min(report.getOverview().getTotalTrades(), 100));
-        model.addAttribute("tradeUsageLimit", 100);
+        model.addAttribute("hasProAccess", hasProAccess);
+        model.addAttribute("tradeUsage", hasProAccess ? report.getOverview().getTotalTrades() : Math.min(report.getOverview().getTotalTrades(), tradeLimit));
+        model.addAttribute("tradeUsageLimit", hasProAccess ? 0 : tradeLimit);
+        model.addAttribute("tradeLimitReached", !hasProAccess && report.getOverview().getTotalTrades() >= tradeLimit);
 
         return "dashboard";
     }
@@ -99,6 +104,11 @@ public class AnalyticsController {
         User currentUser = userService.getCurrentUser(session);
         if (currentUser == null) {
             return ResponseEntity.status(401).build();
+        }
+        if (!userService.hasProAccess(currentUser)) {
+            return ResponseEntity.status(403)
+                    .contentType(MediaType.TEXT_PLAIN)
+                    .body("Pro feature required".getBytes());
         }
         User targetUser = resolveTargetUser(currentUser, selectedUserId);
 
@@ -139,6 +149,9 @@ public class AnalyticsController {
             return "redirect:/login";
         }
 
+        boolean hasProAccess = userService.hasProAccess(currentUser);
+        int tradeLimit = userService.resolveTradeLimit(currentUser);
+
         ResolvedRange range = resolveRange(period, from, to);
         AnalyticsService.AnalyticsWorkspaceReport report = analyticsService.buildWorkspaceReportForUser(
                 currentUser.getId(),
@@ -147,10 +160,16 @@ public class AnalyticsController {
                 symbol,
                 setup
         );
+        int workspaceTradeCount = analyticsService.findTradesForUser(
+                currentUser.getId(),
+                range.fromDateTime(),
+                range.toDateTime()
+        ).size();
 
         model.addAttribute("currentUser", currentUser);
-        model.addAttribute("tradeUsage", 0);
-        model.addAttribute("tradeUsageLimit", 100);
+        model.addAttribute("hasProAccess", hasProAccess);
+        model.addAttribute("tradeUsage", hasProAccess ? workspaceTradeCount : Math.min(workspaceTradeCount, tradeLimit));
+        model.addAttribute("tradeUsageLimit", hasProAccess ? 0 : tradeLimit);
         model.addAttribute("period", range.period());
         model.addAttribute("from", range.fromDate());
         model.addAttribute("to", range.toDate());

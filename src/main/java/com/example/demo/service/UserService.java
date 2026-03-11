@@ -1,5 +1,6 @@
 package com.example.demo.service;
 
+import com.example.demo.entity.PlanType;
 import com.example.demo.entity.User;
 import com.example.demo.repository.UserRepository;
 import jakarta.servlet.http.HttpSession;
@@ -47,6 +48,47 @@ public class UserService {
     }
 
     public boolean isAdmin(User user) {
-        return user != null && "ADMIN".equalsIgnoreCase(user.getRole());
+        return user != null && ("ADMIN".equalsIgnoreCase(user.getRole()) || user.getPlanType() == PlanType.ADMIN);
+    }
+
+    public boolean hasProAccess(User user) {
+        return user != null && (user.getPlanType() == PlanType.PRO || user.getPlanType() == PlanType.ADMIN || isAdmin(user));
+    }
+
+    public boolean isStandard(User user) {
+        return user != null && user.getPlanType() == PlanType.STANDARD;
+    }
+
+    public int resolveTradeLimit(User user) {
+        return hasProAccess(user) ? Integer.MAX_VALUE : 100;
+    }
+
+    public int resolveSetupLimit(User user) {
+        return hasProAccess(user) ? Integer.MAX_VALUE : 5;
+    }
+
+    public int resolveMistakeTagLimit(User user) {
+        return hasProAccess(user) ? Integer.MAX_VALUE : 10;
+    }
+
+    public int resolveImageLimitPerTrade(User user) {
+        return hasProAccess(user) ? Integer.MAX_VALUE : 1;
+    }
+
+    public String resolvePlanLabel(User user) {
+        if (user == null || user.getPlanType() == null) {
+            return "Standard";
+        }
+        return switch (user.getPlanType()) {
+            case PRO -> "Pro Plan";
+            case ADMIN -> "Admin Plan";
+            case STANDARD -> "Standard Plan";
+        };
+    }
+
+    public void requireProAccess(User user, String message) {
+        if (!hasProAccess(user)) {
+            throw new IllegalStateException(message);
+        }
     }
 }

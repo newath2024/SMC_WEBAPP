@@ -58,6 +58,9 @@ public class SetupController {
         model.addAttribute("setup", new Setup());
         model.addAttribute("currentUser", user);
         model.addAttribute("editMode", false);
+        if (!userService.hasProAccess(user) && setupService.findByUserIncludingArchived(user.getId()).size() >= userService.resolveSetupLimit(user)) {
+            model.addAttribute("error", "Standard plan includes up to 5 setups. Upgrade to Pro for unlimited setups.");
+        }
 
         return "setupForm";
     }
@@ -67,6 +70,14 @@ public class SetupController {
 
         User user = userService.getCurrentUser(session);
         if (user == null) return "redirect:/login";
+
+        if (!userService.hasProAccess(user) && setupService.findByUserIncludingArchived(user.getId()).size() >= userService.resolveSetupLimit(user)) {
+            model.addAttribute("setup", setup);
+            model.addAttribute("currentUser", user);
+            model.addAttribute("editMode", false);
+            model.addAttribute("error", "Standard plan includes up to 5 setups. Upgrade to Pro for unlimited setups.");
+            return "setupForm";
+        }
 
         try {
             setupService.create(
