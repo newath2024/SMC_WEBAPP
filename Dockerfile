@@ -7,14 +7,12 @@ COPY mvnw pom.xml ./
 RUN chmod +x mvnw && ./mvnw -q -DskipTests dependency:go-offline
 
 COPY src/ src/
-COPY application.yml ./
 RUN ./mvnw -q clean package -DskipTests
 
 FROM eclipse-temurin:21-jre-jammy
 WORKDIR /app
 
 COPY --from=build /workspace/target/demo-0.0.1-SNAPSHOT.jar app.jar
-COPY --from=build /workspace/application.yml ./application.yml
 
 RUN mkdir -p /app/data/uploads
 

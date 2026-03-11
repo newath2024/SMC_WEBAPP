@@ -1,0 +1,32 @@
+services:
+  - type: web
+    runtime: docker
+    name: tradejournal-web
+    plan: starter
+    region: singapore
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /login
+    envVars:
+      - key: PORT
+        value: "10000"
+      - key: SPRING_DATASOURCE_HOST
+        value: dpg-d6oo6asr85hc739jd560-a
+      - key: SPRING_DATASOURCE_PORT
+        value: "5432"
+      - key: SPRING_DATASOURCE_DATABASE
+        fromDatabase:
+          name: tradejournal-db
+          property: database
+      - key: SPRING_DATASOURCE_USERNAME
+        fromDatabase:
+          name: tradejournal-db
+          property: user
+      - key: SPRING_DATASOURCE_PASSWORD
+        fromDatabase:
+          name: tradejournal-db
+          property: password
+      - key: SPRING_DATASOURCE_DRIVER_CLASS_NAME
+        value: org.postgresql.Driver
+      - key: SPRING_JPA_DATABASE_PLATFORM
+        value: org.hibernate.dialect.PostgreSQLDialect
