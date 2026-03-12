@@ -112,8 +112,9 @@
 
         <nav class="sidebar-nav-group">
           <div class="sidebar-group-title sidebar-title">REPORTING</div>
-          <a th:href="@{/dashboard(period=${period != null ? period : 'ALL'}, from=${from}, to=${to}, userId=${selectedUserId})}"
-             class="sidebar-link nav-item">
+          <a th:href="@{/reports(period=${period != null ? period : 'ALL'}, from=${from}, to=${to})}"
+             class="sidebar-link nav-item"
+             th:classappend="${activePage == 'reports'} ? ' active' : ''">
             <i class="bi bi-file-earmark-text sidebar-icon nav-icon"></i>
             <span class="nav-label nav-text">Reports</span>
           </a>

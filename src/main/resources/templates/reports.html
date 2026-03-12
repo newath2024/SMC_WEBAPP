@@ -1,0 +1,432 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Reports</title>
+  <link rel="icon" type="image/svg+xml" th:href="@{/img/tradejournal-logo-mark.svg}" href="/img/tradejournal-logo-mark.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" rel="stylesheet">
+  <link th:href="@{/css/sidebar-toggle.css}" href="/css/sidebar-toggle.css" rel="stylesheet">
+  <link th:href="@{/css/analytics-dashboard.css}" href="/css/analytics-dashboard.css" rel="stylesheet">
+  <link th:href="@{/css/app-page.css}" href="/css/app-page.css" rel="stylesheet">
+  <link th:href="@{/css/reports-page.css}" href="/css/reports-page.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+</head>
+<body class="app-page-body reports-page-body">
+<div class="container-fluid py-3 px-3 px-lg-4">
+  <div class="app-shell collapsible-shell expanded reports-shell">
+    <aside th:replace="~{fragments/sidebar :: appSidebar('reports', @{/reports/export.csv(period=${period}, from=${from}, to=${to}, account=${selectedAccount}, symbol=${selectedSymbol}, setup=${selectedSetup})})}"></aside>
+
+    <main class="main-content reports-main">
+      <section class="card reports-hero-card border-0 shadow-sm">
+        <div class="reports-hero-copy">
+          <h1 class="reports-title mb-1">Reports</h1>
+          <p class="reports-subtitle mb-1">Track performance, behavior, and setup edge across your trading journal.</p>
+          <p class="reports-copy mb-0">
+            <span th:text="${overview.totalTrades}">0</span>
+            trades selected
+          </p>
+        </div>
+        <div class="reports-hero-badge">
+          <span>Filter focus</span>
+          <strong th:text="${selectedSymbol != 'ALL' ? selectedSymbol : (selectedSetup != 'ALL' ? selectedSetup : 'All trades')}">All trades</strong>
+        </div>
+      </section>
+
+      <section class="card reports-filter-card border-0 shadow-sm">
+        <div class="card-body">
+          <div class="reports-preset-row">
+            <a class="preset-chip"
+               th:classappend="${period == '7D'} ? ' active' : ''"
+               th:href="@{/reports(period='7D', account=${selectedAccount}, symbol=${selectedSymbol}, setup=${selectedSetup})}">Last 7 days</a>
+            <a class="preset-chip"
+               th:classappend="${period == '30D'} ? ' active' : ''"
+               th:href="@{/reports(period='30D', account=${selectedAccount}, symbol=${selectedSymbol}, setup=${selectedSetup})}">Last 30 days</a>
+            <a class="preset-chip"
+               th:classappend="${period == '90D'} ? ' active' : ''"
+               th:href="@{/reports(period='90D', account=${selectedAccount}, symbol=${selectedSymbol}, setup=${selectedSetup})}">Last 90 days</a>
+            <a class="preset-chip"
+               th:classappend="${period == 'ALL'} ? ' active' : ''"
+               th:href="@{/reports(period='ALL', account=${selectedAccount}, symbol=${selectedSymbol}, setup=${selectedSetup})}">All time</a>
+          </div>
+          <form class="reports-filter-grid" th:action="@{/reports}" method="get">
+            <div class="filter-field filter-field-range">
+              <label class="form-label" for="dateRange">Date range</label>
+              <input type="hidden" name="period" value="CUSTOM">
+              <input type="hidden" id="fromDate" name="from" th:value="${from}">
+              <input type="hidden" id="toDate" name="to" th:value="${to}">
+              <input id="dateRange" class="form-control" type="text" placeholder="Select date range">
+            </div>
+
+            <div class="filter-field">
+              <label class="form-label" for="account">Account</label>
+              <select id="account" class="form-select" name="account">
+                <option value="ALL" th:selected="${selectedAccount == 'ALL'}">All accounts</option>
+                <option th:each="accountOption : ${workspaceReport.availableAccounts}"
+                        th:value="${accountOption}"
+                        th:selected="${selectedAccount == accountOption}"
+                        th:text="${accountOption}">Main</option>
+              </select>
+            </div>
+
+            <div class="filter-field">
+              <label class="form-label" for="symbol">Symbol</label>
+              <select id="symbol" class="form-select" name="symbol">
+                <option value="ALL" th:selected="${selectedSymbol == 'ALL'}">All symbols</option>
+                <option th:each="symbolOption : ${workspaceReport.availableSymbols}"
+                        th:value="${symbolOption}"
+                        th:selected="${selectedSymbol == symbolOption}"
+                        th:text="${symbolOption}">XAUUSD</option>
+              </select>
+            </div>
+
+            <div class="filter-field">
+              <label class="form-label" for="setup">Setup</label>
+              <select id="setup" class="form-select" name="setup">
+                <option value="ALL" th:selected="${selectedSetup == 'ALL'}">All setups</option>
+                <option th:each="setupOption : ${workspaceReport.availableSetups}"
+                        th:value="${setupOption}"
+                        th:selected="${selectedSetup == setupOption}"
+                        th:text="${setupOption}">Breakout</option>
+              </select>
+            </div>
+
+            <div class="filter-actions">
+              <button class="btn btn-primary" type="submit">
+                <i class="bi bi-funnel me-1"></i>
+                Apply
+              </button>
+              <a class="btn btn-outline-secondary" th:href="@{/reports(period='ALL', account='ALL', symbol='ALL', setup='ALL')}">Reset</a>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <section class="reports-metric-grid">
+        <article class="card metric-panel border-0 shadow-sm">
+          <div class="metric-caption">Total trades</div>
+          <div class="metric-figure" th:text="${overview.totalTrades}">0</div>
+        </article>
+        <article class="card metric-panel border-0 shadow-sm">
+          <div class="metric-caption">Win rate</div>
+          <div class="metric-figure" th:text="${#numbers.formatDecimal(overview.winRate, 1, 1) + '%'}">0.0%</div>
+        </article>
+        <article class="card metric-panel metric-panel-highlight border-0 shadow-sm">
+          <div class="metric-caption">Net PnL</div>
+          <div class="metric-figure metric-figure-xl" th:classappend="${overview.totalR >= 0} ? ' text-success' : ' text-danger'"
+               th:text="${#numbers.formatDecimal(overview.totalR, 1, 2) + 'R'}">0.00R</div>
+          <div class="metric-note metric-note-strong"
+               th:text="${overview.totalPnl >= 0 ? '+$' + #numbers.formatDecimal(overview.totalPnl, 1, 2) : '-$' + #numbers.formatDecimal(T(java.lang.Math).abs(overview.totalPnl), 1, 2)}">+$0.00</div>
+        </article>
+        <article class="card metric-panel border-0 shadow-sm">
+          <div class="metric-caption">Average R</div>
+          <div class="metric-figure" th:classappend="${overview.avgR >= 0} ? ' text-success' : ' text-danger'"
+               th:text="${#numbers.formatDecimal(overview.avgR, 1, 2) + 'R'}">0.00R</div>
+        </article>
+        <article class="card metric-panel border-0 shadow-sm">
+          <div class="metric-caption">Profit factor</div>
+          <div class="metric-figure" th:text="${riskMetrics.profitFactor != null ? #numbers.formatDecimal(riskMetrics.profitFactor, 1, 2) : '—'}">—</div>
+          <div class="metric-note" th:text="${riskMetrics.profitFactor != null ? 'Gross profit divided by gross loss' : 'Not enough trades'}">Not enough trades</div>
+        </article>
+        <article class="card metric-panel border-0 shadow-sm">
+          <div class="metric-caption">Max drawdown</div>
+          <div class="metric-figure text-danger" th:text="${#numbers.formatDecimal(riskMetrics.maxDrawdown, 1, 2)}">0.00</div>
+          <div class="metric-note">Peak-to-trough in account currency</div>
+        </article>
+      </section>
+
+      <section class="reports-insight-grid">
+        <article class="card insight-panel border-0 shadow-sm">
+          <div class="metric-caption">Best setup</div>
+          <div class="insight-title"
+               th:text="${#lists.isEmpty(workspaceReport.strategyBreakdown) ? 'No setup data' : workspaceReport.strategyBreakdown[0].label}">No setup data</div>
+          <div class="insight-value text-success"
+               th:text="${#lists.isEmpty(workspaceReport.strategyBreakdown) ? '—' : #numbers.formatDecimal(workspaceReport.strategyBreakdown[0].expectancy, 1, 2) + 'R'}">—</div>
+        </article>
+        <article class="card insight-panel border-0 shadow-sm">
+          <div class="metric-caption">Worst setup</div>
+          <div class="insight-title"
+               th:text="${#lists.isEmpty(workspaceReport.strategyBreakdown) ? 'No setup data' : workspaceReport.strategyBreakdown[workspaceReport.strategyBreakdown.size() - 1].label}">No setup data</div>
+          <div class="insight-value"
+               th:classappend="${#lists.isEmpty(workspaceReport.strategyBreakdown) or workspaceReport.strategyBreakdown[workspaceReport.strategyBreakdown.size() - 1].expectancy >= 0} ? ' text-success' : ' text-danger'"
+               th:text="${#lists.isEmpty(workspaceReport.strategyBreakdown) ? '—' : #numbers.formatDecimal(workspaceReport.strategyBreakdown[workspaceReport.strategyBreakdown.size() - 1].expectancy, 1, 2) + 'R'}">—</div>
+        </article>
+      </section>
+
+      <section class="reports-chart-grid reports-chart-grid-primary">
+        <article class="card chart-panel chart-panel-wide border-0 shadow-sm">
+          <div class="card-body">
+            <div class="chart-panel-head">
+              <div>
+                <h2 class="chart-title">Equity curve</h2>
+                <p class="chart-copy mb-0">Cumulative R progression over the selected date range.</p>
+              </div>
+            </div>
+            <div class="chart-frame chart-frame-lg">
+              <canvas id="reportsEquityChart"></canvas>
+              <div class="chart-empty" id="reportsEquityEmpty">Add at least 2 trades to render the equity curve.</div>
+            </div>
+          </div>
+        </article>
+
+        <article class="card chart-panel border-0 shadow-sm">
+          <div class="card-body">
+            <div class="chart-panel-head">
+              <div>
+                <h2 class="chart-title">Win vs loss distribution</h2>
+                <p class="chart-copy mb-0">Share of winning, losing, and breakeven trades.</p>
+              </div>
+            </div>
+            <div class="chart-frame chart-frame-centered">
+              <canvas id="reportsOutcomeChart"></canvas>
+            </div>
+            <div class="outcome-summary">
+              <div class="outcome-pill outcome-pill-win">
+                <strong th:text="${overview.winTrades}">0</strong>
+                <span th:text="${overview.totalTrades > 0 ? #numbers.formatDecimal((overview.winTrades * 100.0) / overview.totalTrades, 1, 0) + '% wins' : '0% wins'}">0% wins</span>
+              </div>
+              <div class="outcome-pill outcome-pill-loss">
+                <strong th:text="${overview.lossTrades}">0</strong>
+                <span th:text="${overview.totalTrades > 0 ? #numbers.formatDecimal((overview.lossTrades * 100.0) / overview.totalTrades, 1, 0) + '% losses' : '0% losses'}">0% losses</span>
+              </div>
+              <div class="outcome-pill outcome-pill-be">
+                <strong th:text="${overview.beTrades}">0</strong>
+                <span th:text="${overview.totalTrades > 0 ? #numbers.formatDecimal((overview.beTrades * 100.0) / overview.totalTrades, 1, 0) + '% breakeven' : '0% breakeven'}">0% breakeven</span>
+              </div>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <section class="reports-chart-grid">
+        <article class="card chart-panel border-0 shadow-sm">
+          <div class="card-body">
+            <div class="chart-panel-head">
+              <div>
+                <h2 class="chart-title">R multiple distribution</h2>
+                <p class="chart-copy mb-0">Histogram of outcomes grouped by R buckets.</p>
+              </div>
+            </div>
+            <div class="chart-frame chart-frame-md">
+              <canvas id="reportsRDistributionChart"></canvas>
+              <div class="chart-empty" id="reportsRDistributionEmpty">No R-multiple distribution data for this filter set.</div>
+            </div>
+          </div>
+        </article>
+
+        <article class="card chart-panel border-0 shadow-sm">
+          <div class="card-body">
+            <div class="chart-panel-head">
+              <div>
+                <h2 class="chart-title">Mistake analysis</h2>
+                <p class="chart-copy mb-0">Most frequent trading mistakes in the selected sample.</p>
+              </div>
+            </div>
+            <div class="chart-frame chart-frame-md">
+              <canvas id="reportsMistakeChart"></canvas>
+              <div class="chart-empty" id="reportsMistakeEmpty">No mistake data linked to these trades.</div>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <section class="reports-chart-grid">
+        <article class="card chart-panel border-0 shadow-sm">
+          <div class="card-body">
+            <div class="chart-panel-head">
+              <div>
+                <h2 class="chart-title">Session performance</h2>
+                <p class="chart-copy mb-0">Average R by Asia, London, and New York sessions.</p>
+              </div>
+            </div>
+            <div class="chart-frame chart-frame-md">
+              <canvas id="reportsSessionChart"></canvas>
+              <div class="chart-empty" id="reportsSessionEmpty">No session data available for this range.</div>
+            </div>
+          </div>
+        </article>
+
+        <article class="card chart-panel border-0 shadow-sm">
+          <div class="card-body">
+            <div class="chart-panel-head">
+              <div>
+                <h2 class="chart-title">Trades by weekday</h2>
+                <p class="chart-copy mb-0">Average R by trading day to surface weekday edge.</p>
+              </div>
+            </div>
+            <div class="chart-frame chart-frame-md">
+              <canvas id="reportsWeekdayChart"></canvas>
+              <div class="chart-empty" id="reportsWeekdayEmpty">No weekday performance data available.</div>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <section class="reports-table-grid">
+        <article class="card table-panel border-0 shadow-sm">
+          <div class="card-body">
+            <div class="chart-panel-head">
+              <div>
+                <h2 class="chart-title">Setup performance</h2>
+                <p class="chart-copy mb-0">Expectancy and trade count by setup.</p>
+              </div>
+            </div>
+            <div class="table-responsive">
+              <table class="table reports-table align-middle mb-0">
+                <thead>
+                <tr>
+                  <th>Setup</th>
+                  <th>Trades</th>
+                  <th>Win rate</th>
+                  <th>Avg R</th>
+                  <th>Expectancy</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="row : ${workspaceReport.strategyBreakdown}">
+                  <td th:text="${row.label}">Breakout</td>
+                  <td th:text="${row.trades}">0</td>
+                  <td th:text="${#numbers.formatDecimal(row.winRate, 1, 1) + '%'}">0.0%</td>
+                  <td th:classappend="${row.avgR >= 0} ? ' value-positive' : ' value-negative'"
+                      th:text="${#numbers.formatDecimal(row.avgR, 1, 2) + 'R'}">0.00R</td>
+                  <td th:classappend="${row.expectancy >= 0} ? ' value-positive' : ' value-negative'"
+                      th:text="${#numbers.formatDecimal(row.expectancy, 1, 2) + 'R'}">0.00R</td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(workspaceReport.strategyBreakdown)}">
+                  <td colspan="5" class="empty-cell">No setup performance rows available.</td>
+                </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </article>
+
+        <article class="card table-panel border-0 shadow-sm">
+          <div class="card-body">
+            <div class="chart-panel-head">
+              <div>
+                <h2 class="chart-title">Symbol performance</h2>
+                <p class="chart-copy mb-0">Performance by instrument across the filtered trade set.</p>
+              </div>
+            </div>
+            <div class="table-responsive">
+              <table class="table reports-table align-middle mb-0">
+                <thead>
+                <tr>
+                  <th>Symbol</th>
+                  <th>Trades</th>
+                  <th>Win rate</th>
+                  <th>Avg R</th>
+                  <th>Total PnL</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="row : ${workspaceReport.symbolPerformance}">
+                  <td th:text="${row.label}">XAUUSD</td>
+                  <td th:text="${row.trades}">0</td>
+                  <td th:text="${#numbers.formatDecimal(row.winRate, 1, 1) + '%'}">0.0%</td>
+                  <td th:classappend="${row.avgR >= 0} ? ' value-positive' : ' value-negative'"
+                      th:text="${#numbers.formatDecimal(row.avgR, 1, 2) + 'R'}">0.00R</td>
+                  <td th:classappend="${row.totalPnl >= 0} ? ' value-positive' : ' value-negative'"
+                      th:text="${row.totalPnl >= 0 ? '+$' + #numbers.formatDecimal(row.totalPnl, 1, 2) : '-$' + #numbers.formatDecimal(T(java.lang.Math).abs(row.totalPnl), 1, 2)}">+$0.00</td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(workspaceReport.symbolPerformance)}">
+                  <td colspan="5" class="empty-cell">No symbol performance rows available.</td>
+                </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </article>
+
+        <article class="card table-panel border-0 shadow-sm">
+          <div class="card-body">
+            <div class="chart-panel-head">
+              <div>
+                <h2 class="chart-title">Session performance</h2>
+                <p class="chart-copy mb-0">Compare average R and net PnL by session.</p>
+              </div>
+            </div>
+            <div class="table-responsive">
+              <table class="table reports-table align-middle mb-0">
+                <thead>
+                <tr>
+                  <th>Session</th>
+                  <th>Trades</th>
+                  <th>Avg R</th>
+                  <th>Total PnL</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="row : ${workspaceReport.sessionPerformance}">
+                  <td th:text="${row.label}">London</td>
+                  <td th:text="${row.trades}">0</td>
+                  <td th:classappend="${row.avgR >= 0} ? ' value-positive' : ' value-negative'"
+                      th:text="${#numbers.formatDecimal(row.avgR, 1, 2) + 'R'}">0.00R</td>
+                  <td th:classappend="${row.totalPnl >= 0} ? ' value-positive' : ' value-negative'"
+                      th:text="${row.totalPnl >= 0 ? '+$' + #numbers.formatDecimal(row.totalPnl, 1, 2) : '-$' + #numbers.formatDecimal(T(java.lang.Math).abs(row.totalPnl), 1, 2)}">+$0.00</td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(workspaceReport.sessionPerformance)}">
+                  <td colspan="4" class="empty-cell">No session performance rows available.</td>
+                </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <section class="card reports-export-card border-0 shadow-sm">
+        <div class="card-body reports-export-actions">
+          <a class="btn btn-primary"
+             th:if="${hasProAccess}"
+             th:href="@{/reports/export.csv(period=${period}, from=${from}, to=${to}, account=${selectedAccount}, symbol=${selectedSymbol}, setup=${selectedSetup})}">
+            <i class="bi bi-download me-1"></i>
+            Download CSV
+          </a>
+          <button class="btn btn-primary" type="button" disabled th:if="${!hasProAccess}">
+            <i class="bi bi-lock-fill me-1"></i>
+            Download CSV
+          </button>
+          <button class="btn btn-outline-secondary" type="button" id="downloadPdfButton">
+            <i class="bi bi-file-earmark-pdf me-1"></i>
+            Download PDF
+          </button>
+        </div>
+      </section>
+    </main>
+  </div>
+</div>
+
+<script th:inline="javascript">
+  window.reportsPageData = {
+    currentFrom: /*[[${from != null ? from.toString() : null}]]*/ null,
+    currentTo: /*[[${to != null ? to.toString() : null}]]*/ null,
+    equityLabels: /*[[${report.equityCurve.![label]}]]*/ [],
+    equityValues: /*[[${report.equityCurve.![rValue]}]]*/ [],
+    outcomeValues: [
+      /*[[${overview.winTrades}]]*/ 0,
+      /*[[${overview.lossTrades}]]*/ 0,
+      /*[[${overview.beTrades}]]*/ 0
+    ],
+    outcomeTotal: /*[[${overview.totalTrades}]]*/ 0,
+    rDistributionLabels: /*[[${workspaceReport.rDistribution.![label]}]]*/ [],
+    rDistributionValues: /*[[${workspaceReport.rDistribution.![count]}]]*/ [],
+    sessionLabels: /*[[${workspaceReport.sessionPerformance.![label]}]]*/ [],
+    sessionValues: /*[[${workspaceReport.sessionPerformance.![avgR]}]]*/ [],
+    weekdayLabels: /*[[${workspaceReport.dayOfWeekPerformance.![label]}]]*/ [],
+    weekdayValues: /*[[${workspaceReport.dayOfWeekPerformance.![avgR]}]]*/ [],
+    mistakeLabels: /*[[${report.mistakeFrequency.![label]}]]*/ [],
+    mistakeValues: /*[[${report.mistakeFrequency.![count]}]]*/ []
+  };
+</script>
+<script th:src="@{/js/reports-page.js}" src="/js/reports-page.js"></script>
+<script th:src="@{/js/sidebar-toggle.js}" src="/js/sidebar-toggle.js"></script>
+</body>
+</html>

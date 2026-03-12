@@ -44,8 +44,21 @@ public class AnalyticsService {
 
     @Transactional(readOnly = true)
     public AnalyticsReport buildReportForUser(String userId, LocalDateTime from, LocalDateTime to) {
+        return buildReportForUser(userId, from, to, null, null, null);
+    }
+
+    @Transactional(readOnly = true)
+    public AnalyticsReport buildReportForUser(
+            String userId,
+            LocalDateTime from,
+            LocalDateTime to,
+            String account,
+            String symbol,
+            String setup
+    ) {
         List<Trade> trades = tradeService.findAllByUser(userId);
-        List<Trade> filteredTrades = filterTradesByRange(trades, from, to);
+        List<Trade> rangedTrades = filterTradesByRange(trades, from, to);
+        List<Trade> filteredTrades = filterTrades(rangedTrades, account, symbol, setup);
         TradeOverview overview = buildOverview(filteredTrades);
         RiskMetrics riskMetrics = buildRiskMetrics(filteredTrades);
         ProcessMetrics processMetrics = buildProcessMetrics(filteredTrades);
@@ -76,9 +89,21 @@ public class AnalyticsService {
             String symbol,
             String setup
     ) {
+        return buildWorkspaceReportForUser(userId, from, to, null, symbol, setup);
+    }
+
+    @Transactional(readOnly = true)
+    public AnalyticsWorkspaceReport buildWorkspaceReportForUser(
+            String userId,
+            LocalDateTime from,
+            LocalDateTime to,
+            String account,
+            String symbol,
+            String setup
+    ) {
         List<Trade> allTrades = tradeService.findAllByUser(userId);
         List<Trade> rangedTrades = filterTradesByRange(allTrades, from, to);
-        List<Trade> filteredTrades = filterTrades(rangedTrades, symbol, setup);
+        List<Trade> filteredTrades = filterTrades(rangedTrades, account, symbol, setup);
 
         Map<String, TradeReview> reviewMap = buildReviewMap(filteredTrades);
 
@@ -91,6 +116,7 @@ public class AnalyticsService {
                 buildDayOfWeekPerformance(filteredTrades),
                 buildSymbolPerformance(filteredTrades),
                 buildStrategyBreakdown(filteredTrades),
+                extractDistinctAccounts(allTrades),
                 extractDistinctSymbols(allTrades),
                 extractDistinctSetups(allTrades)
         );
@@ -104,19 +130,36 @@ public class AnalyticsService {
 
     @Transactional(readOnly = true)
     public List<Trade> findTradesForUser(String userId, LocalDateTime from, LocalDateTime to) {
-        List<Trade> trades = tradeService.findAllByUser(userId);
-        return filterTradesByRange(trades, from, to);
+        return findTradesForUser(userId, from, to, null, null, null);
     }
 
-    private List<Trade> filterTrades(List<Trade> trades, String symbol, String setup) {
+    @Transactional(readOnly = true)
+    public List<Trade> findTradesForUser(
+            String userId,
+            LocalDateTime from,
+            LocalDateTime to,
+            String account,
+            String symbol,
+            String setup
+    ) {
+        List<Trade> trades = tradeService.findAllByUser(userId);
+        List<Trade> rangedTrades = filterTradesByRange(trades, from, to);
+        return filterTrades(rangedTrades, account, symbol, setup);
+    }
+
+    private List<Trade> filterTrades(List<Trade> trades, String account, String symbol, String setup) {
+        String normalizedAccount = normalizeFilter(account);
         String normalizedSymbol = normalizeFilter(symbol);
         String normalizedSetup = normalizeFilter(setup);
-        if (normalizedSymbol == null && normalizedSetup == null) {
+        if (normalizedAccount == null && normalizedSymbol == null && normalizedSetup == null) {
             return trades;
         }
 
         List<Trade> filtered = new ArrayList<>();
         for (Trade trade : trades) {
+            if (normalizedAccount != null && !normalizedAccount.equalsIgnoreCase(normalizeLabel(trade.getAccountLabel()))) {
+                continue;
+            }
             if (normalizedSymbol != null && !normalizedSymbol.equalsIgnoreCase(normalizeLabel(trade.getSymbol()))) {
                 continue;
             }
@@ -579,6 +622,15 @@ public class AnalyticsService {
                 .toList();
     }
 
+    private List<String> extractDistinctAccounts(List<Trade> trades) {
+        return trades.stream()
+                .map(Trade::getAccountLabel)
+                .map(this::normalizeLabel)
+                .distinct()
+                .sorted()
+                .toList();
+    }
+
     private List<String> extractDistinctSetups(List<Trade> trades) {
         return trades.stream()
                 .map(Trade::getSetupName)
@@ -890,6 +942,7 @@ public class AnalyticsService {
         private final List<DayOfWeekPerformanceRow> dayOfWeekPerformance;
         private final List<SymbolPerformanceRow> symbolPerformance;
         private final List<StrategyBreakdownRow> strategyBreakdown;
+        private final List<String> availableAccounts;
         private final List<String> availableSymbols;
         private final List<String> availableSetups;
 
@@ -902,6 +955,7 @@ public class AnalyticsService {
                 List<DayOfWeekPerformanceRow> dayOfWeekPerformance,
                 List<SymbolPerformanceRow> symbolPerformance,
                 List<StrategyBreakdownRow> strategyBreakdown,
+                List<String> availableAccounts,
                 List<String> availableSymbols,
                 List<String> availableSetups
         ) {
@@ -913,6 +967,7 @@ public class AnalyticsService {
             this.dayOfWeekPerformance = dayOfWeekPerformance;
             this.symbolPerformance = symbolPerformance;
             this.strategyBreakdown = strategyBreakdown;
+            this.availableAccounts = availableAccounts;
             this.availableSymbols = availableSymbols;
             this.availableSetups = availableSetups;
         }
@@ -947,6 +1002,10 @@ public class AnalyticsService {
 
         public List<StrategyBreakdownRow> getStrategyBreakdown() {
             return strategyBreakdown;
+        }
+
+        public List<String> getAvailableAccounts() {
+            return availableAccounts;
         }
 
         public List<String> getAvailableSymbols() {

@@ -179,6 +179,116 @@ public class AnalyticsController {
         return "analytics";
     }
 
+    @GetMapping("/reports")
+    public String reportsPage(
+            @RequestParam(value = "period", required = false, defaultValue = "ALL") String period,
+            @RequestParam(value = "from", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam(value = "to", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
+            @RequestParam(value = "account", required = false) String account,
+            @RequestParam(value = "symbol", required = false) String symbol,
+            @RequestParam(value = "setup", required = false) String setup,
+            Model model,
+            HttpSession session
+    ) {
+        User currentUser = userService.getCurrentUser(session);
+        if (currentUser == null) {
+            return "redirect:/login";
+        }
+
+        boolean hasProAccess = userService.hasProAccess(currentUser);
+        int tradeLimit = userService.resolveTradeLimit(currentUser);
+
+        ResolvedRange range = resolveRange(period, from, to);
+        AnalyticsService.AnalyticsReport report = analyticsService.buildReportForUser(
+                currentUser.getId(),
+                range.fromDateTime(),
+                range.toDateTime(),
+                account,
+                symbol,
+                setup
+        );
+        AnalyticsService.AnalyticsWorkspaceReport workspaceReport = analyticsService.buildWorkspaceReportForUser(
+                currentUser.getId(),
+                range.fromDateTime(),
+                range.toDateTime(),
+                account,
+                symbol,
+                setup
+        );
+        List<Trade> filteredTrades = analyticsService.findTradesForUser(
+                currentUser.getId(),
+                range.fromDateTime(),
+                range.toDateTime(),
+                account,
+                symbol,
+                setup
+        );
+
+        model.addAttribute("currentUser", currentUser);
+        model.addAttribute("hasProAccess", hasProAccess);
+        model.addAttribute("tradeUsage", hasProAccess ? filteredTrades.size() : Math.min(filteredTrades.size(), tradeLimit));
+        model.addAttribute("tradeUsageLimit", hasProAccess ? 0 : tradeLimit);
+        model.addAttribute("period", range.period());
+        model.addAttribute("from", range.fromDate());
+        model.addAttribute("to", range.toDate());
+        model.addAttribute("selectedAccount", normalizeOptionalFilter(account));
+        model.addAttribute("selectedSymbol", normalizeOptionalFilter(symbol));
+        model.addAttribute("selectedSetup", normalizeOptionalFilter(setup));
+        model.addAttribute("report", report);
+        model.addAttribute("overview", report.getOverview());
+        model.addAttribute("riskMetrics", report.getRiskMetrics());
+        model.addAttribute("workspaceReport", workspaceReport);
+        return "reports";
+    }
+
+    @GetMapping(value = "/reports/export.csv", produces = "text/csv")
+    public ResponseEntity<byte[]> exportReportsCsv(
+            @RequestParam(value = "period", required = false, defaultValue = "ALL") String period,
+            @RequestParam(value = "from", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam(value = "to", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
+            @RequestParam(value = "account", required = false) String account,
+            @RequestParam(value = "symbol", required = false) String symbol,
+            @RequestParam(value = "setup", required = false) String setup,
+            HttpSession session
+    ) {
+        User currentUser = userService.getCurrentUser(session);
+        if (currentUser == null) {
+            return ResponseEntity.status(401).build();
+        }
+        if (!userService.hasProAccess(currentUser)) {
+            return ResponseEntity.status(403)
+                    .contentType(MediaType.TEXT_PLAIN)
+                    .body("Pro feature required".getBytes());
+        }
+
+        ResolvedRange range = resolveRange(period, from, to);
+        AnalyticsService.AnalyticsReport report = analyticsService.buildReportForUser(
+                currentUser.getId(),
+                range.fromDateTime(),
+                range.toDateTime(),
+                account,
+                symbol,
+                setup
+        );
+        List<Trade> trades = analyticsService.findTradesForUser(
+                currentUser.getId(),
+                range.fromDateTime(),
+                range.toDateTime(),
+                account,
+                symbol,
+                setup
+        );
+
+        String csv = buildAnalyticsCsv(currentUser, range, report, trades);
+        String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
+        String filename = "reports_export_" + timestamp + ".csv";
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                .contentType(new MediaType("text", "csv"))
+                .body(csv.getBytes());
+    }
+
     private String normalizePeriod(String period) {
         if (period == null || period.isBlank()) {
             return "ALL";
