@@ -18,12 +18,9 @@ public class DataSourceConfig {
         String configuredUrl = firstNonBlank(
                 environment.getProperty("SPRING_DATASOURCE_URL"),
                 environment.getProperty("DATABASE_URL"));
-
-        if (!StringUtils.hasText(configuredUrl)) {
-            throw new IllegalStateException("Missing SPRING_DATASOURCE_URL or DATABASE_URL");
-        }
-
-        DatabaseSettings settings = resolveSettings(environment, configuredUrl);
+        DatabaseSettings settings = StringUtils.hasText(configuredUrl)
+                ? resolveSettings(environment, configuredUrl)
+                : resolveSettingsFromParts(environment);
 
         HikariConfig config = new HikariConfig();
         config.setDriverClassName("org.postgresql.Driver");
@@ -37,15 +34,33 @@ public class DataSourceConfig {
     }
 
     private DatabaseSettings resolveSettings(Environment environment, String rawUrl) {
-        String jdbcUrl = toJdbcUrl(rawUrl);
+        String jdbcUrl = toJdbcUrl(rawUrl, environment.getProperty("DB_SSL_MODE"));
         String username = firstNonBlank(environment.getProperty("SPRING_DATASOURCE_USERNAME"), extractUsername(rawUrl));
         String password = firstNonBlank(environment.getProperty("SPRING_DATASOURCE_PASSWORD"), extractPassword(rawUrl));
         return new DatabaseSettings(jdbcUrl, username, password);
     }
 
-    private String toJdbcUrl(String rawUrl) {
+    private DatabaseSettings resolveSettingsFromParts(Environment environment) {
+        String host = environment.getProperty("SPRING_DATASOURCE_HOST");
+        String port = environment.getProperty("SPRING_DATASOURCE_PORT", "5432");
+        String database = environment.getProperty("SPRING_DATASOURCE_DATABASE");
+        String username = environment.getProperty("SPRING_DATASOURCE_USERNAME");
+        String password = environment.getProperty("SPRING_DATASOURCE_PASSWORD");
+
+        if (!StringUtils.hasText(host) || !StringUtils.hasText(database)) {
+            throw new IllegalStateException(
+                    "Missing database config. Set SPRING_DATASOURCE_URL, DATABASE_URL, or SPRING_DATASOURCE_HOST/PORT/DATABASE");
+        }
+
+        String sslMode = environment.getProperty("DB_SSL_MODE");
+        String jdbcUrl = "jdbc:postgresql://" + host + ":" + port + "/" + database
+                + (StringUtils.hasText(sslMode) ? "?sslmode=" + sslMode : "");
+        return new DatabaseSettings(jdbcUrl, username, password);
+    }
+
+    private String toJdbcUrl(String rawUrl, String sslMode) {
         if (rawUrl.startsWith("jdbc:postgresql://")) {
-            return rawUrl;
+            return appendSslMode(rawUrl, sslMode);
         }
         if (rawUrl.startsWith("postgres://") || rawUrl.startsWith("postgresql://")) {
             URI uri = URI.create(rawUrl);
@@ -53,9 +68,17 @@ public class DataSourceConfig {
             int port = uri.getPort() == -1 ? 5432 : uri.getPort();
             String path = uri.getPath();
             String query = uri.getQuery();
-            return "jdbc:postgresql://" + host + ":" + port + path + (query == null ? "" : "?" + query);
+            String jdbcUrl = "jdbc:postgresql://" + host + ":" + port + path + (query == null ? "" : "?" + query);
+            return appendSslMode(jdbcUrl, sslMode);
         }
         throw new IllegalStateException("Unsupported database URL: " + rawUrl);
+    }
+
+    private String appendSslMode(String jdbcUrl, String sslMode) {
+        if (!StringUtils.hasText(sslMode) || jdbcUrl.contains("sslmode=")) {
+            return jdbcUrl;
+        }
+        return jdbcUrl + (jdbcUrl.contains("?") ? "&" : "?") + "sslmode=" + sslMode;
     }
 
     private String extractUsername(String rawUrl) {
