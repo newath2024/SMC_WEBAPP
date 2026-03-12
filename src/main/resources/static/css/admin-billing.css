@@ -1,0 +1,341 @@
+.admin-billing-body {
+  font-family: "Manrope", sans-serif;
+  background:
+    radial-gradient(circle at 15% 10%, rgba(14, 165, 233, 0.12), transparent 30%),
+    radial-gradient(circle at 90% 0%, rgba(16, 185, 129, 0.08), transparent 24%),
+    linear-gradient(180deg, #f8fbff 0%, #eef4fb 100%);
+  color: #0f172a;
+}
+
+.admin-billing-main {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.billing-hero-card,
+.kpi-card,
+.chart-card,
+.table-card,
+.alert-card {
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 22px;
+  box-shadow: 0 20px 45px rgba(15, 23, 42, 0.08);
+}
+
+.billing-hero-card {
+  padding: 1.5rem;
+}
+
+.hero-kicker {
+  display: inline-flex;
+  justify-self: start;
+  font-size: 0.74rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: #0369a1;
+  background: rgba(37, 99, 235, 0.12);
+  border: 1px solid rgba(37, 99, 235, 0.1);
+  border-radius: 999px;
+  padding: 6px 10px;
+  margin-bottom: 2px;
+  gap: 0.2rem;
+}
+
+.hero-title {
+  font-size: clamp(1.9rem, 3vw, 2.4rem);
+  letter-spacing: -0.03em;
+  margin: 0.75rem 0 0.35rem;
+  font-weight: 800;
+}
+
+.hero-filter-bar {
+  display: inline-flex;
+  gap: 0.45rem;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+.filter-chip {
+  border: 1px solid rgba(15, 23, 42, 0.14);
+  background: #ffffff;
+  color: #475569;
+  border-radius: 999px;
+  padding: 0.38rem 0.72rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.filter-chip:hover {
+  color: #1d4ed8;
+  border-color: rgba(37, 99, 235, 0.4);
+}
+
+.filter-chip.is-active {
+  color: #ffffff;
+  border-color: transparent;
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+}
+
+.hero-subtitle,
+.section-copy,
+.kpi-note,
+.alert-note {
+  margin: 0;
+  color: #64748b;
+}
+
+.section-heading {
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.section-heading > div:first-child {
+  flex: 1;
+  min-width: 240px;
+}
+
+.section-heading .hero-filter-bar {
+  margin-left: auto;
+}
+
+.section-title {
+  margin: 0 0 0.25rem;
+  font-size: 1.1rem;
+  font-weight: 800;
+}
+
+.kpi-card {
+  padding: 1rem 1.15rem;
+  height: 100%;
+}
+
+.kpi-card.alert {
+  border-color: rgba(220, 38, 38, 0.2);
+}
+
+.kpi-card.warning {
+  border-color: rgba(245, 158, 11, 0.24);
+}
+
+.kpi-label {
+  display: block;
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 800;
+  color: #64748b;
+}
+
+.kpi-icon {
+  width: 1.95rem;
+  height: 1.95rem;
+  border-radius: 0.6rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #1d4ed8;
+  background: rgba(37, 99, 235, 0.1);
+  margin-bottom: 0.55rem;
+}
+
+.kpi-card.alert .kpi-icon {
+  color: #b91c1c;
+  background: rgba(239, 68, 68, 0.14);
+}
+
+.kpi-card.warning .kpi-icon {
+  color: #b45309;
+  background: rgba(245, 158, 11, 0.18);
+}
+
+.kpi-value {
+  display: block;
+  margin-top: 0.45rem;
+  margin-bottom: 0.35rem;
+  font-size: 1.8rem;
+  letter-spacing: -0.04em;
+}
+
+.chart-card {
+  padding: 0.9rem 1rem 0.75rem;
+}
+
+.card-head {
+  margin-bottom: 0.35rem;
+}
+
+.card-title {
+  margin: 0;
+  font-size: 0.98rem;
+  font-weight: 700;
+}
+
+.chart-wrap {
+  min-height: 250px;
+  position: relative;
+}
+
+.table-card {
+  overflow: hidden;
+}
+
+.billing-table {
+  --bs-table-bg: transparent;
+  --bs-table-striped-bg: rgba(148, 163, 184, 0.06);
+  --bs-table-hover-bg: rgba(59, 130, 246, 0.05);
+}
+
+.billing-table thead th {
+  color: #64748b;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  border-bottom-color: rgba(15, 23, 42, 0.08);
+  white-space: nowrap;
+  background: #f8fafc;
+}
+
+.billing-table tbody td {
+  border-color: rgba(15, 23, 42, 0.06);
+}
+
+.badge-soft,
+.status-badge,
+.severity {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.32rem 0.7rem;
+  border: 1px solid transparent;
+}
+
+.badge-soft {
+  background: rgba(59, 130, 246, 0.1);
+  color: #2563eb;
+}
+
+.status-badge.active,
+.status-badge.paid,
+.status-badge.trialing,
+.status-badge.success {
+  color: #15803d;
+  background: rgba(34, 197, 94, 0.14);
+}
+
+.status-badge.pending,
+.status-badge.warning,
+.status-badge.past-due {
+  color: #b45309;
+  background: rgba(245, 158, 11, 0.18);
+}
+
+.status-badge.failed,
+.status-badge.canceled,
+.status-badge.churned,
+.status-badge.critical,
+.status-badge.danger {
+  color: #b91c1c;
+  background: rgba(239, 68, 68, 0.14);
+}
+
+.status-badge.refunded,
+.status-badge.free,
+.status-badge.inactive,
+.status-badge.secondary,
+.status-badge.n-a {
+  color: #475569;
+  background: rgba(148, 163, 184, 0.2);
+}
+
+.action-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  justify-content: flex-end;
+}
+
+.action-group form {
+  margin: 0;
+}
+
+.alert-card {
+  padding: 1rem;
+  height: 100%;
+}
+
+.alert-list {
+  list-style: none;
+  margin: 0.85rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.9rem;
+}
+
+.alert-title {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin-top: 0.2rem;
+}
+
+.severity.severity-info {
+  color: #0f766e;
+  background: rgba(13, 148, 136, 0.16);
+}
+
+.severity.severity-warning {
+  color: #b45309;
+  background: rgba(245, 158, 11, 0.18);
+}
+
+.severity.severity-critical {
+  color: #b91c1c;
+  background: rgba(239, 68, 68, 0.14);
+}
+
+.table-pagination {
+  border-top: 1px solid rgba(15, 23, 42, 0.08);
+  padding: 0.75rem 1rem;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.table-pagination .page-link {
+  border-radius: 0.55rem;
+  margin-left: 0.25rem;
+  color: #334155;
+}
+
+.table-pagination .page-item.active .page-link {
+  background: #2563eb;
+  border-color: #2563eb;
+}
+
+@media (max-width: 991.98px) {
+  .chart-wrap {
+    min-height: 210px;
+  }
+
+  .section-heading {
+    align-items: flex-start;
+  }
+
+  .action-group {
+    justify-content: flex-start;
+  }
+
+  .section-heading .hero-filter-bar {
+    margin-left: 0;
+  }
+}

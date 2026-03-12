@@ -44,8 +44,9 @@
             <i class="bi bi-exclamation-triangle sidebar-icon nav-icon"></i>
             <span class="nav-label nav-text">Mistakes</span>
           </a>
-          <a th:href="@{/admin#recent-activity}"
-             class="sidebar-link nav-item">
+          <a th:href="@{/admin/reports}"
+             class="sidebar-link nav-item"
+             th:classappend="${activePage == 'admin-reports'} ? ' active' : ''">
             <i class="bi bi-file-earmark-text sidebar-icon nav-icon"></i>
             <span class="nav-label nav-text">Reports</span>
           </a>
@@ -59,8 +60,9 @@
             <i class="bi bi-people sidebar-icon nav-icon"></i>
             <span class="nav-label nav-text">Users</span>
           </a>
-          <a th:href="@{/admin/settings}"
-             class="sidebar-link nav-item">
+          <a th:href="@{/admin/billing}"
+             class="sidebar-link nav-item"
+             th:classappend="${activePage == 'admin-billing'} ? ' active' : ''">
             <i class="bi bi-credit-card-2-front sidebar-icon nav-icon"></i>
             <span class="nav-label nav-text">Billing</span>
           </a>
@@ -131,8 +133,9 @@
 
         <nav class="sidebar-nav-group">
           <div class="sidebar-group-title sidebar-title">ACCOUNT</div>
-          <a th:href="@{/dashboard(period=${period != null ? period : 'ALL'}, from=${from}, to=${to}, userId=${selectedUserId})}"
-             class="sidebar-link nav-item">
+          <a th:href="@{/billing}"
+             class="sidebar-link nav-item"
+             th:classappend="${activePage == 'billing'} ? ' active' : ''">
             <i class="bi bi-credit-card-2-front sidebar-icon nav-icon"></i>
             <span class="nav-label nav-text">Billing</span>
           </a>

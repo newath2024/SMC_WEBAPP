@@ -767,7 +767,6 @@ public class AdminController {
         return Math.round(value * 100.0) / 100.0;
     }
 
-    @SuppressWarnings("unchecked")
     private Map<String, String> getAdminSettings(HttpSession session) {
         Object stored = session.getAttribute(ADMIN_SETTINGS_SESSION_KEY);
         if (stored instanceof Map<?, ?> storedMap) {

@@ -12,5 +12,7 @@ public interface TradeImageRepository extends JpaRepository<TradeImage, String> 
 
     Optional<TradeImage> findByIdAndTradeId(String id, String tradeId);
 
+    long countByTradeUserId(String userId);
+
     void deleteByTradeId(String tradeId);
 }

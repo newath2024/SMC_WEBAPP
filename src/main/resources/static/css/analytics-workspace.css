@@ -52,8 +52,7 @@ body.analytics-workspace-body {
   padding: 28px 30px;
 }
 
-.hero-kicker,
-.section-kicker {
+.hero-kicker {
   display: inline-flex;
   align-items: center;
   gap: 8px;

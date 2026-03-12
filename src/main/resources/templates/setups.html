@@ -16,31 +16,35 @@ href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
   <link th:href="@{/css/setup-form.css}" href="/css/setup-form.css" rel="stylesheet">
 </head>
 
-<body class="dashboard-body app-page-body">
+<body class="dashboard-body app-page-body setups-body">
 <div class="container-fluid py-3 px-3 px-lg-4">
   <div class="app-shell collapsible-shell expanded">
     <aside th:replace="~{fragments/sidebar :: appSidebar('setups', @{/dashboard/export.csv(period='ALL')})}"></aside>
 
     <main class="main-content">
-      <section class="setups-header">
-        <div>
-          <p class="setups-eyebrow mb-2">SETUP LIBRARY</p>
-          <h2 class="m-0" th:text="${adminView} ? 'All Trading Setups' : 'My Trading Setups'">My Trading Setups</h2>
-          <p class="setups-subtext mb-0">Organize strategies and track their performance.</p>
+      <section class="setups-hero-card">
+        <div class="setups-header">
+          <div>
+            <span class="setups-eyebrow"><i class="bi bi-diagram-3 me-1"></i>Setup library</span>
+            <h2 class="m-0 mt-2" th:text="${adminView} ? 'All Trading Setups' : 'My Trading Setups'">My Trading Setups</h2>
+            <p class="setups-subtext mb-0">Organize strategies, compare edge quality, and keep your playbook clean.</p>
+          </div>
+          <a class="btn btn-primary setups-create-btn" th:href="@{/setups/new}">
+            <i class="bi bi-plus-lg"></i>
+            <span>Create Setup</span>
+          </a>
         </div>
-        <a class="btn btn-primary setups-create-btn" th:href="@{/setups/new}">
-          <i class="bi bi-plus-lg"></i>
-          <span>Create Setup</span>
-        </a>
       </section>
 
-      <section class="setups-toolbar">
-        <div class="setups-search-wrap">
-          <i class="bi bi-search"></i>
-          <input id="setupSearch"
-                 type="search"
-                 class="form-control"
-                 placeholder="Search setups by name or description">
+      <section class="setups-toolbar-card">
+        <div class="setups-toolbar">
+          <div class="setups-search-wrap">
+            <i class="bi bi-search"></i>
+            <input id="setupSearch"
+                   type="search"
+                   class="form-control"
+                   placeholder="Search setups by name, description, or owner">
+          </div>
         </div>
       </section>
 

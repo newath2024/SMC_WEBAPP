@@ -23,3 +23,6 @@ spring:
       hibernate:
         dialect: org.hibernate.community.dialect.SQLiteDialect
         format_sql: true
+billing:
+  webhook:
+    secret: ${BILLING_WEBHOOK_SECRET:}

@@ -1,0 +1,421 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Billing & Subscription</title>
+  <link rel="icon" type="image/svg+xml" th:href="@{/img/tradejournal-logo-mark.svg}" href="/img/tradejournal-logo-mark.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <link th:href="@{/css/sidebar-toggle.css}" href="/css/sidebar-toggle.css" rel="stylesheet">
+  <link th:href="@{/css/analytics-dashboard.css}" href="/css/analytics-dashboard.css" rel="stylesheet">
+  <link th:href="@{/css/app-page.css}" href="/css/app-page.css" rel="stylesheet">
+  <link th:href="@{/css/billing-page.css}" href="/css/billing-page.css" rel="stylesheet">
+</head>
+<body class="app-page-body billing-body">
+<div class="container-fluid py-3 px-3 px-lg-4">
+  <div class="app-shell collapsible-shell expanded billing-shell">
+    <aside th:replace="~{fragments/sidebar :: appSidebar('billing', @{/dashboard/export.csv(period='ALL')})}"></aside>
+
+    <main class="main-content billing-main">
+      <section class="card billing-hero shadow-sm border-0">
+        <div class="card-body">
+          <div class="d-flex flex-column flex-xl-row justify-content-between align-items-xl-center gap-3">
+            <div>
+              <span class="billing-kicker"><i class="bi bi-credit-card-2-front me-1"></i>Account billing</span>
+              <h1 class="billing-title mt-3 mb-2">Billing & Subscription</h1>
+              <p class="billing-copy mb-0">Manage your plan, payment methods, renewals, and invoices.</p>
+            </div>
+            <div class="billing-header-note">
+              <div class="header-note-label">Renewal type</div>
+              <div class="header-note-value" th:text="${renewalType}">Auto-renew via Visa</div>
+              <div class="header-note-subtext">Professional billing controls for your trading journal workspace.</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="row g-3">
+        <div class="col-12 col-xxl-7">
+          <article class="card shadow-sm border-0 billing-card h-100">
+            <div class="card-header bg-transparent border-0 pb-0">
+              <h2 class="section-title h5 mb-1">Current Plan</h2>
+              <p class="section-copy mb-0">Current subscription, renewal path, and account billing status.</p>
+            </div>
+            <div class="card-body">
+              <div class="row g-3 mb-3">
+                <div class="col-sm-6 col-xl-4">
+                  <div class="info-tile">
+                    <span class="info-label">Plan</span>
+                    <strong th:text="${currentPlan}">Pro Plan</strong>
+                  </div>
+                </div>
+                <div class="col-sm-6 col-xl-4">
+                  <div class="info-tile">
+                    <span class="info-label">Price</span>
+                    <strong th:text="${monthlyPrice}">$29 / month</strong>
+                  </div>
+                </div>
+                <div class="col-sm-6 col-xl-4">
+                  <div class="info-tile">
+                    <span class="info-label">Status</span>
+                    <strong class="status-badge"
+                            th:classappend="${' ' + billingStatusCss}"
+                            th:text="${billingStatus}">Active</strong>
+                  </div>
+                </div>
+                <div class="col-sm-6 col-xl-6">
+                  <div class="info-tile">
+                    <span class="info-label">Renewal</span>
+                    <strong th:text="${renewalType}">Auto-renew via Visa</strong>
+                  </div>
+                </div>
+                <div class="col-sm-6 col-xl-6">
+                  <div class="info-tile">
+                    <span class="info-label" th:text="${billingDateLabel}">Next billing</span>
+                    <strong th:text="${nextBillingDate}">Apr 11, 2026</strong>
+                  </div>
+                </div>
+                <div class="col-sm-6 col-xl-6">
+                  <div class="info-tile">
+                    <span class="info-label">Plan started</span>
+                    <strong th:text="${planStarted}">Mar 11, 2026</strong>
+                  </div>
+                </div>
+              </div>
+
+              <div class="d-flex flex-wrap gap-2 mb-3">
+                <button class="btn btn-primary btn-sm rounded-pill px-3" type="button">Manage Plan</button>
+                <button class="btn btn-outline-danger btn-sm rounded-pill px-3" type="button">Cancel Subscription</button>
+                <button class="btn btn-outline-dark btn-sm rounded-pill px-3" type="button">Upgrade Plan</button>
+              </div>
+
+              <div class="row g-3">
+                <div class="col-12 col-lg-6">
+                  <div class="ux-note card-note card-note-card">
+                    <div class="note-title">Card payments</div>
+                    <p class="mb-0">This subscription renews automatically each month.</p>
+                  </div>
+                </div>
+                <div class="col-12 col-lg-6">
+                  <div class="ux-note card-note card-note-crypto">
+                    <div class="note-title">Crypto payments</div>
+                    <p class="mb-0">Crypto payments do not auto-renew. You must manually renew before the expiration date.</p>
+                  </div>
+                </div>
+                <div class="col-12" th:if="${showTrialInfo}">
+                  <div class="trial-note">
+                    <i class="bi bi-hourglass-split"></i>
+                    <span th:text="${trialDaysRemaining + ' days remaining in trial'}">7 days remaining in trial</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </article>
+        </div>
+
+        <div class="col-12 col-xxl-5">
+          <article class="card shadow-sm border-0 billing-card h-100">
+            <div class="card-header bg-transparent border-0 pb-0">
+              <h2 class="section-title h5 mb-1">Usage Tracking</h2>
+              <p class="section-copy mb-0">Monthly usage against the limits included in your plan.</p>
+            </div>
+            <div class="card-body">
+              <div class="usage-stack">
+                <div class="usage-block">
+                  <div class="usage-row">
+                    <span>Trades used this month</span>
+                    <strong th:text="${tradesUsedLabel}">32 / 100</strong>
+                  </div>
+                  <div class="progress usage-progress" role="progressbar" th:attr="aria-valuenow=${tradeUsagePct}" aria-valuemin="0" aria-valuemax="100">
+                    <div class="progress-bar" th:style="${'width:' + tradeUsagePct + '%'}"></div>
+                  </div>
+                </div>
+                <div class="usage-block">
+                  <div class="usage-row">
+                    <span>Storage usage</span>
+                    <strong th:text="${storageUsedLabel + ' / ' + storageLimitLabel}">120MB / 2GB</strong>
+                  </div>
+                  <div class="progress usage-progress storage" role="progressbar" th:attr="aria-valuenow=${storageUsagePct}" aria-valuemin="0" aria-valuemax="100">
+                    <div class="progress-bar" th:style="${'width:' + storageUsagePct + '%'}"></div>
+                  </div>
+                </div>
+                <div class="usage-block">
+                  <div class="usage-row">
+                    <span>Screenshots uploaded</span>
+                    <strong th:text="${screenshotsUsedLabel}">15 / 50</strong>
+                  </div>
+                  <div class="progress usage-progress screenshots" role="progressbar" th:attr="aria-valuenow=${imagesUsagePct}" aria-valuemin="0" aria-valuemax="100">
+                    <div class="progress-bar" th:style="${'width:' + imagesUsagePct + '%'}"></div>
+                  </div>
+                </div>
+                <div class="usage-block">
+                  <div class="usage-row">
+                    <span>Exports this month</span>
+                    <strong th:text="${exportsUsedLabel}">3</strong>
+                  </div>
+                  <div class="progress usage-progress exports" role="progressbar" th:attr="aria-valuenow=${exportUsagePct}" aria-valuemin="0" aria-valuemax="100">
+                    <div class="progress-bar" th:style="${'width:' + exportUsagePct + '%'}"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="row g-3">
+        <div class="col-12">
+          <article class="card shadow-sm border-0 billing-card">
+            <div class="card-header bg-transparent border-0 pb-0">
+              <h2 class="section-title h5 mb-1">Payment Methods</h2>
+              <p class="section-copy mb-0">Choose between automatic card renewals or manual crypto invoices.</p>
+            </div>
+            <div class="card-body">
+              <div class="row g-3">
+                <div class="col-12 col-xl-6">
+                  <div class="payment-method-card payment-method-card-credit h-100">
+                    <div class="payment-method-top">
+                      <div class="payment-method-icon"><i class="bi bi-credit-card-fill"></i></div>
+                      <div>
+                        <h3 class="payment-title">Credit / Debit Card</h3>
+                        <p class="payment-copy mb-0">Visa/Credit Card is used for monthly automatic renewal.</p>
+                      </div>
+                    </div>
+                    <div class="payment-method-summary">
+                      <div class="summary-line">
+                        <span>Card</span>
+                        <strong th:text="${paymentBrand + ' ' + paymentMasked}">Visa **** 4242</strong>
+                      </div>
+                      <div class="summary-line">
+                        <span>Expires</span>
+                        <strong th:text="${paymentExpiry}">09/28</strong>
+                      </div>
+                      <div class="summary-line">
+                        <span>Renewal</span>
+                        <strong>Auto-renew enabled</strong>
+                      </div>
+                    </div>
+                    <div class="d-flex flex-wrap gap-2">
+                      <button class="btn btn-outline-dark btn-sm rounded-pill px-3" type="button">Update Card</button>
+                      <button class="btn btn-outline-secondary btn-sm rounded-pill px-3" type="button">Remove Card</button>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="col-12 col-xl-6">
+                  <div class="payment-method-card payment-method-card-crypto h-100">
+                    <div class="payment-method-top">
+                      <div class="payment-method-icon crypto"><i class="bi bi-currency-bitcoin"></i></div>
+                      <div>
+                        <h3 class="payment-title">Crypto Payments</h3>
+                        <p class="payment-copy mb-0">Pay with crypto using a generated invoice. Supported coins: USDT, USDC, BTC, ETH.</p>
+                      </div>
+                    </div>
+                    <div class="supported-coins">
+                      <span class="coin-pill" th:each="coin : ${supportedCoins}" th:text="${coin}">USDT</span>
+                    </div>
+                    <div class="d-flex flex-wrap gap-2">
+                      <button class="btn btn-primary btn-sm rounded-pill px-3" type="button" data-crypto-toggle="open">Pay with Crypto</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="row g-3">
+        <div class="col-12">
+          <article class="card shadow-sm border-0 billing-card">
+            <div class="card-header bg-transparent border-0 pb-0">
+              <h2 class="section-title h5 mb-1">Plan Comparison</h2>
+              <p class="section-copy mb-0">Feature differences between Standard and Pro.</p>
+            </div>
+            <div class="card-body">
+              <div class="table-responsive">
+                <table class="table align-middle billing-table plan-table mb-0">
+                  <thead>
+                  <tr>
+                    <th scope="col">Feature</th>
+                    <th scope="col">Standard</th>
+                    <th scope="col">Pro</th>
+                  </tr>
+                  </thead>
+                  <tbody>
+                  <tr><td>Monthly Price</td><td>$0</td><td>$29</td></tr>
+                  <tr><td>Trade Limit</td><td>100 / month</td><td>500 / month</td></tr>
+                  <tr><td>Storage</td><td>2GB</td><td>10GB</td></tr>
+                  <tr><td>Analytics Workspace</td><td>Core insights</td><td>Advanced workspace</td></tr>
+                  <tr><td>CSV Export</td><td>Up to 10 exports</td><td>Up to 25 exports</td></tr>
+                  <tr><td>Screenshot Upload</td><td>50 files</td><td>250 files</td></tr>
+                  <tr><td>Payment Methods</td><td>Visa, Crypto</td><td>Visa, Crypto</td></tr>
+                  </tbody>
+                </table>
+              </div>
+              <div class="mt-3">
+                <button class="btn btn-primary rounded-pill px-4" type="button">Upgrade to Pro</button>
+              </div>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section>
+        <article class="card shadow-sm border-0 billing-card">
+          <div class="card-header bg-transparent border-0 pb-0">
+            <h2 class="section-title h5 mb-1">Billing History</h2>
+            <p class="section-copy mb-0">Invoice records across Visa and crypto renewals.</p>
+          </div>
+          <div class="card-body">
+            <div class="table-responsive">
+              <table class="table align-middle billing-table mb-0">
+                <thead>
+                <tr>
+                  <th scope="col">Invoice ID</th>
+                  <th scope="col">Amount</th>
+                  <th scope="col">Payment Method</th>
+                  <th scope="col">Currency</th>
+                  <th scope="col">Date</th>
+                  <th scope="col">Status</th>
+                  <th scope="col">Reference</th>
+                  <th scope="col" class="text-end">Download</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="invoice : ${invoices}">
+                  <td th:text="${invoice.invoiceId}">INV-2026-0301</td>
+                  <td th:text="${invoice.amount}">$29</td>
+                  <td th:text="${invoice.paymentMethod}">Visa</td>
+                  <td th:text="${invoice.currency}">USD</td>
+                  <td th:text="${invoice.date}">Mar 01, 2026</td>
+                  <td>
+                    <span class="invoice-status"
+                          th:classappend="${
+                            invoice.status == 'Paid' ? ' is-paid' :
+                            (invoice.status == 'Pending' ? ' is-pending' :
+                            (invoice.status == 'Awaiting Confirmation' ? ' is-awaiting' :
+                            (invoice.status == 'Expired' ? ' is-expired' :
+                            (invoice.status == 'Failed' ? ' is-failed' : ' is-refunded'))))
+                          }"
+                          th:text="${invoice.status}">Paid</span>
+                  </td>
+                  <td th:text="${invoice.reference}">card_4242</td>
+                  <td class="text-end">
+                    <a class="btn btn-sm btn-outline-primary rounded-pill px-3"
+                       th:href="${invoice.downloadUrl}">
+                      <i class="bi bi-download me-1"></i>PDF
+                    </a>
+                  </td>
+                </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </article>
+      </section>
+    </main>
+  </div>
+</div>
+
+<div class="crypto-modal d-none" data-crypto-panel>
+  <div class="crypto-modal-backdrop" data-crypto-toggle="close"></div>
+  <div class="crypto-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="cryptoModalTitle">
+    <div class="crypto-flow-header">
+      <div>
+        <h3 id="cryptoModalTitle" class="section-title h5 mb-1">Crypto Renewal Invoice</h3>
+        <p class="section-copy mb-0">Generate an invoice, submit the transaction hash, then wait for confirmation.</p>
+      </div>
+      <button class="btn btn-outline-secondary btn-sm rounded-pill px-3" type="button" data-crypto-toggle="close">Close</button>
+    </div>
+
+    <div class="crypto-modal-grid mt-3">
+      <div class="crypto-sidebar-card">
+        <div class="crypto-step-card crypto-step-card-light h-100">
+          <label for="networkSelect" class="form-label crypto-step-label">Select Network</label>
+          <select id="networkSelect" class="form-select" data-network-select>
+            <option th:each="method : ${paymentMethodOptions}" th:value="${method}" th:text="${method}">USDT (TRC20)</option>
+          </select>
+          <div class="network-warning" data-network-warning>
+            <i class="bi bi-exclamation-triangle-fill"></i>
+            <span>Make sure to send funds on the selected network (<strong data-network-short>TRC20</strong>).</span>
+          </div>
+          <p class="crypto-step-help mb-0">Network selection controls the wallet route and explorer link.</p>
+        </div>
+      </div>
+
+      <div class="crypto-payment-card">
+        <div class="crypto-step-card crypto-step-card-emphasis h-100">
+          <div class="payment-top-grid">
+            <div class="payment-key-stat">
+              <span>Amount</span>
+              <strong>$29</strong>
+            </div>
+            <div class="payment-key-stat">
+              <span>Network</span>
+              <strong data-network-label th:text="${cryptoNetwork}">USDT (TRC20)</strong>
+            </div>
+          </div>
+
+          <div class="payment-focus-card">
+            <div class="wallet-header">
+              <span class="crypto-step-label mb-0">Wallet Address</span>
+              <button class="btn btn-outline-secondary btn-sm rounded-circle wallet-copy-btn" type="button" data-copy-wallet aria-label="Copy wallet address" title="Copy wallet address">
+                <i class="bi bi-copy"></i><span class="visually-hidden" data-copy-label>Copy</span>
+              </button>
+            </div>
+            <div class="wallet-address-display" data-wallet-address th:text="${cryptoWalletAddress}">TQ9J7X1N2A8P4L5M6R7S8U9V0W1X2Y3Z</div>
+
+            <div class="qr-section">
+              <div class="qr-card qr-card-large">
+                <div class="qr-placeholder qr-placeholder-large">
+                  <div class="qr-inner"></div>
+                </div>
+                <span class="qr-caption">QR Code</span>
+              </div>
+              <div class="invoice-actions invoice-actions-stacked">
+                <button class="btn btn-outline-secondary btn-sm rounded-pill px-3" type="button" data-copy-address-full>
+                  <i class="bi bi-copy me-1"></i>Copy Address
+                </button>
+                <a class="btn btn-outline-dark btn-sm rounded-pill px-3" href="#" target="_blank" rel="noopener noreferrer" data-explorer-link>
+                  <i class="bi bi-box-arrow-up-right me-1"></i><span data-explorer-label>View on Tronscan</span>
+                </a>
+              </div>
+            </div>
+
+            <div class="countdown-card">
+              <span><i class="bi bi-stopwatch me-1"></i>Invoice expires in</span>
+              <strong data-countdown-display>29:43</strong>
+            </div>
+
+            <button class="btn btn-outline-primary btn-sm rounded-pill px-3 d-none align-self-start" type="button" data-regenerate-invoice>Generate new invoice</button>
+          </div>
+
+          <div class="transaction-section">
+            <label for="txHash" class="form-label crypto-step-label">Transaction Hash</label>
+            <div class="transaction-form-row">
+              <input id="txHash" type="text" class="form-control" placeholder="Paste transaction hash" data-transaction-hash>
+              <button class="btn btn-dark rounded-pill px-4" type="button" data-submit-hash>Confirm Payment</button>
+            </div>
+            <div class="hash-feedback mt-2" data-hash-feedback>Paste transaction hash to validate format and explorer lookup.</div>
+          </div>
+
+          <div class="status-row">
+            <span>Status</span>
+            <strong class="invoice-status is-pending" data-crypto-status th:text="${cryptoInvoiceStatus}">Pending</strong>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script th:src="@{/js/sidebar-toggle.js}" src="/js/sidebar-toggle.js"></script>
+<script th:src="@{/js/billing-page.js}" src="/js/billing-page.js"></script>
+</body>
+</html>

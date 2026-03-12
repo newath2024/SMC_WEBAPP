@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Admin Reports</title>
+  <link rel="icon" type="image/svg+xml" th:href="@{/img/tradejournal-logo-mark.svg}" href="/img/tradejournal-logo-mark.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <link th:href="@{/css/sidebar-toggle.css}" href="/css/sidebar-toggle.css" rel="stylesheet">
+  <link th:href="@{/css/analytics-dashboard.css}" href="/css/analytics-dashboard.css" rel="stylesheet">
+  <link th:href="@{/css/app-page.css}" href="/css/app-page.css" rel="stylesheet">
+  <link th:href="@{/css/admin-reports.css}" href="/css/admin-reports.css" rel="stylesheet">
+</head>
+<body class="app-page-body admin-reports-body">
+<div class="container-fluid py-3 px-3 px-lg-4">
+  <div class="app-shell collapsible-shell expanded admin-reports-shell" data-sidebar-static="true">
+    <aside th:replace="~{fragments/sidebar :: appSidebar('admin-reports', @{/dashboard/export.csv(period='ALL')})}"></aside>
+
+    <main class="main-content admin-reports-main">
+      <section class="reports-hero-card">
+        <div>
+          <span class="hero-kicker"><i class="bi bi-file-earmark-bar-graph me-1"></i>Admin workspace</span>
+          <h1 class="hero-title mb-2">Reports Center</h1>
+          <p class="hero-copy mb-0">Generate, filter, and export platform-wide reports for trading, users, and operations.</p>
+        </div>
+        <div class="hero-stats">
+          <div class="hero-stat">
+            <span class="hero-stat-label">Sections</span>
+            <strong class="hero-stat-value">4</strong>
+          </div>
+          <div class="hero-stat">
+            <span class="hero-stat-label">Templates</span>
+            <strong class="hero-stat-value">12</strong>
+          </div>
+        </div>
+      </section>
+
+      <section class="reports-filter-card">
+        <form class="reports-filter-form" method="get" th:action="@{/admin/reports}">
+          <div class="filter-field">
+            <label class="form-label" for="fromDate">Date Range (From)</label>
+            <input class="form-control" id="fromDate" name="from" type="date" th:value="${selectedFrom}">
+          </div>
+          <div class="filter-field">
+            <label class="form-label" for="toDate">Date Range (To)</label>
+            <input class="form-control" id="toDate" name="to" type="date" th:value="${selectedTo}">
+          </div>
+          <div class="filter-field">
+            <label class="form-label" for="userFilter">User</label>
+            <select class="form-select" id="userFilter" name="userId">
+              <option value="">All users</option>
+              <option th:each="option : ${userOptions}"
+                      th:value="${option.value}"
+                      th:selected="${option.value == selectedUserId}"
+                      th:text="${option.label}">user</option>
+            </select>
+          </div>
+          <div class="filter-field">
+            <label class="form-label" for="symbolFilter">Symbol</label>
+            <select class="form-select" id="symbolFilter" name="symbol">
+              <option value="">All symbols</option>
+              <option th:each="option : ${symbolOptions}"
+                      th:value="${option}"
+                      th:selected="${option == selectedSymbol}"
+                      th:text="${option}">BTCUSD</option>
+            </select>
+          </div>
+          <div class="filter-field">
+            <label class="form-label" for="setupFilter">Setup</label>
+            <select class="form-select" id="setupFilter" name="setup">
+              <option value="">All setups</option>
+              <option th:each="option : ${setupOptions}"
+                      th:value="${option}"
+                      th:selected="${option == selectedSetup}"
+                      th:text="${option}">Breakout</option>
+            </select>
+          </div>
+          <div class="filter-field">
+            <label class="form-label" for="sessionFilter">Session</label>
+            <select class="form-select" id="sessionFilter" name="sessionFilter">
+              <option th:each="option : ${sessionOptions}"
+                      th:value="${option.value}"
+                      th:selected="${option.value == selectedSession}"
+                      th:text="${option.label}">All sessions</option>
+            </select>
+          </div>
+          <div class="filter-field">
+            <label class="form-label" for="resultFilter">Result</label>
+            <select class="form-select" id="resultFilter" name="resultFilter">
+              <option th:each="option : ${resultOptions}"
+                      th:value="${option.value}"
+                      th:selected="${option.value == selectedResult}"
+                      th:text="${option.label}">All</option>
+            </select>
+          </div>
+          <div class="filter-actions">
+            <a class="btn btn-outline-secondary" th:href="@{/admin/reports}">Reset</a>
+            <button class="btn btn-primary" type="submit">
+              <i class="bi bi-funnel me-1"></i>
+              Apply Filters
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <section class="reports-sections" th:each="section : ${reportSections}" th:classappend="${section.tintClass}">
+        <div class="section-header">
+          <h2 class="section-title mb-0" th:text="${section.title}">Platform Reports</h2>
+        </div>
+        <div class="row g-3">
+          <div class="col-12 col-md-6 col-xxl-4" th:each="report : ${section.cards}">
+            <article class="report-card h-100" th:attr="data-report-key=${report.key}">
+              <div class="report-card-body">
+                <h3 class="report-title" th:text="${report.title}">Platform Overview</h3>
+                <p class="report-desc" th:text="${report.description}">Description</p>
+              </div>
+              <div class="report-preview" hidden>
+                <div class="preview-title">Preview result</div>
+                <div class="preview-metrics"></div>
+                <div class="preview-table-wrap" hidden>
+                  <table class="table table-sm mb-0 preview-table">
+                    <thead></thead>
+                    <tbody></tbody>
+                  </table>
+                </div>
+              </div>
+              <div class="report-actions">
+                <button class="btn btn-primary btn-sm js-generate-report" type="button">
+                  <i class="bi bi-play-circle me-1"></i>
+                  Generate Report
+                </button>
+                <button class="btn btn-outline-secondary btn-sm js-export-report" type="button" data-format="csv" disabled>
+                  <i class="bi bi-filetype-csv me-1"></i>
+                  Export CSV
+                </button>
+                <button class="btn btn-outline-success btn-sm js-export-report" type="button" data-format="excel" disabled>
+                  <i class="bi bi-file-earmark-excel me-1"></i>
+                  Export Excel
+                </button>
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+</div>
+
+<script th:inline="javascript">
+  window.adminReportPreviewData = /*[[${reportPreviews}]]*/ {};
+</script>
+<script th:src="@{/js/admin-reports.js}" src="/js/admin-reports.js"></script>
+<script th:src="@{/js/sidebar-toggle.js}" src="/js/sidebar-toggle.js"></script>
+</body>
+</html>

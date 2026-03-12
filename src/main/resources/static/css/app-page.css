@@ -1,5 +1,9 @@
 :root {
   --app-page-gap: 24px;
+  --app-radius-sm: 12px;
+  --app-radius-md: 16px;
+  --app-radius-lg: 22px;
+  --app-radius-pill: 999px;
 }
 
 body.app-page-body {
@@ -49,6 +53,30 @@ body.app-page-body h2 {
 
 body.app-page-body .table {
   background: #fff;
+}
+
+/* Global rounded system for all app pages */
+body.app-page-body .card,
+body.app-page-body .modal-content,
+body.app-page-body .dropdown-menu,
+body.app-page-body .table-responsive {
+  border-radius: var(--app-radius-md) !important;
+}
+
+body.app-page-body .btn,
+body.app-page-body .form-control,
+body.app-page-body .form-select,
+body.app-page-body .input-group-text,
+body.app-page-body .nav-link,
+body.app-page-body .progress {
+  border-radius: var(--app-radius-sm) !important;
+}
+
+body.app-page-body .badge,
+body.app-page-body .rounded-pill,
+body.app-page-body [class*="kicker"],
+body.app-page-body [class*="eyebrow"] {
+  border-radius: var(--app-radius-pill) !important;
 }
 
 @media (max-width: 991.98px) {
