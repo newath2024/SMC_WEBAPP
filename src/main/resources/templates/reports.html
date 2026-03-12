@@ -28,14 +28,16 @@
         <div class="reports-hero-copy">
           <h1 class="reports-title mb-1">Reports</h1>
           <p class="reports-subtitle mb-1">Track performance, behavior, and setup edge across your trading journal.</p>
-          <p class="reports-copy mb-0">
-            <span th:text="${overview.totalTrades}">0</span>
-            trades selected
-          </p>
-        </div>
-        <div class="reports-hero-badge">
-          <span>Filter focus</span>
-          <strong th:text="${selectedSymbol != 'ALL' ? selectedSymbol : (selectedSetup != 'ALL' ? selectedSetup : 'All trades')}">All trades</strong>
+          <div class="reports-meta-row">
+            <p class="reports-copy mb-0">
+              <span th:text="${overview.totalTrades}">0</span>
+              trades selected
+            </p>
+            <div class="reports-hero-badge">
+              <span>Filter focus</span>
+              <strong th:text="${selectedSymbol != 'ALL' ? selectedSymbol : (selectedSetup != 'ALL' ? selectedSetup : 'All trades')}">All trades</strong>
+            </div>
+          </div>
         </div>
       </section>
 

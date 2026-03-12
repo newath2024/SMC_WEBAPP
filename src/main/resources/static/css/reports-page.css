@@ -25,10 +25,7 @@
 
 .reports-hero-card {
     padding: 1rem 1.25rem;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
+    display: block;
 }
 
 .reports-title {
@@ -45,8 +42,16 @@
 
 .reports-copy {
     color: #64748b;
-    max-width: 680px;
     font-size: 0.95rem;
+    font-weight: 700;
+}
+
+.reports-meta-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-top: 0.9rem;
 }
 
 .reports-hero-badge {
@@ -358,7 +363,7 @@
 }
 
 @media (max-width: 992px) {
-    .reports-hero-card {
+    .reports-meta-row {
         flex-direction: column;
         align-items: flex-start;
     }
