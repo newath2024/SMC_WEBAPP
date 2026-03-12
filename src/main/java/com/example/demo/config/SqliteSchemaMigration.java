@@ -2,8 +2,10 @@ package com.example.demo.config;
 
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.core.env.Environment;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 
 import java.util.List;
 import java.util.Locale;
@@ -12,14 +14,26 @@ import java.util.Locale;
 public class SqliteSchemaMigration implements ApplicationRunner {
 
     private final JdbcTemplate jdbcTemplate;
+    private final Environment environment;
 
-    public SqliteSchemaMigration(JdbcTemplate jdbcTemplate) {
+    public SqliteSchemaMigration(JdbcTemplate jdbcTemplate, Environment environment) {
         this.jdbcTemplate = jdbcTemplate;
+        this.environment = environment;
     }
 
     @Override
     public void run(ApplicationArguments args) {
+        if (!isSqliteConfigured()) {
+            return;
+        }
         ensureUsersPlanTypeColumn();
+    }
+
+    private boolean isSqliteConfigured() {
+        String datasourceUrl = environment.getProperty("spring.datasource.url");
+        String driverClassName = environment.getProperty("spring.datasource.driver-class-name");
+        return (StringUtils.hasText(datasourceUrl) && datasourceUrl.startsWith("jdbc:sqlite:"))
+                || "org.sqlite.JDBC".equals(driverClassName);
     }
 
     private void ensureUsersPlanTypeColumn() {
