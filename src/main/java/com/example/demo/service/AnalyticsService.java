@@ -653,23 +653,38 @@ public class AnalyticsService {
         int lossTrades = 0;
         double grossProfit = 0.0;
         double grossLossAbs = 0.0;
+        double totalR = 0.0;
+        double winRTotal = 0.0;
+        double lossRAbsTotal = 0.0;
 
         for (Trade trade : trades) {
             double pnl = trade.getPnl();
+            double rMultiple = trade.getRMultiple();
+            totalR += rMultiple;
+
             if (pnl > 0) {
-                winTrades++;
                 grossProfit += pnl;
             } else if (pnl < 0) {
-                lossTrades++;
                 grossLossAbs += Math.abs(pnl);
+            }
+
+            if ("WIN".equalsIgnoreCase(trade.getResult())) {
+                winTrades++;
+                winRTotal += rMultiple;
+            } else if ("LOSS".equalsIgnoreCase(trade.getResult())) {
+                lossTrades++;
+                lossRAbsTotal += Math.abs(rMultiple);
             }
         }
 
-        double avgWin = winTrades == 0 ? 0.0 : grossProfit / winTrades;
-        double avgLoss = lossTrades == 0 ? 0.0 : -(grossLossAbs / lossTrades);
+        double avgWin = winTrades == 0 ? 0.0 : winRTotal / winTrades;
+        double avgLoss = lossTrades == 0 ? 0.0 : -(lossRAbsTotal / lossTrades);
         double winRate = totalTrades == 0 ? 0.0 : (winTrades * 1.0) / totalTrades;
         double lossRate = totalTrades == 0 ? 0.0 : (lossTrades * 1.0) / totalTrades;
         double expectancy = (winRate * avgWin) + (lossRate * avgLoss);
+        if (totalTrades > 0 && winTrades == 0 && lossTrades == 0) {
+            expectancy = totalR / totalTrades;
+        }
         double maxDrawdown = calculateMaxDrawdown(trades);
         Double profitFactor = grossLossAbs == 0.0 ? null : grossProfit / grossLossAbs;
 
