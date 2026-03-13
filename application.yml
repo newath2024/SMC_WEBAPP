@@ -26,10 +26,3 @@ spring:
 billing:
   webhook:
     secret: ${BILLING_WEBHOOK_SECRET:}
-
-app:
-  admin:
-    bootstrap:
-      email: ${APP_ADMIN_BOOTSTRAP_EMAIL:}
-      username: ${APP_ADMIN_BOOTSTRAP_USERNAME:}
-      password: ${APP_ADMIN_BOOTSTRAP_PASSWORD:}

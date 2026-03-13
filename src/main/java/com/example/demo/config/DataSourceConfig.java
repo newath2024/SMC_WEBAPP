@@ -16,7 +16,6 @@ public class DataSourceConfig {
     @Bean
     DataSource dataSource(Environment environment) {
         String configuredUrl = firstNonBlank(
-                environment.getProperty("spring.datasource.url"),
                 environment.getProperty("SPRING_DATASOURCE_URL"),
                 environment.getProperty("DATABASE_URL"));
         DatabaseSettings settings = StringUtils.hasText(configuredUrl)
@@ -24,7 +23,7 @@ public class DataSourceConfig {
                 : resolveSettingsFromParts(environment);
 
         HikariConfig config = new HikariConfig();
-        config.setDriverClassName(settings.driverClassName());
+        config.setDriverClassName("org.postgresql.Driver");
         config.setJdbcUrl(settings.jdbcUrl());
         config.setUsername(settings.username());
         config.setPassword(settings.password());
@@ -36,19 +35,9 @@ public class DataSourceConfig {
 
     private DatabaseSettings resolveSettings(Environment environment, String rawUrl) {
         String jdbcUrl = toJdbcUrl(rawUrl, environment.getProperty("DB_SSL_MODE"));
-        String username = firstNonBlank(
-                environment.getProperty("spring.datasource.username"),
-                environment.getProperty("SPRING_DATASOURCE_USERNAME"),
-                extractUsername(rawUrl));
-        String password = firstNonBlank(
-                environment.getProperty("spring.datasource.password"),
-                environment.getProperty("SPRING_DATASOURCE_PASSWORD"),
-                extractPassword(rawUrl));
-        String driverClassName = firstNonBlank(
-                environment.getProperty("spring.datasource.driver-class-name"),
-                environment.getProperty("SPRING_DATASOURCE_DRIVER_CLASS_NAME"),
-                inferDriverClassName(jdbcUrl));
-        return new DatabaseSettings(jdbcUrl, username, password, driverClassName);
+        String username = firstNonBlank(environment.getProperty("SPRING_DATASOURCE_USERNAME"), extractUsername(rawUrl));
+        String password = firstNonBlank(environment.getProperty("SPRING_DATASOURCE_PASSWORD"), extractPassword(rawUrl));
+        return new DatabaseSettings(jdbcUrl, username, password);
     }
 
     private DatabaseSettings resolveSettingsFromParts(Environment environment) {
@@ -66,13 +55,10 @@ public class DataSourceConfig {
         String sslMode = environment.getProperty("DB_SSL_MODE");
         String jdbcUrl = "jdbc:postgresql://" + host + ":" + port + "/" + database
                 + (StringUtils.hasText(sslMode) ? "?sslmode=" + sslMode : "");
-        return new DatabaseSettings(jdbcUrl, username, password, "org.postgresql.Driver");
+        return new DatabaseSettings(jdbcUrl, username, password);
     }
 
     private String toJdbcUrl(String rawUrl, String sslMode) {
-        if (rawUrl.startsWith("jdbc:sqlite:")) {
-            return rawUrl;
-        }
         if (rawUrl.startsWith("jdbc:postgresql://")) {
             return appendSslMode(rawUrl, sslMode);
         }
@@ -86,16 +72,6 @@ public class DataSourceConfig {
             return appendSslMode(jdbcUrl, sslMode);
         }
         throw new IllegalStateException("Unsupported database URL: " + rawUrl);
-    }
-
-    private String inferDriverClassName(String jdbcUrl) {
-        if (jdbcUrl.startsWith("jdbc:sqlite:")) {
-            return "org.sqlite.JDBC";
-        }
-        if (jdbcUrl.startsWith("jdbc:postgresql://")) {
-            return "org.postgresql.Driver";
-        }
-        throw new IllegalStateException("Unsupported JDBC URL: " + jdbcUrl);
     }
 
     private String appendSslMode(String jdbcUrl, String sslMode) {
@@ -137,6 +113,6 @@ public class DataSourceConfig {
         return null;
     }
 
-    private record DatabaseSettings(String jdbcUrl, String username, String password, String driverClassName) {
+    private record DatabaseSettings(String jdbcUrl, String username, String password) {
     }
 }
