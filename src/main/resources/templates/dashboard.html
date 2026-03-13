@@ -140,7 +140,7 @@
                th:text="${comparison.profitFactorDelta >= 0 ? '+' : '-'} + #numbers.formatDecimal(T(java.lang.Math).abs(comparison.profitFactorDelta), 1, 2) + ' vs last period'">+0.00 vs last period</div>
           <div class="metric-delta"
                th:if="${comparison == null or comparison.profitFactorDelta == null}"
-               th:text="${'Expectancy ' + #numbers.formatDecimal(riskMetrics.expectancy, 1, 2) + 'R'}">Expectancy 0.00R</div>
+               th:text="${'Expectancy ' + #numbers.formatDecimal(riskMetrics.expectancy, 1, 2)}">Expectancy 0.00</div>
         </article>
 
         <article class="metric-card">
