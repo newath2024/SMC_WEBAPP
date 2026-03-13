@@ -11,9 +11,11 @@ public class AuthService {
 
     private final UserRepository userRepository;
     private final BCryptPasswordEncoder passwordEncoder;
+    private final AdminBootstrapService adminBootstrapService;
 
-    public AuthService(UserRepository userRepository) {
+    public AuthService(UserRepository userRepository, AdminBootstrapService adminBootstrapService) {
         this.userRepository = userRepository;
+        this.adminBootstrapService = adminBootstrapService;
         this.passwordEncoder = new BCryptPasswordEncoder();
     }
 
@@ -39,7 +41,8 @@ public class AuthService {
         user.setPlanType(PlanType.STANDARD);
         user.setActive(true);
 
-        return userRepository.save(user);
+        User savedUser = userRepository.save(user);
+        return adminBootstrapService.ensureConfiguredAdmin(savedUser);
     }
 
     public User login(String usernameOrEmail, String rawPassword) {
@@ -58,6 +61,8 @@ public class AuthService {
         if (user == null) {
             throw new IllegalArgumentException("Invalid username/email or password");
         }
+
+        user = adminBootstrapService.ensureConfiguredAdmin(user);
 
         if (!user.isActive()) {
             throw new IllegalArgumentException("Your account is inactive");
