@@ -64,7 +64,7 @@ public class AnalyticsService {
         ProcessMetrics processMetrics = buildProcessMetrics(filteredTrades);
 
         List<BreakdownRow> bySetup = buildBreakdown(filteredTrades, Trade::getSetupName);
-        List<BreakdownRow> bySession = buildBreakdown(filteredTrades, Trade::getSession);
+        List<BreakdownRow> bySession = buildSessionBreakdown(filteredTrades);
         List<BreakdownRow> bySymbol = buildBreakdown(filteredTrades, Trade::getSymbol);
         List<TrendPoint> equityCurve = buildEquityCurve(filteredTrades);
         List<MistakeFrequencyRow> mistakeFrequency = buildMistakeFrequency(filteredTrades);
@@ -348,6 +348,21 @@ public class AnalyticsService {
         return rows;
     }
 
+    private List<BreakdownRow> buildSessionBreakdown(List<Trade> trades) {
+        return buildBreakdown(trades, Trade::getSession).stream()
+                .map(row -> new BreakdownRow(
+                        formatSessionLabel(row.getLabel()),
+                        row.getTotalTrades(),
+                        row.getWinTrades(),
+                        row.getWinRate(),
+                        row.getTotalPnl(),
+                        row.getAvgPnl(),
+                        row.getTotalR(),
+                        row.getAvgR()
+                ))
+                .toList();
+    }
+
     private String normalizeLabel(String rawLabel) {
         if (rawLabel == null || rawLabel.isBlank()) {
             return "N/A";
@@ -583,7 +598,7 @@ public class AnalyticsService {
     }
 
     private List<SessionPerformanceRow> buildSessionPerformance(List<Trade> trades) {
-        List<BreakdownRow> rows = buildBreakdown(trades, Trade::getSession);
+        List<BreakdownRow> rows = buildSessionBreakdown(trades);
         return rows.stream()
                 .map(row -> new SessionPerformanceRow(
                         row.getLabel(),
@@ -592,6 +607,19 @@ public class AnalyticsService {
                         row.getTotalPnl()
                 ))
                 .toList();
+    }
+
+    private String formatSessionLabel(String rawLabel) {
+        if (rawLabel == null || rawLabel.isBlank()) {
+            return "Other";
+        }
+        return switch (rawLabel.trim().toUpperCase(Locale.ROOT)) {
+            case "ASIA" -> "Asia";
+            case "LONDON" -> "London";
+            case "NEW_YORK" -> "New York";
+            case "OTHER" -> "Other";
+            default -> rawLabel.replace('_', ' ');
+        };
     }
 
     private List<DayOfWeekPerformanceRow> buildDayOfWeekPerformance(List<Trade> trades) {
