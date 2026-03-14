@@ -3,6 +3,7 @@ package com.example.demo.controller;
 import com.example.demo.entity.Trade;
 import com.example.demo.entity.TradeReview;
 import com.example.demo.entity.User;
+import com.example.demo.entity.Setup;
 import com.example.demo.service.MistakeTagService;
 import com.example.demo.service.Mt5ImportService;
 import com.example.demo.service.TradeImageService;
@@ -202,6 +203,7 @@ public class TradeController {
     public String create(
             @Valid @ModelAttribute("trade") Trade trade,
             BindingResult bindingResult,
+            @RequestParam(value = "setupId", required = false) String setupId,
             @RequestParam(value = "mistakeIds", required = false) List<String> mistakeIds,
             @RequestParam(value = "customMistakes", required = false) String customMistakes,
             Model model,
@@ -222,6 +224,7 @@ public class TradeController {
             return "tradeForm";
         }
 
+        applySubmittedSetup(trade, setupId);
         if (trade.getSetup() == null || trade.getSetup().getId() == null || trade.getSetup().getId().isBlank()) {
             bindingResult.rejectValue("setup", "required", "Setup is required");
         }
@@ -230,6 +233,7 @@ public class TradeController {
             model.addAttribute("editMode", false);
             fillTradeFormData(model, currentUser);
             model.addAttribute("trade", trade);
+            model.addAttribute("error", buildFormErrorSummary(bindingResult));
             return "tradeForm";
         }
 
@@ -320,6 +324,7 @@ public class TradeController {
             @PathVariable String id,
             @Valid @ModelAttribute("trade") Trade trade,
             BindingResult bindingResult,
+            @RequestParam(value = "setupId", required = false) String setupId,
             @RequestParam(value = "mistakeIds", required = false) List<String> mistakeIds,
             @RequestParam(value = "customMistakes", required = false) String customMistakes,
             Model model,
@@ -330,6 +335,7 @@ public class TradeController {
             return "redirect:/login";
         }
 
+        applySubmittedSetup(trade, setupId);
         if (trade.getSetup() == null || trade.getSetup().getId() == null || trade.getSetup().getId().isBlank()) {
             bindingResult.rejectValue("setup", "required", "Setup is required");
         }
@@ -340,6 +346,7 @@ public class TradeController {
             model.addAttribute("editMode", true);
             model.addAttribute("tradeImages", tradeImageService.findByTradeId(id));
             fillTradeFormData(model, currentUser);
+            model.addAttribute("error", buildFormErrorSummary(bindingResult));
             return "tradeForm";
         }
 
@@ -475,5 +482,35 @@ public class TradeController {
         model.addAttribute("qualityGrade", tradeReviewService.resolveScoreGrade(review.getQualityScore()));
         model.addAttribute("qualityLabel", tradeReviewService.resolveScoreLabel(review.getQualityScore()));
         model.addAttribute("processOutcomeLabel", tradeReviewService.resolveProcessOutcomeLabel(trade, review));
+    }
+
+    private String buildFormErrorSummary(BindingResult bindingResult) {
+        if (bindingResult == null || !bindingResult.hasErrors()) {
+            return "Please review the highlighted fields and try again.";
+        }
+
+        return bindingResult.getFieldErrors().stream()
+                .map(fieldError -> fieldError.getField() + ": " + fieldError.getDefaultMessage())
+                .distinct()
+                .reduce((left, right) -> left + " | " + right)
+                .orElse("Please review the highlighted fields and try again.");
+    }
+
+    private void applySubmittedSetup(Trade trade, String setupId) {
+        if (trade == null) {
+            return;
+        }
+
+        if (setupId == null || setupId.isBlank()) {
+            trade.setSetup(null);
+            return;
+        }
+
+        Setup setup = trade.getSetup();
+        if (setup == null) {
+            setup = new Setup();
+            trade.setSetup(setup);
+        }
+        setup.setId(setupId.trim());
     }
 }
