@@ -85,10 +85,10 @@
               <label class="form-label" for="sessionMode">Session</label>
               <select id="sessionMode" class="form-select" name="sessionMode">
                 <option value="AUTO" selected>Auto infer</option>
-                <option value="ASIA">ASIA</option>
-                <option value="LONDON">LONDON</option>
-                <option value="NEW_YORK">NEW_YORK</option>
-                <option value="OTHER">OTHER</option>
+                <option value="ASIA">Asia</option>
+                <option value="LONDON">London</option>
+                <option value="NEW_YORK">New York</option>
+                <option value="OTHER">Other</option>
               </select>
             </div>
             <div class="col-12">
@@ -135,7 +135,9 @@
            th:if="${(selectedSetup != null and !#strings.isEmpty(selectedSetup)) or (selectedSession != null and !#strings.isEmpty(selectedSession)) or (selectedSymbol != null and !#strings.isEmpty(selectedSymbol)) or selectedFrom != null or selectedTo != null or (param.result != null and !#strings.isEmpty(param.result[0])) or (param.mistake != null and !#strings.isEmpty(param.mistake[0]))}">
         <span class="me-2">Active filters:</span>
         <span class="badge text-bg-primary me-1" th:if="${selectedSetup != null and !#strings.isEmpty(selectedSetup)}" th:text="${'Setup: ' + selectedSetup}"></span>
-        <span class="badge text-bg-primary me-1" th:if="${selectedSession != null and !#strings.isEmpty(selectedSession)}" th:text="${'Session: ' + selectedSession}"></span>
+        <span class="badge text-bg-primary me-1"
+              th:if="${selectedSession != null and !#strings.isEmpty(selectedSession)}"
+              th:text="${'Session: ' + (selectedSession == 'NEW_YORK' ? 'New York' : (selectedSession == 'LONDON' ? 'London' : (selectedSession == 'ASIA' ? 'Asia' : (selectedSession == 'OTHER' ? 'Other' : #strings.replace(selectedSession, '_', ' ')))))}"></span>
         <span class="badge text-bg-primary me-1" th:if="${selectedSymbol != null and !#strings.isEmpty(selectedSymbol)}" th:text="${'Symbol: ' + selectedSymbol}"></span>
         <span class="badge text-bg-primary me-1" th:if="${param.result != null and !#strings.isEmpty(param.result[0])}" th:text="${'Result: ' + param.result[0]}"></span>
         <span class="badge text-bg-primary me-1" th:if="${param.mistake != null and !#strings.isEmpty(param.mistake[0])}" th:text="${'Mistake: ' + param.mistake[0]}"></span>
@@ -182,10 +184,10 @@
                 <label class="form-label" for="sessionFilter">Session</label>
                 <select id="sessionFilter" class="form-select" name="session">
                   <option value="">All sessions</option>
-                  <option value="ASIA" th:selected="${selectedSession == 'ASIA'}">ASIA</option>
-                  <option value="LONDON" th:selected="${selectedSession == 'LONDON'}">LONDON</option>
-                  <option value="NEW_YORK" th:selected="${selectedSession == 'NEW_YORK'}">NEW_YORK</option>
-                  <option value="OTHER" th:selected="${selectedSession == 'OTHER'}">OTHER</option>
+                  <option value="ASIA" th:selected="${selectedSession == 'ASIA'}">Asia</option>
+                  <option value="LONDON" th:selected="${selectedSession == 'LONDON'}">London</option>
+                  <option value="NEW_YORK" th:selected="${selectedSession == 'NEW_YORK'}">New York</option>
+                  <option value="OTHER" th:selected="${selectedSession == 'OTHER'}">Other</option>
                 </select>
               </div>
               <div class="trade-filter-field">
@@ -282,7 +284,7 @@
                 <td>
                   <span class="trade-session-badge"
                         th:classappend="${t.session == 'ASIA' ? ' trade-session-asia' : (t.session == 'LONDON' ? ' trade-session-london' : (t.session == 'NEW_YORK' ? ' trade-session-newyork' : ' trade-session-other'))}"
-                        th:text="${t.session != null ? #strings.replace(t.session, '_', ' ') : 'OTHER'}">LONDON</span>
+                        th:text="${t.session == 'NEW_YORK' ? 'New York' : (t.session == 'LONDON' ? 'London' : (t.session == 'ASIA' ? 'Asia' : (t.session == 'OTHER' ? 'Other' : 'Other')))}">London</span>
                 </td>
                 <td>
                   <span class="trade-result-badge"

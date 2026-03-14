@@ -234,8 +234,10 @@
         <div class="col-12">
           <article class="card shadow-sm border-0 billing-card">
             <div class="card-header bg-transparent border-0 pb-0">
-              <h2 class="section-title h5 mb-1">Plan Comparison</h2>
-              <p class="section-copy mb-0">Feature differences between Standard and Pro.</p>
+              <h2 class="section-title h5 mb-1"
+                  th:text="${hasProAccess ? 'Current Plan' : 'Plan Comparison'}">Plan Comparison</h2>
+              <p class="section-copy mb-0"
+                 th:text="${hasProAccess ? 'Included features and limits in your Pro subscription.' : 'Feature differences between Standard and Pro.'}">Feature differences between Standard and Pro.</p>
             </div>
             <div class="card-body">
               <div class="table-responsive">
@@ -243,22 +245,50 @@
                   <thead>
                   <tr>
                     <th scope="col">Feature</th>
-                    <th scope="col">Standard</th>
-                    <th scope="col">Pro</th>
+                    <th scope="col" th:if="${!hasProAccess}">Standard</th>
+                    <th scope="col" th:text="${hasProAccess ? 'Pro Plan' : 'Pro'}">Pro</th>
                   </tr>
                   </thead>
                   <tbody>
-                  <tr><td>Monthly Price</td><td>$0</td><td>$29</td></tr>
-                  <tr><td>Trade Limit</td><td>100 / month</td><td>500 / month</td></tr>
-                  <tr><td>Storage</td><td>2GB</td><td>10GB</td></tr>
-                  <tr><td>Analytics Workspace</td><td>Core insights</td><td>Advanced workspace</td></tr>
-                  <tr><td>CSV Export</td><td>Up to 10 exports</td><td>Up to 25 exports</td></tr>
-                  <tr><td>Screenshot Upload</td><td>50 files</td><td>250 files</td></tr>
-                  <tr><td>Payment Methods</td><td>Visa, Crypto</td><td>Visa, Crypto</td></tr>
+                  <tr>
+                    <td>Monthly Price</td>
+                    <td th:if="${!hasProAccess}">$0</td>
+                    <td>$29</td>
+                  </tr>
+                  <tr>
+                    <td>Trade Limit</td>
+                    <td th:if="${!hasProAccess}">100 / month</td>
+                    <td>500 / month</td>
+                  </tr>
+                  <tr>
+                    <td>Storage</td>
+                    <td th:if="${!hasProAccess}">2GB</td>
+                    <td>10GB</td>
+                  </tr>
+                  <tr>
+                    <td>Analytics Workspace</td>
+                    <td th:if="${!hasProAccess}">Core insights</td>
+                    <td>Advanced workspace</td>
+                  </tr>
+                  <tr>
+                    <td>CSV Export</td>
+                    <td th:if="${!hasProAccess}">Up to 10 exports</td>
+                    <td>Up to 25 exports</td>
+                  </tr>
+                  <tr>
+                    <td>Screenshot Upload</td>
+                    <td th:if="${!hasProAccess}">50 files</td>
+                    <td>250 files</td>
+                  </tr>
+                  <tr>
+                    <td>Payment Methods</td>
+                    <td th:if="${!hasProAccess}">Visa, Crypto</td>
+                    <td>Visa, Crypto</td>
+                  </tr>
                   </tbody>
                 </table>
               </div>
-              <div class="mt-3">
+              <div class="mt-3" th:if="${!hasProAccess}">
                 <button class="btn btn-primary rounded-pill px-4" type="button">Upgrade to Pro</button>
               </div>
             </div>
