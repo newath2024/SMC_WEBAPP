@@ -54,7 +54,7 @@
             </div>
           </div>
 
-          <form class="row g-3 align-items-end" method="post" th:action="@{/trades/import}" enctype="multipart/form-data">
+          <form class="row g-3 align-items-start" method="post" th:action="@{/trades/import}" enctype="multipart/form-data">
             <div class="col-12 col-xl-4">
               <label class="form-label" for="mt5File">MT5 File</label>
               <input id="mt5File" class="form-control" type="file" name="file" accept=".xlsx,.xls" required>
