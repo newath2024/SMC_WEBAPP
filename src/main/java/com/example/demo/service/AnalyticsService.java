@@ -108,6 +108,7 @@ public class AnalyticsService {
         Map<String, TradeReview> reviewMap = buildReviewMap(filteredTrades);
 
         return new AnalyticsWorkspaceReport(
+                buildWorkspaceSummary(filteredTrades),
                 buildRDistribution(filteredTrades),
                 buildExpectancyBySetup(filteredTrades),
                 buildMistakeImpact(filteredTrades, reviewMap),
@@ -252,6 +253,53 @@ public class AnalyticsService {
                 round2(avgPnl),
                 round2(totalR),
                 round2(avgR)
+        );
+    }
+
+    private WorkspaceSummary buildWorkspaceSummary(List<Trade> trades) {
+        int totalTrades = trades.size();
+        int winTrades = 0;
+        int lossTrades = 0;
+        double netPnl = 0.0;
+        double totalWinPnl = 0.0;
+        double totalLossPnl = 0.0;
+        Double maxProfit = null;
+        Double maxLoss = null;
+
+        for (Trade trade : trades) {
+            double pnl = trade.getPnl();
+            netPnl += pnl;
+
+            if (pnl > 0) {
+                winTrades++;
+                totalWinPnl += pnl;
+                if (maxProfit == null || pnl > maxProfit) {
+                    maxProfit = pnl;
+                }
+            }
+            if (pnl < 0) {
+                lossTrades++;
+                totalLossPnl += pnl;
+                if (maxLoss == null || pnl < maxLoss) {
+                    maxLoss = pnl;
+                }
+            }
+        }
+
+        double avgPnl = totalTrades == 0 ? 0.0 : netPnl / totalTrades;
+        Double avgWinPnl = winTrades == 0 ? null : round2(totalWinPnl / winTrades);
+        Double avgLossPnl = lossTrades == 0 ? null : round2(totalLossPnl / lossTrades);
+
+        return new WorkspaceSummary(
+                totalTrades,
+                winTrades,
+                lossTrades,
+                round2(netPnl),
+                round2(avgPnl),
+                avgWinPnl,
+                avgLossPnl,
+                maxProfit == null ? null : round2(maxProfit),
+                maxLoss == null ? null : round2(maxLoss)
         );
     }
 
@@ -952,7 +1000,78 @@ public class AnalyticsService {
         }
     }
 
+    public static class WorkspaceSummary {
+        private final int totalTrades;
+        private final int winTrades;
+        private final int lossTrades;
+        private final double netPnl;
+        private final double avgPnl;
+        private final Double avgWinPnl;
+        private final Double avgLossPnl;
+        private final Double maxProfit;
+        private final Double maxLoss;
+
+        public WorkspaceSummary(
+                int totalTrades,
+                int winTrades,
+                int lossTrades,
+                double netPnl,
+                double avgPnl,
+                Double avgWinPnl,
+                Double avgLossPnl,
+                Double maxProfit,
+                Double maxLoss
+        ) {
+            this.totalTrades = totalTrades;
+            this.winTrades = winTrades;
+            this.lossTrades = lossTrades;
+            this.netPnl = netPnl;
+            this.avgPnl = avgPnl;
+            this.avgWinPnl = avgWinPnl;
+            this.avgLossPnl = avgLossPnl;
+            this.maxProfit = maxProfit;
+            this.maxLoss = maxLoss;
+        }
+
+        public int getTotalTrades() {
+            return totalTrades;
+        }
+
+        public int getWinTrades() {
+            return winTrades;
+        }
+
+        public int getLossTrades() {
+            return lossTrades;
+        }
+
+        public double getNetPnl() {
+            return netPnl;
+        }
+
+        public double getAvgPnl() {
+            return avgPnl;
+        }
+
+        public Double getAvgWinPnl() {
+            return avgWinPnl;
+        }
+
+        public Double getAvgLossPnl() {
+            return avgLossPnl;
+        }
+
+        public Double getMaxProfit() {
+            return maxProfit;
+        }
+
+        public Double getMaxLoss() {
+            return maxLoss;
+        }
+    }
+
     public static class AnalyticsWorkspaceReport {
+        private final WorkspaceSummary summary;
         private final List<RDistributionRow> rDistribution;
         private final List<ExpectancyBySetupRow> expectancyBySetup;
         private final List<MistakeImpactRow> mistakeImpact;
@@ -966,6 +1085,7 @@ public class AnalyticsService {
         private final List<String> availableSetups;
 
         public AnalyticsWorkspaceReport(
+                WorkspaceSummary summary,
                 List<RDistributionRow> rDistribution,
                 List<ExpectancyBySetupRow> expectancyBySetup,
                 List<MistakeImpactRow> mistakeImpact,
@@ -978,6 +1098,7 @@ public class AnalyticsService {
                 List<String> availableSymbols,
                 List<String> availableSetups
         ) {
+            this.summary = summary;
             this.rDistribution = rDistribution;
             this.expectancyBySetup = expectancyBySetup;
             this.mistakeImpact = mistakeImpact;
@@ -989,6 +1110,10 @@ public class AnalyticsService {
             this.availableAccounts = availableAccounts;
             this.availableSymbols = availableSymbols;
             this.availableSetups = availableSetups;
+        }
+
+        public WorkspaceSummary getSummary() {
+            return summary;
         }
 
         public List<RDistributionRow> getRDistribution() {

@@ -14,7 +14,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -287,8 +286,8 @@ public class TradeService {
     }
 
     private void refreshRMultiples(List<Trade> trades) {
-        Map<String, Double> setupMedianLosses = buildSetupMedianLosses(trades);
-        Double accountMedianLoss = calculateMedianLoss(trades.stream()
+        Map<String, Double> setupAverageLosses = buildSetupAverageLosses(trades);
+        Double accountAverageLoss = calculateAverageLoss(trades.stream()
                 .mapToDouble(Trade::getPnl)
                 .filter(pnl -> pnl < 0)
                 .map(Math::abs)
@@ -296,13 +295,13 @@ public class TradeService {
                 .toList());
 
         for (Trade trade : trades) {
-            RMultipleComputation computation = resolveRMultiple(trade, setupMedianLosses, accountMedianLoss);
+            RMultipleComputation computation = resolveRMultiple(trade, setupAverageLosses, accountAverageLoss);
             trade.setRMultiple(computation.value() == null ? 0.0 : computation.value());
             trade.setRMultipleSource(computation.source());
         }
     }
 
-    private Map<String, Double> buildSetupMedianLosses(List<Trade> trades) {
+    private Map<String, Double> buildSetupAverageLosses(List<Trade> trades) {
         Map<String, List<Double>> setupLosses = new HashMap<>();
 
         for (Trade trade : trades) {
@@ -319,29 +318,34 @@ public class TradeService {
                     .add(Math.abs(trade.getPnl()));
         }
 
-        Map<String, Double> medians = new HashMap<>();
+        Map<String, Double> averages = new HashMap<>();
         for (Map.Entry<String, List<Double>> entry : setupLosses.entrySet()) {
-            Double median = calculateMedianLoss(entry.getValue());
-            if (median != null && median > 0) {
-                medians.put(entry.getKey(), median);
+            Double averageLoss = calculateAverageLoss(entry.getValue());
+            if (averageLoss != null && averageLoss > 0) {
+                averages.put(entry.getKey(), averageLoss);
             }
         }
-        return medians;
+        return averages;
     }
 
-    private Double calculateMedianLoss(List<Double> losses) {
+    private Double calculateAverageLoss(List<Double> losses) {
         if (losses == null || losses.isEmpty()) {
             return null;
         }
 
-        List<Double> sorted = new ArrayList<>(losses);
-        sorted.sort(Comparator.naturalOrder());
-        int size = sorted.size();
-        int mid = size / 2;
-        if (size % 2 == 1) {
-            return sorted.get(mid);
+        double totalLoss = 0.0;
+        int validLosses = 0;
+        for (Double loss : losses) {
+            if (loss == null || loss <= 0) {
+                continue;
+            }
+            totalLoss += loss;
+            validLosses++;
         }
-        return round2((sorted.get(mid - 1) + sorted.get(mid)) / 2.0);
+        if (totalLoss <= 0 || validLosses == 0) {
+            return null;
+        }
+        return round2(totalLoss / validLosses);
     }
 
     private String resolveSetupRiskKey(Trade trade) {
@@ -351,7 +355,7 @@ public class TradeService {
         return trade.getSetup().getId().trim();
     }
 
-    private RMultipleComputation resolveRMultiple(Trade trade, Map<String, Double> setupMedianLosses, Double accountMedianLoss) {
+    private RMultipleComputation resolveRMultiple(Trade trade, Map<String, Double> setupAverageLosses, Double accountAverageLoss) {
         Double exactR = calculateExactRMultiple(trade);
         if (exactR != null) {
             return new RMultipleComputation(round2(exactR), "EXACT");
@@ -366,14 +370,14 @@ public class TradeService {
 
         String setupKey = resolveSetupRiskKey(trade);
         if (setupKey != null) {
-            Double setupMedianLoss = setupMedianLosses.get(setupKey);
-            if (setupMedianLoss != null && setupMedianLoss > 0) {
-                return new RMultipleComputation(round2(trade.getPnl() / setupMedianLoss), "ESTIMATED_SETUP");
+            Double setupAverageLoss = setupAverageLosses.get(setupKey);
+            if (setupAverageLoss != null && setupAverageLoss > 0) {
+                return new RMultipleComputation(round2(trade.getPnl() / setupAverageLoss), "ESTIMATED_SETUP");
             }
         }
 
-        if (accountMedianLoss != null && accountMedianLoss > 0) {
-            return new RMultipleComputation(round2(trade.getPnl() / accountMedianLoss), "ESTIMATED_ACCOUNT");
+        if (accountAverageLoss != null && accountAverageLoss > 0) {
+            return new RMultipleComputation(round2(trade.getPnl() / accountAverageLoss), "ESTIMATED_ACCOUNT");
         }
 
         return new RMultipleComputation(null, "UNKNOWN");

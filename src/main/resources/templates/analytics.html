@@ -81,6 +81,61 @@
         </form>
       </section>
 
+      <section class="workspace-summary-grid" th:with="summary=${analyticsReport.summary}">
+        <article class="analytics-card summary-card">
+          <span class="summary-label">Net PnL</span>
+          <strong class="summary-value"
+                  th:classappend="${summary.totalTrades > 0 and summary.netPnl > 0} ? ' value-positive' : (${summary.totalTrades > 0 and summary.netPnl < 0} ? ' value-negative' : '')"
+                  th:text="${summary.totalTrades > 0 ? (summary.netPnl >= 0 ? '+$' + #numbers.formatDecimal(summary.netPnl, 1, 2) : '-$' + #numbers.formatDecimal(T(java.lang.Math).abs(summary.netPnl), 1, 2)) : 'N/A'}">+$0.00</strong>
+          <span class="summary-meta"
+                th:text="${summary.totalTrades > 0 ? summary.totalTrades + ' trades in current filter' : 'No trades in current filter'}">0 trades in current filter</span>
+        </article>
+
+        <article class="analytics-card summary-card">
+          <span class="summary-label">Avg PnL / Trade</span>
+          <strong class="summary-value"
+                  th:classappend="${summary.totalTrades > 0 and summary.avgPnl > 0} ? ' value-positive' : (${summary.totalTrades > 0 and summary.avgPnl < 0} ? ' value-negative' : '')"
+                  th:text="${summary.totalTrades > 0 ? (summary.avgPnl >= 0 ? '+$' + #numbers.formatDecimal(summary.avgPnl, 1, 2) : '-$' + #numbers.formatDecimal(T(java.lang.Math).abs(summary.avgPnl), 1, 2)) : 'N/A'}">+$0.00</strong>
+          <span class="summary-meta">Average realized USD per trade</span>
+        </article>
+
+        <article class="analytics-card summary-card">
+          <span class="summary-label">Avg Win USD</span>
+          <strong class="summary-value"
+                  th:classappend="${summary.avgWinPnl != null} ? ' value-positive' : ''"
+                  th:text="${summary.avgWinPnl != null ? '+$' + #numbers.formatDecimal(summary.avgWinPnl, 1, 2) : 'N/A'}">+$0.00</strong>
+          <span class="summary-meta"
+                th:text="${summary.avgWinPnl != null ? 'Across ' + summary.winTrades + ' winning trades' : 'No winning trades in current filter'}">Across 0 winning trades</span>
+        </article>
+
+        <article class="analytics-card summary-card">
+          <span class="summary-label">Avg Loss USD</span>
+          <strong class="summary-value"
+                  th:classappend="${summary.avgLossPnl != null} ? ' value-negative' : ''"
+                  th:text="${summary.avgLossPnl != null ? '-$' + #numbers.formatDecimal(T(java.lang.Math).abs(summary.avgLossPnl), 1, 2) : 'N/A'}">-$0.00</strong>
+          <span class="summary-meta"
+                th:text="${summary.avgLossPnl != null ? 'Across ' + summary.lossTrades + ' losing trades' : 'No losing trades in current filter'}">Across 0 losing trades</span>
+        </article>
+
+        <article class="analytics-card summary-card">
+          <span class="summary-label">Max Profit</span>
+          <strong class="summary-value"
+                  th:classappend="${summary.maxProfit != null} ? ' value-positive' : ''"
+                  th:text="${summary.maxProfit != null ? '+$' + #numbers.formatDecimal(summary.maxProfit, 1, 2) : 'N/A'}">+$0.00</strong>
+          <span class="summary-meta"
+                th:text="${summary.maxProfit != null ? 'Largest winning trade in this filter' : 'No winning trades in current filter'}">Largest winning trade in this filter</span>
+        </article>
+
+        <article class="analytics-card summary-card">
+          <span class="summary-label">Max Loss</span>
+          <strong class="summary-value"
+                  th:classappend="${summary.maxLoss != null} ? ' value-negative' : ''"
+                  th:text="${summary.maxLoss != null ? '-$' + #numbers.formatDecimal(T(java.lang.Math).abs(summary.maxLoss), 1, 2) : 'N/A'}">-$0.00</strong>
+          <span class="summary-meta"
+                th:text="${summary.maxLoss != null ? 'Largest losing trade in this filter' : 'No losing trades in current filter'}">Largest losing trade in this filter</span>
+        </article>
+      </section>
+
       <section class="premium-grid" th:if="${!hasProAccess}">
         <article class="locked-card">
           <div class="locked-title">Setup Performance <i class="bi bi-lock-fill"></i></div>
