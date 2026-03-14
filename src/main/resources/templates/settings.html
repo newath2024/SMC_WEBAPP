@@ -174,16 +174,19 @@
 
       <section class="row g-3">
         <div class="col-12 col-xl-6">
-          <article class="card shadow-sm border-0 settings-card h-100">
+          <article id="preferences-card" class="card shadow-sm border-0 settings-card h-100">
             <div class="card-header bg-transparent border-0 pb-0">
               <h2 class="section-title h5 mb-1">Trading Preferences</h2>
               <p class="section-copy mb-0">Set the defaults used when you journal new trades and view charts.</p>
             </div>
             <div class="card-body">
-              <form class="row g-3">
+              <div class="alert alert-success settings-inline-alert" th:if="${preferencesSuccess != null}" th:text="${preferencesSuccess}">Trading preferences updated successfully.</div>
+              <div class="alert alert-danger settings-inline-alert" th:if="${preferencesError != null}" th:text="${preferencesError}">Trading preferences update failed.</div>
+
+              <form class="row g-3" method="post" th:action="@{/settings/preferences}">
                 <div class="col-md-6">
                   <label class="form-label" for="defaultAccount">Default account</label>
-                  <select id="defaultAccount" class="form-select">
+                  <select id="defaultAccount" class="form-select" name="defaultAccount">
                     <option th:each="account : ${accountOptions}"
                             th:value="${account}"
                             th:selected="${account == selectedDefaultAccount}"
@@ -192,7 +195,7 @@
                 </div>
                 <div class="col-md-6">
                   <label class="form-label" for="defaultCurrency">Currency</label>
-                  <select id="defaultCurrency" class="form-select">
+                  <select id="defaultCurrency" class="form-select" name="preferredCurrency">
                     <option th:each="currency : ${currencyOptions}"
                             th:value="${currency}"
                             th:selected="${currency == selectedCurrency}"
@@ -201,7 +204,7 @@
                 </div>
                 <div class="col-md-6">
                   <label class="form-label" for="riskUnit">Risk unit</label>
-                  <select id="riskUnit" class="form-select">
+                  <select id="riskUnit" class="form-select" name="riskUnit">
                     <option th:each="riskUnit : ${riskUnitOptions}"
                             th:value="${riskUnit}"
                             th:selected="${riskUnit == selectedRiskUnit}"
@@ -210,7 +213,7 @@
                 </div>
                 <div class="col-md-6">
                   <label class="form-label" for="chartTimezone">Chart timezone</label>
-                  <select id="chartTimezone" class="form-select">
+                  <select id="chartTimezone" class="form-select" name="chartTimezone">
                     <option th:each="timezone : ${timezoneOptions}"
                             th:value="${timezone}"
                             th:selected="${timezone == selectedChartTimezone}"
@@ -232,7 +235,7 @@
                 <div class="col-12">
                   <div class="settings-form-actions">
                     <span class="field-meta">These defaults help keep your journal entries fast and consistent.</span>
-                    <button class="btn btn-primary rounded-pill px-4" type="button">Save preferences</button>
+                    <button class="btn btn-primary rounded-pill px-4" type="submit">Save preferences</button>
                   </div>
                 </div>
               </form>
@@ -241,45 +244,52 @@
         </div>
 
         <div class="col-12 col-xl-6">
-          <article class="card shadow-sm border-0 settings-card h-100">
+          <article id="notifications-card" class="card shadow-sm border-0 settings-card h-100">
             <div class="card-header bg-transparent border-0 pb-0">
               <h2 class="section-title h5 mb-1">Notifications</h2>
               <p class="section-copy mb-0">Control which account updates and summaries you receive by email.</p>
             </div>
             <div class="card-body">
-              <div class="switch-stack">
-                <div class="switch-card">
-                  <div>
-                    <div class="switch-title">Email notifications</div>
-                    <p class="section-copy mb-0">Important account activity and login alerts.</p>
+              <div class="alert alert-success settings-inline-alert" th:if="${notificationsSuccess != null}" th:text="${notificationsSuccess}">Notification settings updated successfully.</div>
+
+              <form method="post" th:action="@{/settings/notifications}">
+                <div class="switch-stack">
+                  <div class="switch-card">
+                    <div>
+                      <div class="switch-title">Email notifications</div>
+                      <p class="section-copy mb-0">Important account activity and login alerts.</p>
+                    </div>
+                    <div class="form-check form-switch m-0">
+                      <input type="hidden" name="emailNotificationsEnabled" value="false">
+                      <input id="emailNotifications" class="form-check-input" type="checkbox" name="emailNotificationsEnabled" value="true" th:checked="${emailNotificationsEnabled}">
+                    </div>
                   </div>
-                  <div class="form-check form-switch m-0">
-                    <input id="emailNotifications" class="form-check-input" type="checkbox" th:checked="${emailNotificationsEnabled}">
+                  <div class="switch-card">
+                    <div>
+                      <div class="switch-title">Weekly report summary</div>
+                      <p class="section-copy mb-0">Receive a weekly recap of performance, mistakes, and process quality.</p>
+                    </div>
+                    <div class="form-check form-switch m-0">
+                      <input type="hidden" name="weeklySummaryEnabled" value="false">
+                      <input id="weeklySummary" class="form-check-input" type="checkbox" name="weeklySummaryEnabled" value="true" th:checked="${weeklySummaryEnabled}">
+                    </div>
+                  </div>
+                  <div class="switch-card">
+                    <div>
+                      <div class="switch-title">Billing notifications</div>
+                      <p class="section-copy mb-0">Renewals, invoices, payment failures, and trial reminders.</p>
+                    </div>
+                    <div class="form-check form-switch m-0">
+                      <input type="hidden" name="billingNotificationsEnabled" value="false">
+                      <input id="billingNotifications" class="form-check-input" type="checkbox" name="billingNotificationsEnabled" value="true" th:checked="${billingNotificationsEnabled}">
+                    </div>
                   </div>
                 </div>
-                <div class="switch-card">
-                  <div>
-                    <div class="switch-title">Weekly report summary</div>
-                    <p class="section-copy mb-0">Receive a weekly recap of performance, mistakes, and process quality.</p>
-                  </div>
-                  <div class="form-check form-switch m-0">
-                    <input id="weeklySummary" class="form-check-input" type="checkbox" th:checked="${weeklySummaryEnabled}">
-                  </div>
+                <div class="settings-form-actions mt-3">
+                  <span class="field-meta">Billing notices stay enabled for important payment events.</span>
+                  <button class="btn btn-primary rounded-pill px-4" type="submit">Save notifications</button>
                 </div>
-                <div class="switch-card">
-                  <div>
-                    <div class="switch-title">Billing notifications</div>
-                    <p class="section-copy mb-0">Renewals, invoices, payment failures, and trial reminders.</p>
-                  </div>
-                  <div class="form-check form-switch m-0">
-                    <input id="billingNotifications" class="form-check-input" type="checkbox" th:checked="${billingNotificationsEnabled}">
-                  </div>
-                </div>
-              </div>
-              <div class="settings-form-actions mt-3">
-                <span class="field-meta">Billing notices stay enabled for important payment events.</span>
-                <button class="btn btn-primary rounded-pill px-4" type="button">Save notifications</button>
-              </div>
+              </form>
             </div>
           </article>
         </div>

@@ -102,6 +102,61 @@ public class SettingsController {
         return "redirect:/settings#security-card";
     }
 
+    @PostMapping("/settings/preferences")
+    public String updateTradingPreferences(
+            @RequestParam("defaultAccount") String defaultAccount,
+            @RequestParam("preferredCurrency") String preferredCurrency,
+            @RequestParam("riskUnit") String riskUnit,
+            @RequestParam("chartTimezone") String chartTimezone,
+            HttpSession session,
+            RedirectAttributes redirectAttributes
+    ) {
+        User currentUser = userService.getCurrentUser(session);
+        if (currentUser == null) {
+            return "redirect:/login";
+        }
+
+        try {
+            validateAllowedValue(defaultAccount, ACCOUNT_OPTIONS, "Default account");
+            validateAllowedValue(preferredCurrency, CURRENCY_OPTIONS, "Currency");
+            validateAllowedValue(riskUnit, RISK_UNIT_OPTIONS, "Risk unit");
+            validateAllowedValue(chartTimezone, TIMEZONE_OPTIONS, "Chart timezone");
+            settingsService.updateTradingPreferences(currentUser, defaultAccount, preferredCurrency, riskUnit, chartTimezone);
+            redirectAttributes.addFlashAttribute("preferencesSuccess", "Trading preferences updated successfully.");
+        } catch (IllegalArgumentException e) {
+            redirectAttributes.addFlashAttribute("preferencesError", e.getMessage());
+            redirectAttributes.addFlashAttribute("selectedDefaultAccount", defaultAccount);
+            redirectAttributes.addFlashAttribute("selectedCurrency", preferredCurrency);
+            redirectAttributes.addFlashAttribute("selectedRiskUnit", riskUnit);
+            redirectAttributes.addFlashAttribute("selectedChartTimezone", chartTimezone);
+        }
+
+        return "redirect:/settings#preferences-card";
+    }
+
+    @PostMapping("/settings/notifications")
+    public String updateNotifications(
+            @RequestParam(value = "emailNotificationsEnabled", required = false) List<String> emailNotificationsEnabled,
+            @RequestParam(value = "weeklySummaryEnabled", required = false) List<String> weeklySummaryEnabled,
+            @RequestParam(value = "billingNotificationsEnabled", required = false) List<String> billingNotificationsEnabled,
+            HttpSession session,
+            RedirectAttributes redirectAttributes
+    ) {
+        User currentUser = userService.getCurrentUser(session);
+        if (currentUser == null) {
+            return "redirect:/login";
+        }
+
+        settingsService.updateNotifications(
+                currentUser,
+                containsTrue(emailNotificationsEnabled),
+                containsTrue(weeklySummaryEnabled),
+                containsTrue(billingNotificationsEnabled)
+        );
+        redirectAttributes.addFlashAttribute("notificationsSuccess", "Notification settings updated successfully.");
+        return "redirect:/settings#notifications-card";
+    }
+
     private void populateSettingsModel(Model model, User currentUser) {
         boolean hasProAccess = userService.hasProAccess(currentUser);
         int tradeLimit = userService.resolveTradeLimit(currentUser);
@@ -137,10 +192,18 @@ public class SettingsController {
             model.addAttribute("profileAvatarDataUrl", currentUser.getAvatarDataUrl());
         }
 
-        model.addAttribute("selectedDefaultAccount", hasProAccess ? "Pro Main Account" : "Personal Journal Account");
-        model.addAttribute("selectedCurrency", "USD");
-        model.addAttribute("selectedRiskUnit", "R_MULTIPLE");
-        model.addAttribute("selectedChartTimezone", "America/New_York");
+        if (!model.containsAttribute("selectedDefaultAccount")) {
+            model.addAttribute("selectedDefaultAccount", valueOrDefault(currentUser.getDefaultAccount(), hasProAccess ? "Pro Main Account" : "Personal Journal Account"));
+        }
+        if (!model.containsAttribute("selectedCurrency")) {
+            model.addAttribute("selectedCurrency", valueOrDefault(currentUser.getPreferredCurrency(), "USD"));
+        }
+        if (!model.containsAttribute("selectedRiskUnit")) {
+            model.addAttribute("selectedRiskUnit", valueOrDefault(currentUser.getRiskUnit(), "R_MULTIPLE"));
+        }
+        if (!model.containsAttribute("selectedChartTimezone")) {
+            model.addAttribute("selectedChartTimezone", valueOrDefault(currentUser.getChartTimezone(), "America/New_York"));
+        }
 
         model.addAttribute("timezoneOptions", TIMEZONE_OPTIONS);
         model.addAttribute("countryOptions", COUNTRY_OPTIONS);
@@ -148,12 +211,32 @@ public class SettingsController {
         model.addAttribute("currencyOptions", CURRENCY_OPTIONS);
         model.addAttribute("riskUnitOptions", RISK_UNIT_OPTIONS);
 
-        model.addAttribute("emailNotificationsEnabled", true);
-        model.addAttribute("weeklySummaryEnabled", hasProAccess);
-        model.addAttribute("billingNotificationsEnabled", true);
+        if (!model.containsAttribute("emailNotificationsEnabled")) {
+            model.addAttribute("emailNotificationsEnabled", boolOrDefault(currentUser.getEmailNotificationsEnabled(), true));
+        }
+        if (!model.containsAttribute("weeklySummaryEnabled")) {
+            model.addAttribute("weeklySummaryEnabled", boolOrDefault(currentUser.getWeeklySummaryEnabled(), hasProAccess));
+        }
+        if (!model.containsAttribute("billingNotificationsEnabled")) {
+            model.addAttribute("billingNotificationsEnabled", boolOrDefault(currentUser.getBillingNotificationsEnabled(), true));
+        }
     }
 
     private String valueOrDefault(String value, String fallback) {
         return value == null || value.isBlank() ? fallback : value;
+    }
+
+    private boolean boolOrDefault(Boolean value, boolean fallback) {
+        return value == null ? fallback : value;
+    }
+
+    private void validateAllowedValue(String submittedValue, List<String> allowedValues, String fieldName) {
+        if (submittedValue == null || submittedValue.isBlank() || !allowedValues.contains(submittedValue)) {
+            throw new IllegalArgumentException(fieldName + " selection is invalid");
+        }
+    }
+
+    private boolean containsTrue(List<String> values) {
+        return values != null && values.stream().anyMatch(value -> "true".equalsIgnoreCase(value));
     }
 }
