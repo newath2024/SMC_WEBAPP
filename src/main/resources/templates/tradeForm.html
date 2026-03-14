@@ -198,7 +198,7 @@
                       This older trade does not have an original stop saved yet. Fill this once to keep R accurate.
                     </div>
                     <div class="form-text text-warning" th:if="${editMode and trade.importedFromMt5 and !trade.exactRMultiple}">
-                      MT5 imports without a confirmed initial stop use Estimated R from average loss until you fill this field.
+                      MT5 imports without a confirmed initial stop use Estimated R from account average loss until you fill this field.
                     </div>
                   </div>
 
@@ -235,7 +235,7 @@
                            type="text"
                            th:value="${trade.knownRMultiple ? (trade.estimatedRMultiple ? '~' : '') + #numbers.formatDecimal(trade.rMultiple, 1, 2) : ''}"
                            readonly>
-                    <div class="form-text">Auto-calculated on save. Exact R uses Initial Stop Loss; MT5 imports can fall back to Estimated R.</div>
+                    <div class="form-text">Auto-calculated on save. Exact R uses Initial Stop Loss; trades without that can fall back to Estimated R from account average loss.</div>
                     <div class="form-text" th:if="${editMode}" th:text="${'Current R source: ' + trade.rMultipleSourceLabel}">Current R source: Exact</div>
                   </div>
                 </div>
