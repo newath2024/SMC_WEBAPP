@@ -23,7 +23,7 @@
     <aside th:replace="~{fragments/sidebar :: appSidebar('trades', @{/dashboard/export.csv(period='ALL')})}"></aside>
 
     <main class="main-content">
-<section class="trade-hero">
+      <section class="trade-hero">
         <div>
           <p class="trade-eyebrow mb-2">Trading journal</p>
           <h2 class="m-0">Trades</h2>
@@ -34,6 +34,70 @@
             <i class="bi bi-plus-lg"></i>
             <span>New Trade</span>
           </a>
+        </div>
+      </section>
+
+      <div class="alert alert-success mb-0" th:if="${importSuccess != null}" th:text="${importSuccess}">
+        Import completed.
+      </div>
+
+      <div class="alert alert-danger mb-0" th:if="${importError != null}" th:text="${importError}">
+        Import failed.
+      </div>
+
+      <section class="card shadow-sm trade-table-card" th:if="${!adminView}">
+        <div class="card-body">
+          <div class="trade-list-header">
+            <div>
+              <h5 class="card-title mb-1">Import MT5 History</h5>
+              <p class="trade-list-copy mb-0">Upload an MT5 history export (.xlsx or .xls). We import closed positions from the Positions section, skip duplicates, and ignore Orders/Deals.</p>
+            </div>
+          </div>
+
+          <form class="row g-3 align-items-end" method="post" th:action="@{/trades/import}" enctype="multipart/form-data">
+            <div class="col-12 col-xl-4">
+              <label class="form-label" for="mt5File">MT5 File</label>
+              <input id="mt5File" class="form-control" type="file" name="file" accept=".xlsx,.xls" required>
+              <div class="form-text">Use the MT5 trade history report file you exported from desktop.</div>
+            </div>
+            <div class="col-12 col-md-4 col-xl-2">
+              <label class="form-label" for="setupName">Setup Name</label>
+              <input id="setupName" class="form-control" type="text" name="setupName" value="MT5 Import">
+            </div>
+            <div class="col-6 col-md-2 col-xl-2">
+              <label class="form-label" for="defaultHtf">Default HTF</label>
+              <select id="defaultHtf" class="form-select" name="defaultHtf">
+                <option value="H4">H4</option>
+                <option value="H1" selected>H1</option>
+                <option value="M30">M30</option>
+                <option value="M15">M15</option>
+              </select>
+            </div>
+            <div class="col-6 col-md-2 col-xl-2">
+              <label class="form-label" for="defaultLtf">Default LTF</label>
+              <select id="defaultLtf" class="form-select" name="defaultLtf">
+                <option value="M15">M15</option>
+                <option value="M5" selected>M5</option>
+                <option value="M1">M1</option>
+              </select>
+            </div>
+            <div class="col-12 col-md-4 col-xl-2">
+              <label class="form-label" for="sessionMode">Session</label>
+              <select id="sessionMode" class="form-select" name="sessionMode">
+                <option value="AUTO" selected>Auto infer</option>
+                <option value="ASIA">ASIA</option>
+                <option value="LONDON">LONDON</option>
+                <option value="NEW_YORK">NEW_YORK</option>
+                <option value="OTHER">OTHER</option>
+              </select>
+            </div>
+            <div class="col-12">
+              <button class="btn btn-outline-primary" type="submit">
+                <i class="bi bi-upload me-1"></i>
+                Import Trades
+              </button>
+            </div>
+          </form>
         </div>
       </section>
 

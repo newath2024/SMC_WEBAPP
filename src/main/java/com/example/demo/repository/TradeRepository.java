@@ -11,11 +11,23 @@ import java.util.Optional;
 
 public interface TradeRepository extends JpaRepository<Trade, String> {
 
+    long countByUserId(String userId);
+
     @EntityGraph(attributePaths = {"setup"})
     List<Trade> findByUserIdOrderByEntryTimeDesc(String userId);
 
     @EntityGraph(attributePaths = {"setup"})
     Optional<Trade> findByIdAndUserId(String id, String userId);
+
+    boolean existsByUserIdAndEntryTimeAndExitTimeAndSymbolIgnoreCaseAndDirectionIgnoreCaseAndPositionSizeAndEntryPrice(
+            String userId,
+            java.time.LocalDateTime entryTime,
+            java.time.LocalDateTime exitTime,
+            String symbol,
+            String direction,
+            double positionSize,
+            double entryPrice
+    );
 
     @Query("""
             select t.setup.id as setupId,

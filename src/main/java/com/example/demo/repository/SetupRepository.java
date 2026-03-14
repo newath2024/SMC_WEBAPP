@@ -14,6 +14,8 @@ public interface SetupRepository extends JpaRepository<Setup, String> {
 
     List<Setup> findByUserIdOrderByActiveDescNameAsc(String userId);
 
+    Optional<Setup> findByUserIdAndNameIgnoreCase(String userId, String name);
+
     Optional<Setup> findByIdAndUserId(String id, String userId);
 
     boolean existsByUserIdAndNameIgnoreCase(String userId, String name);

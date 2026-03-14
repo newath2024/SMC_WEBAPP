@@ -4,6 +4,7 @@ import com.example.demo.entity.Trade;
 import com.example.demo.entity.TradeReview;
 import com.example.demo.entity.User;
 import com.example.demo.service.MistakeTagService;
+import com.example.demo.service.Mt5ImportService;
 import com.example.demo.service.TradeImageService;
 import com.example.demo.service.TradeReviewService;
 import com.example.demo.service.SetupService;
@@ -13,10 +14,13 @@ import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import org.springframework.dao.CannotAcquireLockException;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -34,6 +38,7 @@ public class TradeController {
     private final MistakeTagService mistakeTagService;
     private final TradeImageService tradeImageService;
     private final TradeReviewService tradeReviewService;
+    private final Mt5ImportService mt5ImportService;
 
     public TradeController(
             TradeService tradeService,
@@ -41,7 +46,8 @@ public class TradeController {
             SetupService setupService,
             MistakeTagService mistakeTagService,
             TradeImageService tradeImageService,
-            TradeReviewService tradeReviewService
+            TradeReviewService tradeReviewService,
+            Mt5ImportService mt5ImportService
     ) {
         this.tradeService = tradeService;
         this.userService = userService;
@@ -49,6 +55,7 @@ public class TradeController {
         this.mistakeTagService = mistakeTagService;
         this.tradeImageService = tradeImageService;
         this.tradeReviewService = tradeReviewService;
+        this.mt5ImportService = mt5ImportService;
     }
 
     private void fillTradeFormData(Model model, User currentUser) {
@@ -151,6 +158,44 @@ public class TradeController {
         }
         fillTradeFormData(model, currentUser);
         return "tradeForm";
+    }
+
+    @PostMapping(value = "/import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public String importMt5History(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(value = "setupName", required = false) String setupName,
+            @RequestParam(value = "defaultHtf", required = false) String defaultHtf,
+            @RequestParam(value = "defaultLtf", required = false) String defaultLtf,
+            @RequestParam(value = "sessionMode", required = false) String sessionMode,
+            RedirectAttributes redirectAttributes,
+            HttpSession session
+    ) {
+        User currentUser = userService.getCurrentUser(session);
+        if (currentUser == null) {
+            return "redirect:/login";
+        }
+        if (userService.isAdmin(currentUser)) {
+            return "redirect:/trades";
+        }
+
+        try {
+            Mt5ImportService.ImportResult result = mt5ImportService.importWorkbook(
+                    file,
+                    currentUser,
+                    new Mt5ImportService.ImportOptions(setupName, defaultHtf, defaultLtf, sessionMode)
+            );
+
+            String successMessage = "Imported " + result.importedCount()
+                    + " trades into setup '" + result.setupName()
+                    + "' from account '" + result.accountLabel()
+                    + "'. Duplicates skipped: " + result.duplicateCount()
+                    + ". Unusable rows skipped: " + result.skippedCount() + ".";
+            redirectAttributes.addFlashAttribute("importSuccess", successMessage);
+        } catch (IllegalArgumentException | IllegalStateException ex) {
+            redirectAttributes.addFlashAttribute("importError", ex.getMessage());
+        }
+
+        return "redirect:/trades";
     }
 
     @PostMapping
