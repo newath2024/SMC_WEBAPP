@@ -5,6 +5,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
+import jakarta.persistence.Lob;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
@@ -25,6 +26,14 @@ public class User {
 
     @Column(nullable = false, unique = true)
     private String email;
+
+    private String timezone;
+
+    private String country;
+
+    @Lob
+    @Column(name = "avatar_data_url")
+    private String avatarDataUrl;
 
     @Column(name = "password_hash", nullable = false)
     private String passwordHash;
@@ -94,6 +103,30 @@ public class User {
 
     public void setPasswordHash(String passwordHash) {
         this.passwordHash = passwordHash;
+    }
+
+    public String getTimezone() {
+        return timezone;
+    }
+
+    public void setTimezone(String timezone) {
+        this.timezone = timezone;
+    }
+
+    public String getCountry() {
+        return country;
+    }
+
+    public void setCountry(String country) {
+        this.country = country;
+    }
+
+    public String getAvatarDataUrl() {
+        return avatarDataUrl;
+    }
+
+    public void setAvatarDataUrl(String avatarDataUrl) {
+        this.avatarDataUrl = avatarDataUrl;
     }
 
     public String getRole() {

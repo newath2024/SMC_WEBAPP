@@ -140,8 +140,9 @@
             <i class="bi bi-credit-card-2-front sidebar-icon nav-icon"></i>
             <span class="nav-label nav-text">Billing</span>
           </a>
-          <a th:href="@{/dashboard(period=${period != null ? period : 'ALL'}, from=${from}, to=${to}, userId=${selectedUserId})}"
-             class="sidebar-link nav-item">
+          <a th:href="@{/settings}"
+             class="sidebar-link nav-item"
+             th:classappend="${activePage == 'settings'} ? ' active' : ''">
             <i class="bi bi-gear-fill sidebar-icon nav-icon"></i>
             <span class="nav-label nav-text">Settings</span>
           </a>
