@@ -83,9 +83,12 @@
 
                   <div class="col-md-4">
                     <label class="form-label">Setup</label>
-                    <select class="form-select" th:field="*{setup.id}">
+                    <select class="form-select" name="setupId">
                       <option value="">-- Select setup --</option>
-                      <option th:each="s : ${setups}" th:value="${s.id}" th:text="${s.name}"></option>
+                      <option th:each="s : ${setups}"
+                              th:value="${s.id}"
+                              th:text="${s.name}"
+                              th:selected="${trade.setup != null and trade.setup.id == s.id}"></option>
                     </select>
                     <div class="text-danger small" th:if="${#fields.hasErrors('setup')}" th:errors="*{setup}"></div>
                   </div>
@@ -204,12 +207,21 @@
 
                   <div class="col-md-3">
                     <label class="form-label">PnL</label>
-                    <input id="pnl" class="form-control" type="number" step="0.01" th:field="*{pnl}" readonly>
+                    <input id="pnl"
+                           class="form-control"
+                           type="text"
+                           th:value="${#numbers.formatDecimal(trade.pnl, 1, 2)}"
+                           readonly>
                   </div>
 
                   <div class="col-md-3">
                     <label class="form-label">R Multiple</label>
-                    <input id="rMultiple" class="form-control" type="number" step="0.01" th:field="*{rMultiple}" readonly>
+                    <input id="rMultiple"
+                           class="form-control"
+                           type="text"
+                           th:value="${#numbers.formatDecimal(trade.rMultiple, 1, 2)}"
+                           readonly>
+                    <div class="form-text">Auto-calculated on save. If SL is moved to entry, R can stay blank or 0.</div>
                   </div>
                 </div>
               </section>
