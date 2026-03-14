@@ -8,6 +8,8 @@ import java.util.Optional;
 
 public interface BillingInvoiceRepository extends JpaRepository<BillingInvoice, String> {
     List<BillingInvoice> findTop200ByOrderByInvoiceDateDesc();
+    List<BillingInvoice> findByUserIdOrderByInvoiceDateDesc(String userId);
     boolean existsByInvoiceNo(String invoiceNo);
     Optional<BillingInvoice> findByInvoiceNo(String invoiceNo);
+    void deleteByUserId(String userId);
 }

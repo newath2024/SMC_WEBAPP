@@ -19,6 +19,8 @@ public interface TradeRepository extends JpaRepository<Trade, String> {
     @EntityGraph(attributePaths = {"setup"})
     Optional<Trade> findByIdAndUserId(String id, String userId);
 
+    void deleteByUserId(String userId);
+
     boolean existsByUserIdAndEntryTimeAndExitTimeAndSymbolIgnoreCaseAndDirectionIgnoreCaseAndPositionSizeAndEntryPrice(
             String userId,
             java.time.LocalDateTime entryTime,

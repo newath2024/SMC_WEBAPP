@@ -34,6 +34,7 @@
             <h2 class="form-title">Sign in</h2>
             <p class="form-subtitle">Track and analyze your trades</p>
 
+            <div th:if="${message}" class="alert alert-success" th:text="${message}"></div>
             <div th:if="${error}" class="alert alert-danger" th:text="${error}"></div>
 
             <form method="post" action="/login" class="d-grid gap-3">

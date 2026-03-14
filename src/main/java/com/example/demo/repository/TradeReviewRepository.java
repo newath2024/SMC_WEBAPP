@@ -19,4 +19,6 @@ public interface TradeReviewRepository extends JpaRepository<TradeReview, String
     List<TradeReview> findByTradeIdIn(List<String> tradeIds);
 
     void deleteByTradeId(String tradeId);
+
+    void deleteByTradeIdIn(List<String> tradeIds);
 }

@@ -11,4 +11,5 @@ public interface BillingSubscriptionRepository extends JpaRepository<BillingSubs
     Optional<BillingSubscription> findByProviderCustomerId(String providerCustomerId);
     Optional<BillingSubscription> findByProviderSubscriptionId(String providerSubscriptionId);
     List<BillingSubscription> findAllByOrderByUpdatedAtDesc();
+    void deleteByUserId(String userId);
 }

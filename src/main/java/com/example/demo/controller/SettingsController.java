@@ -1,10 +1,14 @@
 package com.example.demo.controller;
 
 import com.example.demo.entity.User;
+import com.example.demo.service.AccountPrivacyService;
 import com.example.demo.service.SettingsService;
 import com.example.demo.service.TradeService;
 import com.example.demo.service.UserService;
 import jakarta.servlet.http.HttpSession;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -30,11 +34,18 @@ public class SettingsController {
     private final UserService userService;
     private final TradeService tradeService;
     private final SettingsService settingsService;
+    private final AccountPrivacyService accountPrivacyService;
 
-    public SettingsController(UserService userService, TradeService tradeService, SettingsService settingsService) {
+    public SettingsController(
+            UserService userService,
+            TradeService tradeService,
+            SettingsService settingsService,
+            AccountPrivacyService accountPrivacyService
+    ) {
         this.userService = userService;
         this.tradeService = tradeService;
         this.settingsService = settingsService;
+        this.accountPrivacyService = accountPrivacyService;
     }
 
     @GetMapping("/settings")
@@ -155,6 +166,56 @@ public class SettingsController {
         );
         redirectAttributes.addFlashAttribute("notificationsSuccess", "Notification settings updated successfully.");
         return "redirect:/settings#notifications-card";
+    }
+
+    @GetMapping("/settings/export/all")
+    public ResponseEntity<byte[]> exportAllData(HttpSession session) {
+        User currentUser = userService.getCurrentUser(session);
+        if (currentUser == null) {
+            return ResponseEntity.status(401).build();
+        }
+
+        AccountPrivacyService.ExportFile exportFile = accountPrivacyService.exportAllData(currentUser);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + exportFile.fileName() + "\"")
+                .contentType(MediaType.parseMediaType(exportFile.contentType()))
+                .body(exportFile.content());
+    }
+
+    @GetMapping("/settings/export/trades.csv")
+    public ResponseEntity<byte[]> exportTradesCsv(HttpSession session) {
+        User currentUser = userService.getCurrentUser(session);
+        if (currentUser == null) {
+            return ResponseEntity.status(401).build();
+        }
+
+        AccountPrivacyService.ExportFile exportFile = accountPrivacyService.exportTradesCsv(currentUser);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + exportFile.fileName() + "\"")
+                .contentType(MediaType.parseMediaType(exportFile.contentType()))
+                .body(exportFile.content());
+    }
+
+    @PostMapping("/settings/delete-account")
+    public String deleteAccount(
+            @RequestParam("currentPassword") String currentPassword,
+            @RequestParam("confirmationText") String confirmationText,
+            HttpSession session,
+            RedirectAttributes redirectAttributes
+    ) {
+        User currentUser = userService.getCurrentUser(session);
+        if (currentUser == null) {
+            return "redirect:/login";
+        }
+
+        try {
+            accountPrivacyService.deleteAccount(currentUser, currentPassword, confirmationText);
+            session.invalidate();
+            return "redirect:/login?accountDeleted=1";
+        } catch (IllegalArgumentException e) {
+            redirectAttributes.addFlashAttribute("dangerError", e.getMessage());
+            return "redirect:/settings#danger-zone-card";
+        }
     }
 
     private void populateSettingsModel(Model model, User currentUser) {

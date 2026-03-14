@@ -21,4 +21,6 @@ public interface SetupRepository extends JpaRepository<Setup, String> {
     boolean existsByUserIdAndNameIgnoreCase(String userId, String name);
 
     boolean existsByUserIdAndNameIgnoreCaseAndIdNot(String userId, String name, String id);
+
+    void deleteByUserId(String userId);
 }
