@@ -93,6 +93,32 @@ public class SettingsService {
         return userRepository.save(currentUser);
     }
 
+    public User updateTradingPreferences(
+            User currentUser,
+            String defaultAccount,
+            String preferredCurrency,
+            String riskUnit,
+            String chartTimezone
+    ) {
+        currentUser.setDefaultAccount(normalize(defaultAccount));
+        currentUser.setPreferredCurrency(normalize(preferredCurrency).toUpperCase(Locale.ROOT));
+        currentUser.setRiskUnit(normalize(riskUnit).toUpperCase(Locale.ROOT));
+        currentUser.setChartTimezone(defaultIfBlank(normalize(chartTimezone), DEFAULT_TIMEZONE));
+        return userRepository.save(currentUser);
+    }
+
+    public User updateNotifications(
+            User currentUser,
+            boolean emailNotificationsEnabled,
+            boolean weeklySummaryEnabled,
+            boolean billingNotificationsEnabled
+    ) {
+        currentUser.setEmailNotificationsEnabled(emailNotificationsEnabled);
+        currentUser.setWeeklySummaryEnabled(weeklySummaryEnabled);
+        currentUser.setBillingNotificationsEnabled(billingNotificationsEnabled);
+        return userRepository.save(currentUser);
+    }
+
     private void validateProfileInput(User currentUser, String username, String email) {
         if (username.isBlank()) {
             throw new IllegalArgumentException("Name must not be blank");

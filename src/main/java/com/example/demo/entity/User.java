@@ -35,6 +35,27 @@ public class User {
     @Column(name = "avatar_data_url")
     private String avatarDataUrl;
 
+    @Column(name = "default_account")
+    private String defaultAccount;
+
+    @Column(name = "preferred_currency", length = 10)
+    private String preferredCurrency;
+
+    @Column(name = "risk_unit", length = 20)
+    private String riskUnit;
+
+    @Column(name = "chart_timezone")
+    private String chartTimezone;
+
+    @Column(name = "email_notifications_enabled")
+    private Boolean emailNotificationsEnabled;
+
+    @Column(name = "weekly_summary_enabled")
+    private Boolean weeklySummaryEnabled;
+
+    @Column(name = "billing_notifications_enabled")
+    private Boolean billingNotificationsEnabled;
+
     @Column(name = "password_hash", nullable = false)
     private String passwordHash;
 
@@ -127,6 +148,62 @@ public class User {
 
     public void setAvatarDataUrl(String avatarDataUrl) {
         this.avatarDataUrl = avatarDataUrl;
+    }
+
+    public String getDefaultAccount() {
+        return defaultAccount;
+    }
+
+    public void setDefaultAccount(String defaultAccount) {
+        this.defaultAccount = defaultAccount;
+    }
+
+    public String getPreferredCurrency() {
+        return preferredCurrency;
+    }
+
+    public void setPreferredCurrency(String preferredCurrency) {
+        this.preferredCurrency = preferredCurrency;
+    }
+
+    public String getRiskUnit() {
+        return riskUnit;
+    }
+
+    public void setRiskUnit(String riskUnit) {
+        this.riskUnit = riskUnit;
+    }
+
+    public String getChartTimezone() {
+        return chartTimezone;
+    }
+
+    public void setChartTimezone(String chartTimezone) {
+        this.chartTimezone = chartTimezone;
+    }
+
+    public Boolean getEmailNotificationsEnabled() {
+        return emailNotificationsEnabled;
+    }
+
+    public void setEmailNotificationsEnabled(Boolean emailNotificationsEnabled) {
+        this.emailNotificationsEnabled = emailNotificationsEnabled;
+    }
+
+    public Boolean getWeeklySummaryEnabled() {
+        return weeklySummaryEnabled;
+    }
+
+    public void setWeeklySummaryEnabled(Boolean weeklySummaryEnabled) {
+        this.weeklySummaryEnabled = weeklySummaryEnabled;
+    }
+
+    public Boolean getBillingNotificationsEnabled() {
+        return billingNotificationsEnabled;
+    }
+
+    public void setBillingNotificationsEnabled(Boolean billingNotificationsEnabled) {
+        this.billingNotificationsEnabled = billingNotificationsEnabled;
     }
 
     public String getRole() {
