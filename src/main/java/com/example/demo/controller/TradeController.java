@@ -88,7 +88,12 @@ public class TradeController {
                 .count();
         double winRate = trades.isEmpty() ? 0.0 : (winCount * 100.0) / trades.size();
         double totalPnl = trades.stream().mapToDouble(Trade::getPnl).sum();
-        double averageR = trades.isEmpty() ? 0.0 : trades.stream().mapToDouble(Trade::getRMultiple).average().orElse(0.0);
+        long knownRCount = trades.stream().filter(Trade::hasKnownRMultiple).count();
+        double averageR = knownRCount == 0 ? 0.0 : trades.stream()
+                .filter(Trade::hasKnownRMultiple)
+                .mapToDouble(Trade::getRMultiple)
+                .average()
+                .orElse(0.0);
 
         model.addAttribute("trades", trades);
         model.addAttribute("filteredView", filteredView);
@@ -100,6 +105,7 @@ public class TradeController {
         model.addAttribute("selectedFrom", from);
         model.addAttribute("selectedTo", to);
         model.addAttribute("tradeCount", trades.size());
+        model.addAttribute("knownRTradeCount", knownRCount);
         model.addAttribute("winCount", winCount);
         model.addAttribute("winRate", winRate);
         model.addAttribute("totalPnl", totalPnl);

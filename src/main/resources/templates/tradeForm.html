@@ -190,9 +190,23 @@
                   </div>
 
                   <div class="col-md-3">
-                    <label class="form-label">Stop Loss</label>
+                    <label class="form-label">Initial Stop Loss</label>
+                    <input id="initialStopLoss" class="form-control" type="number" step="0.00001" th:field="*{initialStopLoss}">
+                    <div class="text-danger small" th:if="${#fields.hasErrors('initialStopLoss')}" th:errors="*{initialStopLoss}"></div>
+                    <div class="form-text">Used to calculate R. Keep this at the original stop, even if you later move SL to BE or trail it.</div>
+                    <div class="form-text text-warning" th:if="${editMode and trade.initialStopLoss == null}">
+                      This older trade does not have an original stop saved yet. Fill this once to keep R accurate.
+                    </div>
+                    <div class="form-text text-warning" th:if="${editMode and trade.importedFromMt5 and !trade.exactRMultiple}">
+                      MT5 imports without a confirmed initial stop use Estimated R from median loss until you fill this field.
+                    </div>
+                  </div>
+
+                  <div class="col-md-3">
+                    <label class="form-label">Current Stop Loss</label>
                     <input id="stopLoss" class="form-control" type="number" step="0.00001" th:field="*{stopLoss}">
                     <div class="text-danger small" th:if="${#fields.hasErrors('stopLoss')}" th:errors="*{stopLoss}"></div>
+                    <div class="form-text">This can move during trade management and does not change the original risk basis.</div>
                   </div>
 
                   <div class="col-md-3">
@@ -219,9 +233,10 @@
                     <input id="rMultiple"
                            class="form-control"
                            type="text"
-                           th:value="${#numbers.formatDecimal(trade.rMultiple, 1, 2)}"
+                           th:value="${trade.knownRMultiple ? (trade.estimatedRMultiple ? '~' : '') + #numbers.formatDecimal(trade.rMultiple, 1, 2) : ''}"
                            readonly>
-                    <div class="form-text">Auto-calculated on save. If SL is moved to entry, R can stay blank or 0.</div>
+                    <div class="form-text">Auto-calculated on save. Exact R uses Initial Stop Loss; MT5 imports can fall back to Estimated R.</div>
+                    <div class="form-text" th:if="${editMode}" th:text="${'Current R source: ' + trade.rMultipleSourceLabel}">Current R source: Exact</div>
                   </div>
                 </div>
               </section>

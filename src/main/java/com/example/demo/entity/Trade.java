@@ -63,6 +63,13 @@ public class Trade {
     @Positive
     private double stopLoss;
 
+    @Column(name = "initial_stop_loss")
+    @Positive
+    private Double initialStopLoss;
+
+    @Column(name = "initial_stop_loss_confirmed")
+    private Boolean initialStopLossConfirmed;
+
     @Positive
     private double takeProfit;
 
@@ -77,6 +84,9 @@ public class Trade {
 
     @Column(name = "r_multiple")
     private double rMultiple;
+
+    @Column(name = "r_multiple_source", length = 32)
+    private String rMultipleSource;
 
     private String session; // ASIA / LONDON / NEW_YORK / OTHER
 
@@ -247,6 +257,54 @@ public class Trade {
         this.stopLoss = stopLoss;
     }
 
+    public Double getInitialStopLoss() {
+        return initialStopLoss;
+    }
+
+    public void setInitialStopLoss(Double initialStopLoss) {
+        this.initialStopLoss = initialStopLoss;
+    }
+
+    public Boolean getInitialStopLossConfirmed() {
+        return initialStopLossConfirmed;
+    }
+
+    public void setInitialStopLossConfirmed(Boolean initialStopLossConfirmed) {
+        this.initialStopLossConfirmed = initialStopLossConfirmed;
+    }
+
+    @Transient
+    public double getRiskStopLoss() {
+        if (hasExactRiskBasis() && initialStopLoss != null && initialStopLoss > 0) {
+            return initialStopLoss;
+        }
+        return stopLoss;
+    }
+
+    @Transient
+    public boolean isImportedFromMt5() {
+        return note != null && note.startsWith("Imported from MT5 history");
+    }
+
+    @Transient
+    public boolean hasExactRiskBasis() {
+        if (Boolean.TRUE.equals(initialStopLossConfirmed)) {
+            return initialStopLoss != null && initialStopLoss > 0;
+        }
+        if (Boolean.FALSE.equals(initialStopLossConfirmed)) {
+            return false;
+        }
+        if (isImportedFromMt5()) {
+            return false;
+        }
+        return (initialStopLoss != null && initialStopLoss > 0) || stopLoss > 0;
+    }
+
+    @Transient
+    public boolean isExactRiskBasis() {
+        return hasExactRiskBasis();
+    }
+
     public double getTakeProfit() {
         return takeProfit;
     }
@@ -293,6 +351,58 @@ public class Trade {
 
     public void setRMultiple(double rMultiple) {
         this.rMultiple = rMultiple;
+    }
+
+    public String getRMultipleSource() {
+        return rMultipleSource;
+    }
+
+    public void setRMultipleSource(String rMultipleSource) {
+        this.rMultipleSource = rMultipleSource;
+    }
+
+    @Transient
+    public boolean hasKnownRMultiple() {
+        return rMultipleSource != null && !"UNKNOWN".equalsIgnoreCase(rMultipleSource);
+    }
+
+    @Transient
+    public boolean hasEstimatedRMultiple() {
+        return rMultipleSource != null && rMultipleSource.toUpperCase().startsWith("ESTIMATED");
+    }
+
+    @Transient
+    public boolean hasExactRMultiple() {
+        return "EXACT".equalsIgnoreCase(rMultipleSource);
+    }
+
+    @Transient
+    public boolean isKnownRMultiple() {
+        return hasKnownRMultiple();
+    }
+
+    @Transient
+    public boolean isEstimatedRMultiple() {
+        return hasEstimatedRMultiple();
+    }
+
+    @Transient
+    public boolean isExactRMultiple() {
+        return hasExactRMultiple();
+    }
+
+    @Transient
+    public String getRMultipleSourceLabel() {
+        if ("EXACT".equalsIgnoreCase(rMultipleSource)) {
+            return "Exact";
+        }
+        if ("ESTIMATED_SETUP".equalsIgnoreCase(rMultipleSource)) {
+            return "Estimated (Setup)";
+        }
+        if ("ESTIMATED_ACCOUNT".equalsIgnoreCase(rMultipleSource)) {
+            return "Estimated (Account)";
+        }
+        return "Unknown";
     }
 
     public String getSession() {

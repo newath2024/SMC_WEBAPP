@@ -121,13 +121,13 @@
         <article class="trade-stat-card">
           <span class="trade-stat-label">Avg R</span>
           <strong id="avgRValue" class="trade-stat-value" th:classappend="${averageR > 0 ? ' is-profit' : (averageR < 0 ? ' is-loss' : '')}"
-                  th:text="${(averageR > 0 ? '+' : '') + #numbers.formatDecimal(averageR,1,2) + 'R'}">0.00R</strong>
-          <span class="trade-stat-meta">Across filtered trades</span>
+                  th:text="${knownRTradeCount > 0 ? ((averageR > 0 ? '+' : '') + #numbers.formatDecimal(averageR,1,2) + 'R') : 'N/A'}">0.00R</strong>
+          <span id="avgRMeta" class="trade-stat-meta" th:text="${knownRTradeCount + ' trades with known R'}">0 trades with known R</span>
         </article>
         <article class="trade-stat-card">
           <span class="trade-stat-label">Expectancy</span>
-          <strong id="expectancyValue" class="trade-stat-value">0.00R</strong>
-          <span id="expectancyMeta" class="trade-stat-meta">Expected R per trade (filtered)</span>
+          <strong id="expectancyValue" class="trade-stat-value" th:text="${knownRTradeCount > 0 ? '0.00R' : 'N/A'}">0.00R</strong>
+          <span id="expectancyMeta" class="trade-stat-meta">Expected R per trade with known R</span>
         </article>
       </section>
 
@@ -253,6 +253,8 @@
                            data-sort-date=${t.entryTime != null ? #temporals.format(t.entryTime, 'yyyyMMddHHmmss') : (t.tradeDate != null ? #temporals.format(t.tradeDate, 'yyyyMMddHHmmss') : (t.createdAt != null ? #temporals.format(t.createdAt, 'yyyyMMddHHmmss') : '0'))},
                            data-sort-pnl=${t.pnl},
                            data-sort-r=${t.rMultiple},
+                           data-r-known=${t.knownRMultiple},
+                           data-r-source=${t.rMultipleSourceLabel},
                            data-symbol=${t.symbol != null ? t.symbol : ''},
                            data-setup=${t.setupName != null ? t.setupName : ''},
                            data-session=${t.session != null ? t.session : ''},
@@ -294,9 +296,14 @@
                         th:text="${(t.pnl > 0 ? '+' : '') + #numbers.formatDecimal(t.pnl,1,2)}">0.00</span>
                 </td>
                 <td>
-                  <span class="trade-value"
-                        th:classappend="${t.rMultiple > 0 ? ' is-profit' : (t.rMultiple < 0 ? ' is-loss' : '')}"
-                        th:text="${(t.rMultiple > 0 ? '+' : '') + #numbers.formatDecimal(t.rMultiple,1,2) + 'R'}">0.00R</span>
+                  <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <span class="trade-value"
+                          th:if="${t.knownRMultiple}"
+                          th:classappend="${t.rMultiple > 0 ? ' is-profit' : (t.rMultiple < 0 ? ' is-loss' : '')}"
+                          th:text="${(t.estimatedRMultiple ? '~' : (t.rMultiple > 0 ? '+' : '')) + #numbers.formatDecimal(t.rMultiple,1,2) + 'R'}">0.00R</span>
+                    <span class="trade-value text-muted" th:if="${!t.knownRMultiple}">Unknown</span>
+                    <span class="badge rounded-pill text-bg-light border" th:text="${t.rMultipleSourceLabel}">Exact</span>
+                  </div>
                 </td>
                 <td class="trade-actions-cell">
                   <details class="trade-action-menu" onclick="event.stopPropagation()">
@@ -391,6 +398,7 @@
     const winRateMeta = document.getElementById('winRateMeta');
     const netPnlValue = document.getElementById('netPnlValue');
     const avgRValue = document.getElementById('avgRValue');
+    const avgRMeta = document.getElementById('avgRMeta');
     const expectancyValue = document.getElementById('expectancyValue');
     const expectancyMeta = document.getElementById('expectancyMeta');
 
@@ -547,6 +555,9 @@
       let visibleCount = 0;
       let visibleWins = 0;
       let visibleLosses = 0;
+      let visibleKnownRCount = 0;
+      let visibleKnownRWins = 0;
+      let visibleKnownRLosses = 0;
       let visiblePnl = 0;
       let visibleR = 0;
       let winRTotal = 0;
@@ -557,6 +568,7 @@
         const rowSetup = (row.dataset.setup || '').toUpperCase();
         const rowSession = (row.dataset.session || '').toUpperCase();
         const rowResult = normalizeResultValue(row.dataset.result || '');
+        const rowHasKnownR = (row.dataset.rKnown || '').toLowerCase() === 'true';
         const rowMistakes = (row.dataset.mistakes || '').toLowerCase();
         const rowDate = row.dataset.tradeDate || '';
 
@@ -577,14 +589,24 @@
         visibleCount += 1;
         if (rowResult === 'WIN') {
           visibleWins += 1;
-          winRTotal += Number(row.dataset.sortR || 0);
         }
         if (rowResult === 'LOSS') {
           visibleLosses += 1;
-          lossRAbsTotal += Math.abs(Number(row.dataset.sortR || 0));
         }
         visiblePnl += Number(row.dataset.sortPnl || 0);
-        visibleR += Number(row.dataset.sortR || 0);
+        if (rowHasKnownR) {
+          const rowR = Number(row.dataset.sortR || 0);
+          visibleKnownRCount += 1;
+          visibleR += rowR;
+          if (rowResult === 'WIN') {
+            visibleKnownRWins += 1;
+            winRTotal += rowR;
+          }
+          if (rowResult === 'LOSS') {
+            visibleKnownRLosses += 1;
+            lossRAbsTotal += Math.abs(rowR);
+          }
+        }
       });
 
       if (emptyRow) {
@@ -605,25 +627,37 @@
         updateSignedClass(netPnlValue, visiblePnl);
       }
       if (avgRValue) {
-        const avgR = visibleCount > 0 ? visibleR / visibleCount : 0;
-        avgRValue.textContent = formatSignedNumber(avgR, 'R');
-        updateSignedClass(avgRValue, avgR);
+        if (visibleKnownRCount > 0) {
+          const avgR = visibleR / visibleKnownRCount;
+          avgRValue.textContent = formatSignedNumber(avgR, 'R');
+          updateSignedClass(avgRValue, avgR);
+        } else {
+          avgRValue.textContent = 'N/A';
+          avgRValue.classList.remove('is-profit', 'is-loss');
+        }
+      }
+      if (avgRMeta) {
+        avgRMeta.textContent = visibleKnownRCount + ' trades with known R';
       }
       if (expectancyValue) {
-        const winRate = visibleCount > 0 ? visibleWins / visibleCount : 0;
-        const lossRate = visibleCount > 0 ? visibleLosses / visibleCount : 0;
-        const avgWinR = visibleWins > 0 ? winRTotal / visibleWins : 0;
-        const avgLossR = visibleLosses > 0 ? lossRAbsTotal / visibleLosses : 0;
-        let expectancy = (winRate * avgWinR) - (lossRate * avgLossR);
-        // Fallback to average R when filtered set has no WIN/LOSS labels (e.g. only PARTIAL/BE).
-        if (visibleCount > 0 && visibleWins === 0 && visibleLosses === 0) {
-          expectancy = visibleR / visibleCount;
+        if (visibleKnownRCount > 0) {
+          const winRate = visibleKnownRCount > 0 ? visibleKnownRWins / visibleKnownRCount : 0;
+          const lossRate = visibleKnownRCount > 0 ? visibleKnownRLosses / visibleKnownRCount : 0;
+          const avgWinR = visibleKnownRWins > 0 ? winRTotal / visibleKnownRWins : 0;
+          const avgLossR = visibleKnownRLosses > 0 ? lossRAbsTotal / visibleKnownRLosses : 0;
+          let expectancy = (winRate * avgWinR) - (lossRate * avgLossR);
+          if (visibleKnownRWins === 0 && visibleKnownRLosses === 0) {
+            expectancy = visibleR / visibleKnownRCount;
+          }
+          expectancyValue.textContent = formatSignedNumber(expectancy, 'R');
+          updateSignedClass(expectancyValue, expectancy);
+        } else {
+          expectancyValue.textContent = 'N/A';
+          expectancyValue.classList.remove('is-profit', 'is-loss');
         }
-        expectancyValue.textContent = formatSignedNumber(expectancy, 'R');
-        updateSignedClass(expectancyValue, expectancy);
       }
       if (expectancyMeta) {
-        expectancyMeta.textContent = visibleWins + 'W / ' + visibleLosses + 'L in view';
+        expectancyMeta.textContent = visibleKnownRWins + 'W / ' + visibleKnownRLosses + 'L with known R';
       }
     }
 
