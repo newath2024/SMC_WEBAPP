@@ -198,7 +198,7 @@
                       This older trade does not have an original stop saved yet. Fill this once to keep R accurate.
                     </div>
                     <div class="form-text text-warning" th:if="${editMode and trade.importedFromMt5 and !trade.exactRMultiple}">
-                      MT5 imports without a confirmed initial stop use Estimated R from median loss until you fill this field.
+                      MT5 imports without a confirmed initial stop use Estimated R from average loss until you fill this field.
                     </div>
                   </div>
 
