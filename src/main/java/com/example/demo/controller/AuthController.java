@@ -22,10 +22,17 @@ public class AuthController {
     }
 
     @GetMapping("/login")
-    public String loginPage(HttpSession session) {
+    public String loginPage(
+            @RequestParam(value = "accountDeleted", required = false) String accountDeleted,
+            HttpSession session,
+            Model model
+    ) {
         User currentUser = userService.getCurrentUser(session);
         if (currentUser != null) {
             return redirectAfterAuth(currentUser);
+        }
+        if ("1".equals(accountDeleted)) {
+            model.addAttribute("message", "Your account and related journal data were deleted successfully.");
         }
         return "login";
     }

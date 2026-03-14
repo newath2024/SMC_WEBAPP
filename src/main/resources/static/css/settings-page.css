@@ -259,6 +259,14 @@
     padding: 1rem;
 }
 
+.privacy-action-card form {
+    margin-top: auto;
+}
+
+.privacy-action-card form .btn {
+    width: 100%;
+}
+
 .privacy-action-icon {
     width: 3rem;
     height: 3rem;
@@ -324,6 +332,10 @@
 .danger-checklist i {
     color: #dc2626;
     margin-top: 0.08rem;
+}
+
+.danger-form .form-control {
+    background: rgba(255, 255, 255, 0.92);
 }
 
 @media (max-width: 991.98px) {

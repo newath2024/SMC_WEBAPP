@@ -309,7 +309,9 @@
                     <div class="privacy-action-icon"><i class="bi bi-cloud-arrow-down"></i></div>
                     <div class="privacy-action-title">Export all data</div>
                     <p class="section-copy mb-3">Bundle your trades, setups, tags, and profile details into a portable archive.</p>
-                    <button class="btn btn-outline-dark rounded-pill px-3" type="button">Export all data</button>
+                    <form method="get" th:action="@{/settings/export/all}">
+                      <button class="btn btn-outline-dark rounded-pill px-3" type="submit">Export all data</button>
+                    </form>
                   </div>
                 </div>
                 <div class="col-12 col-lg-6">
@@ -317,7 +319,9 @@
                     <div class="privacy-action-icon accent"><i class="bi bi-filetype-csv"></i></div>
                     <div class="privacy-action-title">Download CSV</div>
                     <p class="section-copy mb-3">Quickly export journal rows for spreadsheet analysis or external backups.</p>
-                    <button class="btn btn-outline-primary rounded-pill px-3" type="button">Download CSV</button>
+                    <form method="get" th:action="@{/settings/export/trades.csv}">
+                      <button class="btn btn-outline-primary rounded-pill px-3" type="submit">Download CSV</button>
+                    </form>
                   </div>
                 </div>
                 <div class="col-12">
@@ -332,12 +336,13 @@
         </div>
 
         <div class="col-12 col-xl-5">
-          <article class="card shadow-sm border-0 settings-card danger-card h-100">
+          <article id="danger-zone-card" class="card shadow-sm border-0 settings-card danger-card h-100">
             <div class="card-header bg-transparent border-0 pb-0">
               <h2 class="section-title h5 mb-1">Danger Zone</h2>
               <p class="section-copy mb-0">Permanently remove your account and trading journal workspace.</p>
             </div>
             <div class="card-body d-flex flex-column">
+              <div class="alert alert-danger settings-inline-alert" th:if="${dangerError != null}" th:text="${dangerError}">Account deletion failed.</div>
               <div class="danger-alert">
                 <div class="danger-alert-title">Delete account</div>
                 <p class="mb-0">This action removes your profile, trades, screenshots, setups, and reports. It cannot be undone.</p>
@@ -347,9 +352,17 @@
                 <div><i class="bi bi-x-circle"></i>Active subscriptions should be canceled before deletion.</div>
                 <div><i class="bi bi-x-circle"></i>Exports are your only backup once the account is removed.</div>
               </div>
-              <div class="mt-auto pt-3">
-                <button class="btn btn-danger rounded-pill px-4" type="button">Delete account</button>
-              </div>
+              <form class="danger-form mt-auto pt-3" method="post" th:action="@{/settings/delete-account}">
+                <div class="mb-3">
+                  <label class="form-label" for="deleteCurrentPassword">Current password</label>
+                  <input id="deleteCurrentPassword" class="form-control" type="password" name="currentPassword" placeholder="Enter your current password" required>
+                </div>
+                <div class="mb-3">
+                  <label class="form-label" for="deleteConfirmationText">Type DELETE to confirm</label>
+                  <input id="deleteConfirmationText" class="form-control" type="text" name="confirmationText" placeholder="DELETE" required>
+                </div>
+                <button class="btn btn-danger rounded-pill px-4" type="submit">Delete account</button>
+              </form>
             </div>
           </article>
         </div>
