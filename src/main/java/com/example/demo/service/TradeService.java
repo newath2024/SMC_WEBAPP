@@ -14,7 +14,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class TradeService {
@@ -57,15 +60,18 @@ public class TradeService {
 
         trade.setUser(user);
         trade.setSetup(resolveSetupForUser(trade.getSetup(), user.getId()));
+        ensureInitialStopLoss(trade);
 
         normalizeTrade(trade);
-        autoCalculateMetrics(trade);
+        trade.setPnl(calculatePnL(trade));
 
         Trade saved = repo.save(trade);
         replaceMistakes(saved, mistakeIds, customMistakes);
-        loadMistakes(saved);
+        refreshRMultiplesForUser(user.getId());
 
-        return saved;
+        Trade refreshed = repo.findByIdAndUserId(saved.getId(), user.getId()).orElse(saved);
+        loadMistakes(refreshed);
+        return refreshed;
     }
 
     public List<Trade> findAllByUser(String userId) {
@@ -115,29 +121,36 @@ public class TradeService {
         applyEditableFields(existing, formTrade);
         existing.setSetup(resolveSetupForUser(formTrade.getSetup(), currentUser.getId()));
         normalizeTrade(existing);
-        autoCalculateMetrics(existing);
+        existing.setPnl(calculatePnL(existing));
 
         Trade saved = repo.save(existing);
         replaceMistakes(saved, mistakeIds, customMistakes);
-        loadMistakes(saved);
+        refreshRMultiplesForUser(currentUser.getId());
 
-        return saved;
+        Trade refreshed = repo.findByIdAndUserId(saved.getId(), currentUser.getId()).orElse(saved);
+        loadMistakes(refreshed);
+        return refreshed;
     }
 
     @Transactional
     public Trade updateForAdmin(String tradeId, Trade formTrade, List<String> mistakeIds, String customMistakes) {
         Trade existing = findByIdForAdmin(tradeId);
+        String ownerUserId = existing.getUser() != null ? existing.getUser().getId() : null;
 
         applyEditableFields(existing, formTrade);
         existing.setSetup(resolveSetupForAdmin(formTrade.getSetup()));
         normalizeTrade(existing);
-        autoCalculateMetrics(existing);
+        existing.setPnl(calculatePnL(existing));
 
         Trade saved = repo.save(existing);
         replaceMistakes(saved, mistakeIds, customMistakes);
-        loadMistakes(saved);
+        if (ownerUserId != null && !ownerUserId.isBlank()) {
+            refreshRMultiplesForUser(ownerUserId);
+        }
 
-        return saved;
+        Trade refreshed = repo.findById(saved.getId()).orElse(saved);
+        loadMistakes(refreshed);
+        return refreshed;
     }
 
     @Transactional
@@ -146,14 +159,19 @@ public class TradeService {
         tradeReviewRepository.deleteByTradeId(trade.getId());
         tradeMistakeTagRepository.deleteByTradeId(trade.getId());
         repo.delete(trade);
+        refreshRMultiplesForUser(userId);
     }
 
     @Transactional
     public void deleteForAdmin(String tradeId) {
         Trade trade = findByIdForAdmin(tradeId);
+        String ownerUserId = trade.getUser() != null ? trade.getUser().getId() : null;
         tradeReviewRepository.deleteByTradeId(trade.getId());
         tradeMistakeTagRepository.deleteByTradeId(trade.getId());
         repo.delete(trade);
+        if (ownerUserId != null && !ownerUserId.isBlank()) {
+            refreshRMultiplesForUser(ownerUserId);
+        }
     }
 
     private void applyEditableFields(Trade existing, Trade formTrade) {
@@ -169,6 +187,10 @@ public class TradeService {
 
         existing.setEntryPrice(formTrade.getEntryPrice());
         existing.setStopLoss(formTrade.getStopLoss());
+        if (formTrade.getInitialStopLoss() != null && formTrade.getInitialStopLoss() > 0) {
+            existing.setInitialStopLoss(formTrade.getInitialStopLoss());
+            existing.setInitialStopLossConfirmed(true);
+        }
         existing.setTakeProfit(formTrade.getTakeProfit());
         existing.setExitPrice(formTrade.getExitPrice());
         existing.setPositionSize(formTrade.getPositionSize());
@@ -218,21 +240,159 @@ public class TradeService {
         }
     }
 
-    private void autoCalculateMetrics(Trade trade) {
-        trade.setRMultiple(calculateRMultiple(trade));
-        trade.setPnl(calculatePnL(trade));
+    @Transactional
+    public void refreshAllUsersRMultiples() {
+        List<Trade> trades = repo.findAll();
+        if (trades.isEmpty()) {
+            return;
+        }
+
+        Map<String, List<Trade>> tradesByUser = new HashMap<>();
+        for (Trade trade : trades) {
+            if (trade.getUser() == null || trade.getUser().getId() == null || trade.getUser().getId().isBlank()) {
+                continue;
+            }
+            tradesByUser.computeIfAbsent(trade.getUser().getId(), ignored -> new ArrayList<>()).add(trade);
+        }
+
+        for (List<Trade> userTrades : tradesByUser.values()) {
+            refreshRMultiples(userTrades);
+        }
+
+        repo.saveAll(trades);
+    }
+
+    @Transactional
+    public void refreshRMultiplesForUser(String userId) {
+        if (userId == null || userId.isBlank()) {
+            return;
+        }
+
+        List<Trade> trades = repo.findByUserIdOrderByEntryTimeDesc(userId);
+        if (trades.isEmpty()) {
+            return;
+        }
+
+        refreshRMultiples(trades);
+        repo.saveAll(trades);
     }
 
     public double calculateRMultiple(Trade trade) {
+        RMultipleComputation computation = resolveRMultiple(trade, Map.of(), null);
+        return computation.value() == null ? 0.0 : computation.value();
+    }
+
+    public double calculatePnL(Trade trade) {
+        return pnlCalculator.calculate(trade);
+    }
+
+    private void refreshRMultiples(List<Trade> trades) {
+        Map<String, Double> setupMedianLosses = buildSetupMedianLosses(trades);
+        Double accountMedianLoss = calculateMedianLoss(trades.stream()
+                .mapToDouble(Trade::getPnl)
+                .filter(pnl -> pnl < 0)
+                .map(Math::abs)
+                .boxed()
+                .toList());
+
+        for (Trade trade : trades) {
+            RMultipleComputation computation = resolveRMultiple(trade, setupMedianLosses, accountMedianLoss);
+            trade.setRMultiple(computation.value() == null ? 0.0 : computation.value());
+            trade.setRMultipleSource(computation.source());
+        }
+    }
+
+    private Map<String, Double> buildSetupMedianLosses(List<Trade> trades) {
+        Map<String, List<Double>> setupLosses = new HashMap<>();
+
+        for (Trade trade : trades) {
+            if (trade.getPnl() >= 0) {
+                continue;
+            }
+
+            String setupKey = resolveSetupRiskKey(trade);
+            if (setupKey == null) {
+                continue;
+            }
+
+            setupLosses.computeIfAbsent(setupKey, ignored -> new ArrayList<>())
+                    .add(Math.abs(trade.getPnl()));
+        }
+
+        Map<String, Double> medians = new HashMap<>();
+        for (Map.Entry<String, List<Double>> entry : setupLosses.entrySet()) {
+            Double median = calculateMedianLoss(entry.getValue());
+            if (median != null && median > 0) {
+                medians.put(entry.getKey(), median);
+            }
+        }
+        return medians;
+    }
+
+    private Double calculateMedianLoss(List<Double> losses) {
+        if (losses == null || losses.isEmpty()) {
+            return null;
+        }
+
+        List<Double> sorted = new ArrayList<>(losses);
+        sorted.sort(Comparator.naturalOrder());
+        int size = sorted.size();
+        int mid = size / 2;
+        if (size % 2 == 1) {
+            return sorted.get(mid);
+        }
+        return round2((sorted.get(mid - 1) + sorted.get(mid)) / 2.0);
+    }
+
+    private String resolveSetupRiskKey(Trade trade) {
+        if (trade == null || trade.getSetup() == null || trade.getSetup().getId() == null || trade.getSetup().getId().isBlank()) {
+            return null;
+        }
+        return trade.getSetup().getId().trim();
+    }
+
+    private RMultipleComputation resolveRMultiple(Trade trade, Map<String, Double> setupMedianLosses, Double accountMedianLoss) {
+        Double exactR = calculateExactRMultiple(trade);
+        if (exactR != null) {
+            return new RMultipleComputation(round2(exactR), "EXACT");
+        }
+
+        if (trade == null) {
+            return new RMultipleComputation(null, "UNKNOWN");
+        }
+        if (trade.getDirection() == null || trade.getDirection().isBlank() || trade.getExitPrice() <= 0) {
+            return new RMultipleComputation(null, "UNKNOWN");
+        }
+
+        String setupKey = resolveSetupRiskKey(trade);
+        if (setupKey != null) {
+            Double setupMedianLoss = setupMedianLosses.get(setupKey);
+            if (setupMedianLoss != null && setupMedianLoss > 0) {
+                return new RMultipleComputation(round2(trade.getPnl() / setupMedianLoss), "ESTIMATED_SETUP");
+            }
+        }
+
+        if (accountMedianLoss != null && accountMedianLoss > 0) {
+            return new RMultipleComputation(round2(trade.getPnl() / accountMedianLoss), "ESTIMATED_ACCOUNT");
+        }
+
+        return new RMultipleComputation(null, "UNKNOWN");
+    }
+
+    private Double calculateExactRMultiple(Trade trade) {
+        if (trade == null || !trade.hasExactRiskBasis()) {
+            return null;
+        }
+
         String direction = trade.getDirection();
         String result = trade.getResult();
 
         double entry = trade.getEntryPrice();
-        double stopLoss = trade.getStopLoss();
+        double stopLoss = trade.getRiskStopLoss();
         double exit = trade.getExitPrice();
 
         if (direction == null || direction.isBlank()) {
-            return 0.0;
+            return null;
         }
 
         if ("LOSS".equalsIgnoreCase(result)) {
@@ -240,7 +400,7 @@ public class TradeService {
         }
 
         if (entry <= 0 || stopLoss <= 0 || exit <= 0) {
-            return 0.0;
+            return null;
         }
 
         double risk;
@@ -253,18 +413,32 @@ public class TradeService {
             risk = stopLoss - entry;
             reward = entry - exit;
         } else {
-            return 0.0;
+            return null;
         }
 
         if (risk <= 0) {
-            return 0.0;
+            return null;
         }
 
-        return round2(reward / risk);
+        return reward / risk;
     }
 
-    public double calculatePnL(Trade trade) {
-        return pnlCalculator.calculate(trade);
+    private void ensureInitialStopLoss(Trade trade) {
+        if (trade == null) {
+            return;
+        }
+        if (trade.isImportedFromMt5()) {
+            if (trade.getInitialStopLossConfirmed() == null) {
+                trade.setInitialStopLossConfirmed(false);
+            }
+            return;
+        }
+        if ((trade.getInitialStopLoss() == null || trade.getInitialStopLoss() <= 0) && trade.getStopLoss() > 0) {
+            trade.setInitialStopLoss(trade.getStopLoss());
+        }
+        if (trade.getInitialStopLoss() != null && trade.getInitialStopLoss() > 0 && trade.getInitialStopLossConfirmed() == null) {
+            trade.setInitialStopLossConfirmed(true);
+        }
     }
 
     private void replaceMistakes(Trade trade, List<String> mistakeIds, String customMistakes) {
@@ -338,6 +512,9 @@ public class TradeService {
             throw new IllegalArgumentException("Setup is required");
         }
         return rawSetup.getId().trim();
+    }
+
+    private record RMultipleComputation(Double value, String source) {
     }
 }
 

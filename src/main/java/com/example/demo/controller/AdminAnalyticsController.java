@@ -277,6 +277,9 @@ public class AdminAnalyticsController {
         long three = 0;
 
         for (Trade trade : trades) {
+            if (!trade.hasKnownRMultiple()) {
+                continue;
+            }
             double value = trade.getRMultiple();
             if (value <= -2.0) {
                 minusTwo++;
@@ -309,7 +312,11 @@ public class AdminAnalyticsController {
                     List<Trade> sessionTrades = trades.stream()
                             .filter(trade -> session.equals(normalizeSession(trade.getSession())))
                             .toList();
-                    double avgR = sessionTrades.isEmpty() ? 0.0 : sessionTrades.stream().mapToDouble(Trade::getRMultiple).average().orElse(0.0);
+                    double avgR = sessionTrades.stream()
+                            .filter(Trade::hasKnownRMultiple)
+                            .mapToDouble(Trade::getRMultiple)
+                            .average()
+                            .orElse(0.0);
                     return new SessionPerformancePoint(
                             formatSessionLabel(session),
                             round2(avgR),

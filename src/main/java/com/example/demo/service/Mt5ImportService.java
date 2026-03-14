@@ -49,15 +49,18 @@ public class Mt5ImportService {
     private final TradeRepository tradeRepository;
     private final SetupRepository setupRepository;
     private final UserService userService;
+    private final TradeService tradeService;
 
     public Mt5ImportService(
             TradeRepository tradeRepository,
             SetupRepository setupRepository,
-            UserService userService
+            UserService userService,
+            TradeService tradeService
     ) {
         this.tradeRepository = tradeRepository;
         this.setupRepository = setupRepository;
         this.userService = userService;
+        this.tradeService = tradeService;
     }
 
     @Transactional
@@ -106,6 +109,7 @@ public class Mt5ImportService {
 
         if (!tradesToSave.isEmpty()) {
             tradeRepository.saveAll(tradesToSave);
+            tradeService.refreshRMultiplesForUser(user.getId());
         }
 
         return new ImportResult(
@@ -392,12 +396,15 @@ public class Mt5ImportService {
                 : fallbackTakeProfit(row.direction(), row.entryPrice(), row.exitPrice(), row.profit());
 
         trade.setStopLoss(round5(resolvedStopLoss));
+        trade.setInitialStopLoss(null);
+        trade.setInitialStopLossConfirmed(false);
         trade.setTakeProfit(round5(resolvedTakeProfit));
 
         double netPnl = round2(row.profit() + row.commission() + row.swap());
         trade.setPnl(netPnl);
         trade.setResult(resolveResult(netPnl));
-        trade.setRMultiple(hasReportedStopLoss ? round2(calculateRMultiple(trade)) : 0.0);
+        trade.setRMultiple(0.0);
+        trade.setRMultipleSource("UNKNOWN");
         trade.setSession(resolveSession(sessionMode, row.entryTime()));
         trade.setNote(buildImportNote(row, netPnl, hasReportedStopLoss, hasReportedTakeProfit));
 
@@ -644,30 +651,6 @@ public class Mt5ImportService {
             return exitPrice;
         }
         return entryPrice * 0.995;
-    }
-
-    private double calculateRMultiple(Trade trade) {
-        double entry = trade.getEntryPrice();
-        double stopLoss = trade.getStopLoss();
-        double exit = trade.getExitPrice();
-
-        if ("BUY".equals(trade.getDirection())) {
-            double risk = entry - stopLoss;
-            if (risk <= 0) {
-                return 0.0;
-            }
-            return (exit - entry) / risk;
-        }
-
-        if ("SELL".equals(trade.getDirection())) {
-            double risk = stopLoss - entry;
-            if (risk <= 0) {
-                return 0.0;
-            }
-            return (entry - exit) / risk;
-        }
-
-        return 0.0;
     }
 
     private double round2(double value) {

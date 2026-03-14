@@ -496,10 +496,11 @@
             <div class="trade-stat-label">PnL</div>
             <div class="trade-stat-value" th:classappend="${trade.pnl != null and trade.pnl < 0} ? ' trade-negative' : ' trade-positive'" th:text="${trade.pnl}">0</div>
           </div>
-          <div class="trade-stat">
-            <div class="trade-stat-label">R</div>
-            <div class="trade-stat-value" th:text="${trade.rMultiple}">0.0</div>
-          </div>
+            <div class="trade-stat">
+              <div class="trade-stat-label">R</div>
+              <div class="trade-stat-value"
+                 th:text="${trade.knownRMultiple ? ((trade.estimatedRMultiple ? '~' : (trade.rMultiple > 0 ? '+' : '')) + #numbers.formatDecimal(trade.rMultiple, 1, 2) + 'R') : 'Unknown'}">0.0</div>
+            </div>
           <div class="trade-stat">
             <div class="trade-stat-label">Holding</div>
             <div class="trade-stat-value" th:text="${trade.holdingMinutes != null ? trade.holdingMinutes + ' min' : '-'}">-</div>
@@ -523,7 +524,8 @@
             <div class="trade-summary-block-title">Execution</div>
             <div class="trade-summary-stack">
               <div class="trade-summary-row"><div class="trade-summary-label">Entry</div><div class="trade-summary-value" th:text="${trade.entryPrice}">0</div></div>
-              <div class="trade-summary-row"><div class="trade-summary-label">Stop Loss</div><div class="trade-summary-value" th:text="${trade.stopLoss}">0</div></div>
+              <div class="trade-summary-row"><div class="trade-summary-label">Initial Stop Loss</div><div class="trade-summary-value" th:text="${trade.exactRiskBasis and trade.initialStopLoss != null ? trade.initialStopLoss : '-'}">0</div></div>
+              <div class="trade-summary-row"><div class="trade-summary-label">Current Stop Loss</div><div class="trade-summary-value" th:text="${trade.stopLoss}">0</div></div>
               <div class="trade-summary-row"><div class="trade-summary-label">Take Profit</div><div class="trade-summary-value" th:text="${trade.takeProfit}">0</div></div>
               <div class="trade-summary-row"><div class="trade-summary-label">Exit</div><div class="trade-summary-value" th:text="${trade.exitPrice}">0</div></div>
               <div class="trade-summary-row"><div class="trade-summary-label">Position Size</div><div class="trade-summary-value" th:text="${trade.positionSize}">0</div></div>
@@ -811,13 +813,13 @@
                 <div class="trade-section-copy">Risk profile and trade efficiency snapshot.</div>
               </div>
             </div>
-            <div class="trade-side-grid" th:with="risk=${(trade.entryPrice != null and trade.stopLoss != null) ? T(java.lang.Math).abs(trade.entryPrice - trade.stopLoss) : null}, reward=${(trade.entryPrice != null and trade.takeProfit != null) ? T(java.lang.Math).abs(trade.takeProfit - trade.entryPrice) : null}">
+            <div class="trade-side-grid" th:with="risk=${trade.exactRMultiple ? T(java.lang.Math).abs(trade.entryPrice - trade.riskStopLoss) : null}, reward=${(trade.entryPrice != null and trade.takeProfit != null) ? T(java.lang.Math).abs(trade.takeProfit - trade.entryPrice) : null}">
               <div class="trade-side-stat"><div class="trade-side-label">Risk</div><div class="trade-side-value" th:text="${risk != null ? risk : '-'}">-</div></div>
               <div class="trade-side-stat"><div class="trade-side-label">Reward</div><div class="trade-side-value" th:text="${reward != null ? reward : '-'}">-</div></div>
-              <div class="trade-side-stat"><div class="trade-side-label">RR</div><div class="trade-side-value" th:text="${(trade.rMultiple != null) ? trade.rMultiple : '-'}">-</div></div>
+              <div class="trade-side-stat"><div class="trade-side-label">RR</div><div class="trade-side-value" th:text="${trade.knownRMultiple ? ((trade.estimatedRMultiple ? '~' : '') + #numbers.formatDecimal(trade.rMultiple, 1, 2) + 'R') : 'Unknown'}">-</div></div>
               <div class="trade-side-stat"><div class="trade-side-label">Trade Efficiency</div><div class="trade-side-value" th:text="${trade.result != null ? trade.result : '-'}">-</div></div>
-              <div class="trade-side-stat"><div class="trade-side-label">MFE</div><div class="trade-side-value">Not tracked</div></div>
-              <div class="trade-side-stat"><div class="trade-side-label">MAE</div><div class="trade-side-value">Not tracked</div></div>
+              <div class="trade-side-stat"><div class="trade-side-label">R Source</div><div class="trade-side-value" th:text="${trade.rMultipleSourceLabel}">-</div></div>
+              <div class="trade-side-stat"><div class="trade-side-label">Current SL</div><div class="trade-side-value" th:text="${trade.stopLoss > 0 ? trade.stopLoss : '-'}">-</div></div>
             </div>
           </div>
 

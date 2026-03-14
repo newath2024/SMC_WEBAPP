@@ -177,11 +177,28 @@ public class AdminReportsController {
         long total = trades.size();
         long wins = trades.stream().filter(t -> "WIN".equals(normResult(t.getResult()))).count();
         long losses = trades.stream().filter(t -> "LOSS".equals(normResult(t.getResult()))).count();
-        double avgR = trades.stream().mapToDouble(Trade::getRMultiple).average().orElse(0);
+        long knownRTrades = trades.stream().filter(Trade::hasKnownRMultiple).count();
+        long knownRWins = trades.stream().filter(Trade::hasKnownRMultiple).filter(t -> "WIN".equals(normResult(t.getResult()))).count();
+        long knownRLosses = trades.stream().filter(Trade::hasKnownRMultiple).filter(t -> "LOSS".equals(normResult(t.getResult()))).count();
+        double avgR = trades.stream()
+                .filter(Trade::hasKnownRMultiple)
+                .mapToDouble(Trade::getRMultiple)
+                .average()
+                .orElse(0);
         double pnl = trades.stream().mapToDouble(Trade::getPnl).sum();
-        double avgWinR = trades.stream().filter(t -> "WIN".equals(normResult(t.getResult()))).mapToDouble(Trade::getRMultiple).average().orElse(0);
-        double avgLossR = trades.stream().filter(t -> "LOSS".equals(normResult(t.getResult()))).mapToDouble(Trade::getRMultiple).average().orElse(0);
-        double expectancy = (wins * 1.0 / total) * avgWinR + (losses * 1.0 / total) * avgLossR;
+        double avgWinR = trades.stream()
+                .filter(Trade::hasKnownRMultiple)
+                .filter(t -> "WIN".equals(normResult(t.getResult())))
+                .mapToDouble(Trade::getRMultiple)
+                .average()
+                .orElse(0);
+        double avgLossR = trades.stream()
+                .filter(Trade::hasKnownRMultiple)
+                .filter(t -> "LOSS".equals(normResult(t.getResult())))
+                .mapToDouble(Trade::getRMultiple)
+                .average()
+                .orElse(0);
+        double expectancy = knownRTrades == 0 ? 0.0 : (knownRWins * 1.0 / knownRTrades) * avgWinR + (knownRLosses * 1.0 / knownRTrades) * avgLossR;
         return new TradeStats(total, wins * 100.0 / total, avgR, pnl, expectancy);
     }
 

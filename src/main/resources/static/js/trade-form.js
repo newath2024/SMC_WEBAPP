@@ -1,5 +1,6 @@
 const MAX_SETUP_IMAGE_SIZE_BYTES = 1024 * 1024; // 1MB per file
 let isSubmittingTradeForm = false;
+let initialStopLossManuallyEdited = false;
 
 function parseNum(value) {
     if (value === null || value === undefined || value === '') return null;
@@ -100,11 +101,13 @@ function calculatePnLBySymbol(symbol, direction, entry, exit, size) {
 }
 
 function calculateLiveMetrics() {
+    const form = getTradeForm();
     const symbol = document.getElementById('symbol')?.value;
     const direction = document.getElementById('direction')?.value;
     const result = document.getElementById('result')?.value;
 
     const entry = parseNum(document.getElementById('entryPrice')?.value);
+    const initialStop = parseNum(document.getElementById('initialStopLoss')?.value);
     const sl = parseNum(document.getElementById('stopLoss')?.value);
     const exit = parseNum(document.getElementById('exitPrice')?.value);
     const size = parseNum(document.getElementById('positionSize')?.value);
@@ -117,7 +120,8 @@ function calculateLiveMetrics() {
     pnlInput.value = '';
     rInput.value = '';
 
-    const r = calculateRMultiple(direction, result, entry, sl, exit);
+    const riskStop = initialStop !== null ? initialStop : (form && !isEditTradePage(form) ? sl : null);
+    const r = calculateRMultiple(direction, result, entry, riskStop, exit);
     if (r !== null) {
         rInput.value = r.toFixed(2);
     }
@@ -354,6 +358,8 @@ function initTradeFormPage() {
     });
 
     const setupImagesInput = getSetupImagesInput();
+    const initialStopLossInput = document.getElementById('initialStopLoss');
+    const stopLossInput = document.getElementById('stopLoss');
     if (setupImagesInput) {
         setupImagesInput.addEventListener('change', validateSetupImages);
     }
@@ -361,6 +367,34 @@ function initTradeFormPage() {
     const form = getTradeForm();
     if (form) {
         form.addEventListener('submit', handleTradeFormSubmit);
+    }
+
+    if (initialStopLossInput) {
+        initialStopLossInput.addEventListener('input', function () {
+            initialStopLossManuallyEdited = true;
+            calculateLiveMetrics();
+        });
+        initialStopLossInput.addEventListener('change', function () {
+            initialStopLossManuallyEdited = true;
+            calculateLiveMetrics();
+        });
+    }
+
+    if (stopLossInput && initialStopLossInput && form && !isEditTradePage(form)) {
+        const syncInitialStopLoss = function () {
+            if (initialStopLossManuallyEdited) {
+                return;
+            }
+            initialStopLossInput.value = stopLossInput.value || '';
+            calculateLiveMetrics();
+        };
+
+        stopLossInput.addEventListener('input', syncInitialStopLoss);
+        stopLossInput.addEventListener('change', syncInitialStopLoss);
+
+        if (!initialStopLossInput.value && stopLossInput.value) {
+            initialStopLossInput.value = stopLossInput.value;
+        }
     }
 
     document.addEventListener('click', async function (event) {

@@ -217,6 +217,7 @@ public class AnalyticsService {
         int winTrades = 0;
         int lossTrades = 0;
         int beTrades = 0;
+        int knownRTrades = 0;
 
         double totalPnl = 0.0;
         double totalR = 0.0;
@@ -231,12 +232,15 @@ public class AnalyticsService {
             }
 
             totalPnl += trade.getPnl();
-            totalR += trade.getRMultiple();
+            if (trade.hasKnownRMultiple()) {
+                knownRTrades++;
+                totalR += trade.getRMultiple();
+            }
         }
 
         double winRate = totalTrades == 0 ? 0.0 : (winTrades * 100.0) / totalTrades;
         double avgPnl = totalTrades == 0 ? 0.0 : totalPnl / totalTrades;
-        double avgR = totalTrades == 0 ? 0.0 : totalR / totalTrades;
+        double avgR = knownRTrades == 0 ? 0.0 : totalR / knownRTrades;
 
         return new TradeOverview(
                 totalTrades,
@@ -264,7 +268,10 @@ public class AnalyticsService {
                 acc.winTrades++;
             }
             acc.totalPnl += trade.getPnl();
-            acc.totalR += trade.getRMultiple();
+            if (trade.hasKnownRMultiple()) {
+                acc.knownRTrades++;
+                acc.totalR += trade.getRMultiple();
+            }
         }
 
         List<BreakdownRow> rows = new ArrayList<>();
@@ -274,7 +281,7 @@ public class AnalyticsService {
 
             double winRate = acc.totalTrades == 0 ? 0.0 : (acc.winTrades * 100.0) / acc.totalTrades;
             double avgPnl = acc.totalTrades == 0 ? 0.0 : acc.totalPnl / acc.totalTrades;
-            double avgR = acc.totalTrades == 0 ? 0.0 : acc.totalR / acc.totalTrades;
+            double avgR = acc.knownRTrades == 0 ? 0.0 : acc.totalR / acc.knownRTrades;
 
             rows.add(new BreakdownRow(
                     label,
@@ -350,7 +357,9 @@ public class AnalyticsService {
 
         for (Trade trade : sorted) {
             runningPnl += trade.getPnl();
-            runningR += trade.getRMultiple();
+            if (trade.hasKnownRMultiple()) {
+                runningR += trade.getRMultiple();
+            }
             peakPnl = Math.max(peakPnl, runningPnl);
             points.add(new TrendPoint(
                     buildTradePointLabel(trade),
@@ -417,6 +426,9 @@ public class AnalyticsService {
         for (RRangeBucket bucket : definitions) {
             int count = 0;
             for (Trade trade : trades) {
+                if (!trade.hasKnownRMultiple()) {
+                    continue;
+                }
                 double value = trade.getRMultiple();
                 if (bucket.matches(value)) {
                     count++;
@@ -758,8 +770,10 @@ public class AnalyticsService {
             }
 
             if (Boolean.TRUE.equals(review.getFollowedPlan())) {
-                followedPlanTrades++;
-                followedPlanTotalR += trade.getRMultiple();
+                if (trade.hasKnownRMultiple()) {
+                    followedPlanTrades++;
+                    followedPlanTotalR += trade.getRMultiple();
+                }
             }
         }
 
@@ -838,23 +852,28 @@ public class AnalyticsService {
     private static class GroupAccumulator {
         private int totalTrades;
         private int winTrades;
+        private int knownRTrades;
         private double totalPnl;
         private double totalR;
     }
 
     private static class MetricAccumulator {
         private int count;
+        private int knownRTrades;
         private double totalPnl;
         private double totalR;
 
         private void add(Trade trade) {
             count++;
             totalPnl += trade.getPnl();
-            totalR += trade.getRMultiple();
+            if (trade.hasKnownRMultiple()) {
+                knownRTrades++;
+                totalR += trade.getRMultiple();
+            }
         }
 
         private double averageR() {
-            return count == 0 ? 0.0 : totalR / count;
+            return knownRTrades == 0 ? 0.0 : totalR / knownRTrades;
         }
     }
 

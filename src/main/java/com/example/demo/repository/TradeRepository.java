@@ -33,7 +33,7 @@ public interface TradeRepository extends JpaRepository<Trade, String> {
             select t.setup.id as setupId,
                    count(t.id) as tradeCount,
                    sum(case when upper(coalesce(t.result, '')) = 'WIN' then 1 else 0 end) as winCount,
-                   avg(t.rMultiple) as averageR,
+                   avg(case when upper(coalesce(t.rMultipleSource, 'UNKNOWN')) <> 'UNKNOWN' then t.rMultiple else null end) as averageR,
                    sum(t.pnl) as totalPnl
             from Trade t
             where t.setup is not null and t.user.id = :userId
@@ -45,7 +45,7 @@ public interface TradeRepository extends JpaRepository<Trade, String> {
             select t.setup.id as setupId,
                    count(t.id) as tradeCount,
                    sum(case when upper(coalesce(t.result, '')) = 'WIN' then 1 else 0 end) as winCount,
-                   avg(t.rMultiple) as averageR,
+                   avg(case when upper(coalesce(t.rMultipleSource, 'UNKNOWN')) <> 'UNKNOWN' then t.rMultiple else null end) as averageR,
                    sum(t.pnl) as totalPnl
             from Trade t
             where t.setup is not null

@@ -403,7 +403,7 @@ public class AnalyticsController {
         sb.append("\n");
 
         sb.append("Trades\n");
-        sb.append("Id,Entry Time,Symbol,Direction,Setup,Session,Result,PnL,R Multiple,Account\n");
+        sb.append("Id,Entry Time,Symbol,Direction,Setup,Session,Result,PnL,R Multiple,R Source,Account\n");
         for (Trade trade : trades) {
             sb.append(csv(trade.getId())).append(",")
                     .append(csv(formatDateTime(trade.getEntryTime()))).append(",")
@@ -413,7 +413,8 @@ public class AnalyticsController {
                     .append(csv(trade.getSession())).append(",")
                     .append(csv(trade.getResult())).append(",")
                     .append(trade.getPnl()).append(",")
-                    .append(trade.getRMultiple()).append(",")
+                    .append(csv(trade.hasKnownRMultiple() ? String.valueOf(trade.getRMultiple()) : "")).append(",")
+                    .append(csv(trade.getRMultipleSourceLabel())).append(",")
                     .append(csv(trade.getAccountLabel()))
                     .append("\n");
         }
