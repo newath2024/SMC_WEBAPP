@@ -277,7 +277,7 @@ public class TradeService {
     }
 
     public double calculateRMultiple(Trade trade) {
-        RMultipleComputation computation = resolveRMultiple(trade, Map.of(), null);
+        RMultipleComputation computation = resolveRMultiple(trade, null);
         return computation.value() == null ? 0.0 : computation.value();
     }
 
@@ -286,7 +286,6 @@ public class TradeService {
     }
 
     private void refreshRMultiples(List<Trade> trades) {
-        Map<String, Double> setupAverageLosses = buildSetupAverageLosses(trades);
         Double accountAverageLoss = calculateAverageLoss(trades.stream()
                 .mapToDouble(Trade::getPnl)
                 .filter(pnl -> pnl < 0)
@@ -295,37 +294,10 @@ public class TradeService {
                 .toList());
 
         for (Trade trade : trades) {
-            RMultipleComputation computation = resolveRMultiple(trade, setupAverageLosses, accountAverageLoss);
+            RMultipleComputation computation = resolveRMultiple(trade, accountAverageLoss);
             trade.setRMultiple(computation.value() == null ? 0.0 : computation.value());
             trade.setRMultipleSource(computation.source());
         }
-    }
-
-    private Map<String, Double> buildSetupAverageLosses(List<Trade> trades) {
-        Map<String, List<Double>> setupLosses = new HashMap<>();
-
-        for (Trade trade : trades) {
-            if (trade.getPnl() >= 0) {
-                continue;
-            }
-
-            String setupKey = resolveSetupRiskKey(trade);
-            if (setupKey == null) {
-                continue;
-            }
-
-            setupLosses.computeIfAbsent(setupKey, ignored -> new ArrayList<>())
-                    .add(Math.abs(trade.getPnl()));
-        }
-
-        Map<String, Double> averages = new HashMap<>();
-        for (Map.Entry<String, List<Double>> entry : setupLosses.entrySet()) {
-            Double averageLoss = calculateAverageLoss(entry.getValue());
-            if (averageLoss != null && averageLoss > 0) {
-                averages.put(entry.getKey(), averageLoss);
-            }
-        }
-        return averages;
     }
 
     private Double calculateAverageLoss(List<Double> losses) {
@@ -348,14 +320,7 @@ public class TradeService {
         return round2(totalLoss / validLosses);
     }
 
-    private String resolveSetupRiskKey(Trade trade) {
-        if (trade == null || trade.getSetup() == null || trade.getSetup().getId() == null || trade.getSetup().getId().isBlank()) {
-            return null;
-        }
-        return trade.getSetup().getId().trim();
-    }
-
-    private RMultipleComputation resolveRMultiple(Trade trade, Map<String, Double> setupAverageLosses, Double accountAverageLoss) {
+    private RMultipleComputation resolveRMultiple(Trade trade, Double accountAverageLoss) {
         Double exactR = calculateExactRMultiple(trade);
         if (exactR != null) {
             return new RMultipleComputation(round2(exactR), "EXACT");
@@ -366,14 +331,6 @@ public class TradeService {
         }
         if (trade.getDirection() == null || trade.getDirection().isBlank() || trade.getExitPrice() <= 0) {
             return new RMultipleComputation(null, "UNKNOWN");
-        }
-
-        String setupKey = resolveSetupRiskKey(trade);
-        if (setupKey != null) {
-            Double setupAverageLoss = setupAverageLosses.get(setupKey);
-            if (setupAverageLoss != null && setupAverageLoss > 0) {
-                return new RMultipleComputation(round2(trade.getPnl() / setupAverageLoss), "ESTIMATED_SETUP");
-            }
         }
 
         if (accountAverageLoss != null && accountAverageLoss > 0) {
