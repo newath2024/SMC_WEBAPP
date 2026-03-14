@@ -433,7 +433,7 @@
         </div>
       </section>
 
-      <section class="pricing-grid" id="billing">
+      <section class="pricing-grid" id="billing" th:if="${!hasProAccess}">
         <article class="pricing-card">
           <div class="pricing-tier">Free</div>
           <div class="pricing-price">$0</div>
