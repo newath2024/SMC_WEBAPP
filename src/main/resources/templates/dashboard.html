@@ -246,40 +246,53 @@
       </section>
 
       <section class="dashboard-card process-card">
-        <div class="section-head">
-          <div>
-            <div class="section-title">Process Quality</div>
-            <p class="section-copy">The operational layer traders actually care about.</p>
-          </div>
+        <div class="section-header process-section-header mb-4">
+          <h3 class="section-title">Process Quality &amp; Mistake Analysis</h3>
+          <p class="section-copy">Review coverage, discipline leaks, and repeat mistake patterns in one compact view.</p>
         </div>
 
-        <div class="process-metrics">
-          <div class="process-metric">
-            <span class="process-metric-label">Reviewed Trades</span>
-            <strong th:text="${#numbers.formatDecimal(processMetrics.reviewedRate, 1, 0) + '%'}">0%</strong>
+        <div class="process-content-row">
+          <div class="process-col">
+            <div class="process-summary">
+              <div class="process-summary-head">
+                <div class="section-title small">Process Quality</div>
+                <p class="section-copy">Compact process signals that matter most.</p>
+              </div>
+              <div class="process-metrics">
+                <div class="process-metric">
+                  <span class="process-metric-label">Reviewed Trades</span>
+                  <strong th:text="${#numbers.formatDecimal(processMetrics.reviewedRate, 1, 0) + '%'}">0%</strong>
+                </div>
+                <div class="process-metric">
+                  <span class="process-metric-label">Bad Wins</span>
+                  <strong th:text="${processMetrics.badProcessWins}">0</strong>
+                </div>
+                <div class="process-metric">
+                  <span class="process-metric-label">Rule Violations</span>
+                  <strong th:text="${processMetrics.ruleViolations}">0</strong>
+                </div>
+                <div class="process-metric">
+                  <span class="process-metric-label">HQ Trades</span>
+                  <strong th:text="${processMetrics.highQualityTrades}">0</strong>
+                </div>
+              </div>
+            </div>
           </div>
-          <div class="process-metric">
-            <span class="process-metric-label">Bad Wins</span>
-            <strong th:text="${processMetrics.badProcessWins}">0</strong>
-          </div>
-          <div class="process-metric">
-            <span class="process-metric-label">Rule Violations</span>
-            <strong th:text="${processMetrics.ruleViolations}">0</strong>
-          </div>
-          <div class="process-metric">
-            <span class="process-metric-label">HQ Trades</span>
-            <strong th:text="${processMetrics.highQualityTrades}">0</strong>
-          </div>
-        </div>
 
-        <div class="mistake-panel">
-          <div class="mistake-panel-head">
-            <div class="section-title small">Mistake Frequency</div>
-            <div class="section-copy" th:if="${#lists.isEmpty(report.mistakeFrequency)}">No linked mistake data yet.</div>
-          </div>
-          <div class="chart-block compact">
-            <canvas id="mistakeFrequencyChart"></canvas>
-            <div class="chart-empty" id="mistakeFrequencyEmpty">Log mistake tags or review flags to see process leaks.</div>
+          <div class="process-col">
+            <div class="mistake-panel">
+              <div class="mistake-panel-head">
+                <div>
+                  <div class="section-title small">Mistake Frequency</div>
+                  <p class="section-copy">Spot repeat process leaks fast.</p>
+                </div>
+                <div class="section-copy" th:if="${#lists.isEmpty(report.mistakeFrequency)}">No linked mistake data yet.</div>
+              </div>
+              <div class="chart-block process-chart-block">
+                <canvas id="mistakeFrequencyChart"></canvas>
+                <div class="chart-empty" id="mistakeFrequencyEmpty">Log mistake tags or review flags to see process leaks.</div>
+              </div>
+            </div>
           </div>
         </div>
       </section>

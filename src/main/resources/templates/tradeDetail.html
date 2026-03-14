@@ -262,6 +262,14 @@
       gap: 0.9rem;
     }
 
+    .trade-gallery-group-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 0.85rem;
+    }
+
     .trade-empty {
       background: #f8fafc;
       border: 1px dashed rgba(148, 163, 184, 0.45);
@@ -276,10 +284,48 @@
       align-items: center;
       gap: 0.35rem;
       width: fit-content;
+      border: 0;
+      background: transparent;
+      padding: 0;
       color: #1d4ed8;
       text-decoration: none;
       font-weight: 600;
       font-size: 0.85rem;
+      cursor: pointer;
+    }
+
+    .trade-upload-zone {
+      margin-top: 0.9rem;
+      transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+    }
+
+    .trade-upload-zone.is-dragover {
+      border-color: rgba(29, 78, 216, 0.55);
+      background: #eff6ff;
+      box-shadow: inset 0 0 0 1px rgba(29, 78, 216, 0.12);
+    }
+
+    .trade-upload-zone.is-uploading {
+      opacity: 0.72;
+      pointer-events: none;
+    }
+
+    .trade-gallery-input {
+      display: none;
+    }
+
+    .trade-upload-feedback {
+      min-height: 1.2rem;
+      margin-top: 0.45rem;
+      color: var(--trade-muted);
+    }
+
+    .trade-upload-feedback.is-success {
+      color: var(--trade-positive);
+    }
+
+    .trade-upload-feedback.is-error {
+      color: var(--trade-negative);
     }
 
     .trade-gallery-item img {
@@ -554,7 +600,7 @@
 
       <section class="trade-layout">
         <div class="trade-column">
-          <div class="trade-panel trade-gallery-card">
+          <div class="trade-panel trade-gallery-card js-trade-image-manager" th:attr="data-trade-id=${trade.id}">
             <div class="trade-section-head">
               <div>
                 <h3 class="trade-section-title">Chart Images</h3>
@@ -562,72 +608,104 @@
               </div>
             </div>
 
-            <div class="trade-gallery-group">
-              <h6 class="mb-3">Before</h6>
+            <div class="trade-gallery-group js-trade-image-group" data-image-type="BEFORE" data-image-label="Before">
+              <div class="trade-gallery-group-head">
+                <h6 class="mb-0">Before</h6>
+                <button type="button" class="btn btn-sm btn-outline-primary js-trade-image-upload-trigger">
+                  <i class="bi bi-upload me-1"></i>
+                  <span>Upload</span>
+                </button>
+              </div>
               <div class="trade-gallery-grid" th:if="${tradeImages != null and !#lists.isEmpty(tradeImages.?[imageType == 'BEFORE'])}">
                 <div class="trade-gallery-item" th:each="img : ${tradeImages.?[imageType == 'BEFORE']}">
                   <img th:src="${img.imageUrl}" class="img-fluid rounded mb-2 setup-image-thumb" alt="Before chart">
                   <div class="small text-muted" th:text="${img.caption != null && !#strings.isEmpty(img.caption) ? img.caption : 'Before chart'}"></div>
                 </div>
               </div>
-              <div class="trade-empty small" th:if="${tradeImages == null or #lists.isEmpty(tradeImages.?[imageType == 'BEFORE'])}">
-                <div>Drop chart screenshots here or upload images.</div>
-                <a class="trade-empty-action" th:href="@{/trades/{id}/edit(id=${trade.id})}">
+              <div class="trade-empty trade-upload-zone small js-trade-image-dropzone">
+                <div th:text="${tradeImages != null and !#lists.isEmpty(tradeImages.?[imageType == 'BEFORE']) ? 'Drop more chart screenshots here or upload images.' : 'No before charts yet. Drop chart screenshots here or upload images.'}">Drop chart screenshots here or upload images.</div>
+                <button type="button" class="trade-empty-action js-trade-image-upload-trigger">
                   <i class="bi bi-plus-circle"></i>
                   <span>Upload chart</span>
-                </a>
+                </button>
+                <input class="trade-gallery-input js-trade-image-upload-input" type="file" accept="image/*" multiple>
               </div>
+              <div class="trade-upload-feedback small js-trade-image-feedback" aria-live="polite"></div>
             </div>
 
-            <div class="trade-gallery-group">
-              <h6 class="mb-3">After</h6>
+            <div class="trade-gallery-group js-trade-image-group" data-image-type="AFTER" data-image-label="After">
+              <div class="trade-gallery-group-head">
+                <h6 class="mb-0">After</h6>
+                <button type="button" class="btn btn-sm btn-outline-primary js-trade-image-upload-trigger">
+                  <i class="bi bi-upload me-1"></i>
+                  <span>Upload</span>
+                </button>
+              </div>
               <div class="trade-gallery-grid" th:if="${tradeImages != null and !#lists.isEmpty(tradeImages.?[imageType == 'AFTER'])}">
                 <div class="trade-gallery-item" th:each="img : ${tradeImages.?[imageType == 'AFTER']}">
                   <img th:src="${img.imageUrl}" class="img-fluid rounded mb-2 setup-image-thumb" alt="After chart">
                   <div class="small text-muted" th:text="${img.caption != null && !#strings.isEmpty(img.caption) ? img.caption : 'After chart'}"></div>
                 </div>
               </div>
-              <div class="trade-empty small" th:if="${tradeImages == null or #lists.isEmpty(tradeImages.?[imageType == 'AFTER'])}">
-                <div>Drop chart screenshots here or upload images.</div>
-                <a class="trade-empty-action" th:href="@{/trades/{id}/edit(id=${trade.id})}">
+              <div class="trade-empty trade-upload-zone small js-trade-image-dropzone">
+                <div th:text="${tradeImages != null and !#lists.isEmpty(tradeImages.?[imageType == 'AFTER']) ? 'Drop more chart screenshots here or upload images.' : 'No after charts yet. Drop chart screenshots here or upload images.'}">Drop chart screenshots here or upload images.</div>
+                <button type="button" class="trade-empty-action js-trade-image-upload-trigger">
                   <i class="bi bi-plus-circle"></i>
                   <span>Upload chart</span>
-                </a>
+                </button>
+                <input class="trade-gallery-input js-trade-image-upload-input" type="file" accept="image/*" multiple>
               </div>
+              <div class="trade-upload-feedback small js-trade-image-feedback" aria-live="polite"></div>
             </div>
 
-            <div class="trade-gallery-group">
-              <h6 class="mb-3">Review</h6>
+            <div class="trade-gallery-group js-trade-image-group" data-image-type="REVIEW" data-image-label="Review">
+              <div class="trade-gallery-group-head">
+                <h6 class="mb-0">Review</h6>
+                <button type="button" class="btn btn-sm btn-outline-primary js-trade-image-upload-trigger">
+                  <i class="bi bi-upload me-1"></i>
+                  <span>Upload</span>
+                </button>
+              </div>
               <div class="trade-gallery-grid" th:if="${tradeImages != null and !#lists.isEmpty(tradeImages.?[imageType == 'REVIEW'])}">
                 <div class="trade-gallery-item" th:each="img : ${tradeImages.?[imageType == 'REVIEW']}">
                   <img th:src="${img.imageUrl}" class="img-fluid rounded mb-2 setup-image-thumb" alt="Review chart">
                   <div class="small text-muted" th:text="${img.caption != null && !#strings.isEmpty(img.caption) ? img.caption : 'Review chart'}"></div>
                 </div>
               </div>
-              <div class="trade-empty small" th:if="${tradeImages == null or #lists.isEmpty(tradeImages.?[imageType == 'REVIEW'])}">
-                <div>Drop chart screenshots here or upload images.</div>
-                <a class="trade-empty-action" th:href="@{/trades/{id}/edit(id=${trade.id})}">
+              <div class="trade-empty trade-upload-zone small js-trade-image-dropzone">
+                <div th:text="${tradeImages != null and !#lists.isEmpty(tradeImages.?[imageType == 'REVIEW']) ? 'Drop more chart screenshots here or upload images.' : 'No review charts yet. Drop chart screenshots here or upload images.'}">Drop chart screenshots here or upload images.</div>
+                <button type="button" class="trade-empty-action js-trade-image-upload-trigger">
                   <i class="bi bi-plus-circle"></i>
                   <span>Upload chart</span>
-                </a>
+                </button>
+                <input class="trade-gallery-input js-trade-image-upload-input" type="file" accept="image/*" multiple>
               </div>
+              <div class="trade-upload-feedback small js-trade-image-feedback" aria-live="polite"></div>
             </div>
 
-            <div class="trade-gallery-group">
-              <h6 class="mb-3">Other Images</h6>
+            <div class="trade-gallery-group js-trade-image-group" data-image-type="SETUP" data-image-label="Other">
+              <div class="trade-gallery-group-head">
+                <h6 class="mb-0">Other Images</h6>
+                <button type="button" class="btn btn-sm btn-outline-primary js-trade-image-upload-trigger">
+                  <i class="bi bi-upload me-1"></i>
+                  <span>Upload</span>
+                </button>
+              </div>
               <div class="trade-gallery-grid" th:if="${tradeImages != null and !#lists.isEmpty(tradeImages.?[imageType != 'BEFORE' and imageType != 'AFTER' and imageType != 'REVIEW'])}">
                 <div class="trade-gallery-item" th:each="img : ${tradeImages.?[imageType != 'BEFORE' and imageType != 'AFTER' and imageType != 'REVIEW']}">
                   <img th:src="${img.imageUrl}" class="img-fluid rounded mb-2 setup-image-thumb" alt="Chart image">
                   <div class="small text-muted" th:text="${img.caption != null && !#strings.isEmpty(img.caption) ? img.caption : (img.imageType != null ? img.imageType : 'Chart image')}"></div>
                 </div>
               </div>
-              <div class="trade-empty small" th:if="${tradeImages == null or #lists.isEmpty(tradeImages.?[imageType != 'BEFORE' and imageType != 'AFTER' and imageType != 'REVIEW'])}">
-                <div>Drop chart screenshots here or upload images.</div>
-                <a class="trade-empty-action" th:href="@{/trades/{id}/edit(id=${trade.id})}">
+              <div class="trade-empty trade-upload-zone small js-trade-image-dropzone">
+                <div th:text="${tradeImages != null and !#lists.isEmpty(tradeImages.?[imageType != 'BEFORE' and imageType != 'AFTER' and imageType != 'REVIEW']) ? 'Drop more chart screenshots here or upload images.' : 'No extra images yet. Drop chart screenshots here or upload images.'}">Drop chart screenshots here or upload images.</div>
+                <button type="button" class="trade-empty-action js-trade-image-upload-trigger">
                   <i class="bi bi-plus-circle"></i>
                   <span>Upload chart</span>
-                </a>
+                </button>
+                <input class="trade-gallery-input js-trade-image-upload-input" type="file" accept="image/*" multiple>
               </div>
+              <div class="trade-upload-feedback small js-trade-image-feedback" aria-live="polite"></div>
             </div>
           </div>
 
@@ -919,6 +997,7 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 </script>
 
+<script th:src="@{/js/trade-detail.js}" src="/js/trade-detail.js"></script>
 <script th:src="@{/js/sidebar-toggle.js}" src="/js/sidebar-toggle.js"></script>
 
 </body>
