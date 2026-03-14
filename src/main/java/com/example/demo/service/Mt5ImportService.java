@@ -18,13 +18,23 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.ByteArrayInputStream;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
+import javax.xml.parsers.DocumentBuilderFactory;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
 
 @Service
 public class Mt5ImportService {
@@ -108,6 +118,14 @@ public class Mt5ImportService {
     }
 
     private ParsedReport parseReport(MultipartFile file) {
+        String originalFilename = file.getOriginalFilename();
+        if (originalFilename != null && originalFilename.toLowerCase(Locale.ENGLISH).endsWith(".xlsx")) {
+            return parseXlsxReport(file);
+        }
+        return parseWorkbookReport(file);
+    }
+
+    private ParsedReport parseWorkbookReport(MultipartFile file) {
         try (InputStream inputStream = file.getInputStream(); Workbook workbook = WorkbookFactory.create(inputStream)) {
             if (workbook.getNumberOfSheets() == 0) {
                 throw new IllegalArgumentException("The uploaded workbook does not contain any sheet.");
@@ -157,6 +175,66 @@ public class Mt5ImportService {
         }
     }
 
+    private ParsedReport parseXlsxReport(MultipartFile file) {
+        try {
+            Map<String, byte[]> entries = unzipEntries(file);
+            byte[] sheetBytes = entries.get("xl/worksheets/sheet1.xml");
+            if (sheetBytes == null) {
+                throw new IllegalArgumentException("The uploaded MT5 workbook does not contain sheet1.xml.");
+            }
+
+            List<String> sharedStrings = parseSharedStrings(entries.get("xl/sharedStrings.xml"));
+            List<Map<String, String>> rows = parseSheetRows(sheetBytes, sharedStrings);
+
+            String accountLabel = null;
+            boolean readingPositions = false;
+            int skippedRows = 0;
+            List<Mt5PositionRow> positions = new ArrayList<>();
+
+            for (Map<String, String> row : rows) {
+                String firstCell = row.getOrDefault("A", "");
+                if (!StringUtils.hasText(accountLabel) && "Account:".equalsIgnoreCase(firstCell)) {
+                    accountLabel = row.getOrDefault("D", "");
+                }
+
+                if (!readingPositions) {
+                    if ("Time".equalsIgnoreCase(row.getOrDefault("A", ""))
+                            && "Position".equalsIgnoreCase(row.getOrDefault("B", ""))
+                            && "Symbol".equalsIgnoreCase(row.getOrDefault("C", ""))
+                            && "Type".equalsIgnoreCase(row.getOrDefault("D", ""))) {
+                        readingPositions = true;
+                    }
+                    continue;
+                }
+
+                if ("Orders".equalsIgnoreCase(firstCell)) {
+                    break;
+                }
+
+                if (!StringUtils.hasText(firstCell)
+                        && !StringUtils.hasText(row.getOrDefault("B", ""))
+                        && !StringUtils.hasText(row.getOrDefault("C", ""))
+                        && !StringUtils.hasText(row.getOrDefault("D", ""))) {
+                    continue;
+                }
+
+                Mt5PositionRow position = parsePositionRow(row);
+                if (position == null) {
+                    skippedRows++;
+                    continue;
+                }
+
+                positions.add(position);
+            }
+
+            return new ParsedReport(accountLabel, positions, skippedRows);
+        } catch (IllegalArgumentException ex) {
+            throw ex;
+        } catch (Exception ex) {
+            throw new IllegalArgumentException("Unable to read the MT5 .xlsx file. Please upload the original MT5 Excel export.");
+        }
+    }
+
     private boolean isPositionsHeaderRow(Row row, DataFormatter formatter) {
         return "Time".equalsIgnoreCase(getCellText(row, 0, formatter))
                 && "Position".equalsIgnoreCase(getCellText(row, 1, formatter))
@@ -185,6 +263,48 @@ public class Mt5ImportService {
         double commission = parseDouble(getCell(row, 10), formatter);
         double swap = parseDouble(getCell(row, 11), formatter);
         double profit = parseDouble(getCell(row, 12), formatter);
+
+        if (entryTime == null || exitTime == null) {
+            return null;
+        }
+        if (!StringUtils.hasText(symbol) || !StringUtils.hasText(direction)) {
+            return null;
+        }
+        if (volume <= 0 || entryPrice <= 0 || exitPrice <= 0) {
+            return null;
+        }
+
+        return new Mt5PositionRow(
+                positionId,
+                symbol,
+                direction,
+                volume,
+                entryTime,
+                exitTime,
+                entryPrice,
+                exitPrice,
+                stopLoss,
+                takeProfit,
+                commission,
+                swap,
+                profit
+        );
+    }
+
+    private Mt5PositionRow parsePositionRow(Map<String, String> row) {
+        LocalDateTime entryTime = parseDateTime(row.getOrDefault("A", ""));
+        String positionId = row.getOrDefault("B", "");
+        String symbol = normalizeUpper(row.getOrDefault("C", ""));
+        String direction = normalizeDirection(row.getOrDefault("D", ""));
+        double volume = parseDouble(row.getOrDefault("E", ""));
+        double entryPrice = parseDouble(row.getOrDefault("F", ""));
+        double stopLoss = parseDouble(row.getOrDefault("G", ""));
+        double takeProfit = parseDouble(row.getOrDefault("H", ""));
+        LocalDateTime exitTime = parseDateTime(row.getOrDefault("I", ""));
+        double exitPrice = parseDouble(row.getOrDefault("J", ""));
+        double commission = parseDouble(row.getOrDefault("K", ""));
+        double swap = parseDouble(row.getOrDefault("L", ""));
+        double profit = parseDouble(row.getOrDefault("M", ""));
 
         if (entryTime == null || exitTime == null) {
             return null;
@@ -384,6 +504,118 @@ public class Mt5ImportService {
         } catch (NumberFormatException ex) {
             return 0.0;
         }
+    }
+
+    private double parseDouble(String rawValue) {
+        if (!StringUtils.hasText(rawValue)) {
+            return 0.0;
+        }
+        String normalized = rawValue.replace(",", "").trim();
+        try {
+            return Double.parseDouble(normalized);
+        } catch (NumberFormatException ex) {
+            return 0.0;
+        }
+    }
+
+    private Map<String, byte[]> unzipEntries(MultipartFile file) throws IOException {
+        Map<String, byte[]> entries = new HashMap<>();
+        try (ZipInputStream zipInputStream = new ZipInputStream(file.getInputStream())) {
+            ZipEntry entry;
+            while ((entry = zipInputStream.getNextEntry()) != null) {
+                if (!entry.isDirectory()) {
+                    entries.put(entry.getName(), zipInputStream.readAllBytes());
+                }
+            }
+        }
+        return entries;
+    }
+
+    private List<String> parseSharedStrings(byte[] sharedStringsBytes) throws Exception {
+        List<String> sharedStrings = new ArrayList<>();
+        if (sharedStringsBytes == null || sharedStringsBytes.length == 0) {
+            return sharedStrings;
+        }
+
+        Document document = parseXml(sharedStringsBytes);
+        NodeList items = document.getElementsByTagNameNS("*", "si");
+        for (int i = 0; i < items.getLength(); i++) {
+            Element item = (Element) items.item(i);
+            NodeList texts = item.getElementsByTagNameNS("*", "t");
+            StringBuilder value = new StringBuilder();
+            for (int j = 0; j < texts.getLength(); j++) {
+                value.append(texts.item(j).getTextContent());
+            }
+            sharedStrings.add(value.toString());
+        }
+        return sharedStrings;
+    }
+
+    private List<Map<String, String>> parseSheetRows(byte[] sheetBytes, List<String> sharedStrings) throws Exception {
+        Document document = parseXml(sheetBytes);
+        NodeList rowNodes = document.getElementsByTagNameNS("*", "row");
+        List<Map<String, String>> rows = new ArrayList<>();
+
+        for (int i = 0; i < rowNodes.getLength(); i++) {
+            Element rowElement = (Element) rowNodes.item(i);
+            NodeList cellNodes = rowElement.getElementsByTagNameNS("*", "c");
+            Map<String, String> rowValues = new HashMap<>();
+
+            for (int j = 0; j < cellNodes.getLength(); j++) {
+                Element cellElement = (Element) cellNodes.item(j);
+                String reference = cellElement.getAttribute("r");
+                String column = extractColumn(reference);
+                if (!StringUtils.hasText(column)) {
+                    continue;
+                }
+
+                String rawType = cellElement.getAttribute("t");
+                String rawValue = firstChildText(cellElement, "v");
+                if ("s".equals(rawType) && StringUtils.hasText(rawValue)) {
+                    int sharedIndex = Integer.parseInt(rawValue);
+                    rowValues.put(column, sharedIndex >= 0 && sharedIndex < sharedStrings.size() ? sharedStrings.get(sharedIndex) : "");
+                } else {
+                    rowValues.put(column, rawValue == null ? "" : rawValue.trim());
+                }
+            }
+
+            rows.add(rowValues);
+        }
+
+        return rows;
+    }
+
+    private Document parseXml(byte[] bytes) throws Exception {
+        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+        factory.setNamespaceAware(true);
+        try (ByteArrayInputStream inputStream = new ByteArrayInputStream(bytes)) {
+            return factory.newDocumentBuilder().parse(inputStream);
+        }
+    }
+
+    private String firstChildText(Element parent, String localName) {
+        NodeList nodes = parent.getElementsByTagNameNS("*", localName);
+        if (nodes.getLength() == 0) {
+            return "";
+        }
+        Node node = nodes.item(0);
+        return node == null ? "" : node.getTextContent();
+    }
+
+    private String extractColumn(String reference) {
+        if (!StringUtils.hasText(reference)) {
+            return "";
+        }
+        StringBuilder column = new StringBuilder();
+        for (int i = 0; i < reference.length(); i++) {
+            char current = reference.charAt(i);
+            if (Character.isLetter(current)) {
+                column.append(current);
+            } else {
+                break;
+            }
+        }
+        return column.toString();
     }
 
     private double fallbackStopLoss(String direction, double entryPrice, double exitPrice, double profit) {
