@@ -111,10 +111,22 @@
                       </div>
                     </div>
                   </div>
+                  <div class="col-12">
+                    <div id="tradeChartImportReviewActions" class="trade-ai-import-review-actions d-none">
+                      <div>
+                        <p class="trade-ai-import-review-title mb-1">Imported values were already applied to the form below.</p>
+                        <p class="trade-ai-import-review-copy mb-0">Review Core Setup and Execution, then save the trade when everything looks right.</p>
+                      </div>
+                      <div class="trade-ai-import-review-buttons">
+                        <a class="btn btn-outline-secondary btn-sm" href="#tradeCoreSetupSection">Review Imported Fields</a>
+                        <a class="btn btn-primary btn-sm" href="#tradeFormFooter" th:text="${editMode ? 'Jump to Update Trade' : 'Jump to Save Trade'}">Jump to Save Trade</a>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </section>
 
-              <section class="trade-form-section">
+              <section id="tradeCoreSetupSection" class="trade-form-section">
                 <div class="trade-form-section-header">
                   <h5 class="mb-1">Core Setup</h5>
                   <p class="mb-0">Capture the trade identity and context.</p>
@@ -408,7 +420,7 @@
               </section>
             </div>
 
-            <div class="trade-form-footer">
+            <div id="tradeFormFooter" class="trade-form-footer">
               <button class="btn btn-primary" type="submit" th:text="${editMode ? 'Update Trade' : 'Save Trade'}">Save Trade</button>
               <a class="btn btn-outline-secondary" th:href="${editMode ? '/trades/' + trade.id : '/trades'}">Cancel</a>
             </div>
