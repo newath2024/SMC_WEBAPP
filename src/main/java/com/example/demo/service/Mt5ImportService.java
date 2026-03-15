@@ -16,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.Serializable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.ByteArrayInputStream;
@@ -28,6 +29,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.UUID;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -65,41 +67,100 @@ public class Mt5ImportService {
 
     @Transactional
     public ImportResult importWorkbook(MultipartFile file, User user, ImportOptions options) {
-        if (file == null || file.isEmpty()) {
-            throw new IllegalArgumentException("Please choose an MT5 history file to import.");
-        }
+        return confirmImport(user, previewWorkbook(file, user, options));
+    }
 
-        if (user == null) {
-            throw new IllegalArgumentException("You must be logged in to import trades.");
-        }
+    public ImportPreview previewWorkbook(MultipartFile file, User user, ImportOptions options) {
+        validateImportRequest(file, user);
 
-        String setupName = normalizeOrDefault(options.setupName(), "MT5 Import");
-        String defaultHtf = normalizeOrDefault(options.defaultHtf(), "H1");
-        String defaultLtf = normalizeOrDefault(options.defaultLtf(), "M5");
-        String sessionMode = normalizeOrDefault(options.sessionMode(), "AUTO");
-
+        ImportOptions normalizedOptions = normalizeOptions(options);
         ParsedReport report = parseReport(file);
         if (report.positions().isEmpty()) {
             throw new IllegalArgumentException("No closed positions were found in the MT5 report.");
         }
 
-        Setup setup = resolveOrCreateSetup(user, setupName);
         String accountLabel = normalizeOrDefault(report.accountLabel(), "MT5 Account");
         long existingTradeCount = tradeRepository.countByUserId(user.getId());
+        int tradeLimit = userService.resolveTradeLimit(user);
+        boolean proAccess = userService.hasProAccess(user);
+        long remainingTradeSlots = proAccess ? 0 : Math.max(0, tradeLimit - existingTradeCount);
 
-        List<Trade> tradesToSave = new ArrayList<>();
+        List<ImportPreviewTrade> previewTrades = new ArrayList<>();
         int duplicateCount = 0;
 
         for (Mt5PositionRow row : report.positions()) {
-            if (isDuplicate(user, row)) {
+            boolean duplicate = isDuplicate(user, row);
+            if (duplicate) {
+                duplicateCount++;
+            }
+            previewTrades.add(preparePreviewTrade(row, normalizedOptions.sessionMode(), duplicate));
+        }
+
+        int importableCount = Math.max(0, report.positions().size() - duplicateCount);
+        boolean canImport = importableCount > 0
+                && (proAccess || existingTradeCount + importableCount <= tradeLimit);
+        String blockingMessage = null;
+        if (importableCount == 0) {
+            blockingMessage = "No new trades to import. Every closed position in this file is already in your journal.";
+        } else if (!proAccess && existingTradeCount + importableCount > tradeLimit) {
+            blockingMessage = "This preview contains " + importableCount
+                    + " new trades but your free plan only has " + remainingTradeSlots
+                    + " slot(s) left. Upgrade to Pro or import a smaller file.";
+        }
+
+        return new ImportPreview(
+                UUID.randomUUID().toString(),
+                user.getId(),
+                normalizeOrDefault(file.getOriginalFilename(), "mt5-history.xlsx"),
+                accountLabel,
+                normalizedOptions.setupName(),
+                normalizedOptions.defaultHtf(),
+                normalizedOptions.defaultLtf(),
+                normalizedOptions.sessionMode(),
+                report.positions().size(),
+                importableCount,
+                duplicateCount,
+                report.skippedRows(),
+                proAccess,
+                remainingTradeSlots,
+                canImport,
+                blockingMessage,
+                previewTrades
+        );
+    }
+
+    @Transactional
+    public ImportResult confirmImport(User user, ImportPreview preview) {
+        if (user == null) {
+            throw new IllegalArgumentException("You must be logged in to import trades.");
+        }
+        if (preview == null) {
+            throw new IllegalArgumentException("There is no MT5 import preview to confirm.");
+        }
+        if (!StringUtils.hasText(preview.userId()) || !preview.userId().equals(user.getId())) {
+            throw new IllegalArgumentException("This MT5 import preview belongs to another account. Please upload the file again.");
+        }
+
+        String accountLabel = normalizeOrDefault(preview.accountLabel(), "MT5 Account");
+        long existingTradeCount = tradeRepository.countByUserId(user.getId());
+
+        List<ImportPreviewTrade> importablePreviewTrades = new ArrayList<>();
+        int duplicateCount = 0;
+
+        for (ImportPreviewTrade previewTrade : preview.previewTrades()) {
+            if (isDuplicate(user, previewTrade)) {
                 duplicateCount++;
                 continue;
             }
 
-            tradesToSave.add(buildTrade(user, setup, accountLabel, defaultHtf, defaultLtf, sessionMode, row));
+            importablePreviewTrades.add(previewTrade);
         }
 
-        int importableCount = tradesToSave.size();
+        int importableCount = importablePreviewTrades.size();
+        if (importableCount == 0) {
+            throw new IllegalStateException("There are no new trades left to import from this preview.");
+        }
+
         int tradeLimit = userService.resolveTradeLimit(user);
         if (!userService.hasProAccess(user) && existingTradeCount + importableCount > tradeLimit) {
             long remaining = Math.max(0, tradeLimit - existingTradeCount);
@@ -107,17 +168,47 @@ public class Mt5ImportService {
                     "This import would exceed your free plan limit. Remaining slots: " + remaining + ". Upgrade to Pro or import a smaller file.");
         }
 
-        if (!tradesToSave.isEmpty()) {
-            tradeRepository.saveAll(tradesToSave);
-            tradeService.refreshRMultiplesForUser(user.getId());
+        Setup setup = resolveOrCreateSetup(user, preview.setupName());
+        List<Trade> tradesToSave = new ArrayList<>();
+        for (ImportPreviewTrade previewTrade : importablePreviewTrades) {
+            tradesToSave.add(buildTrade(
+                    user,
+                    setup,
+                    accountLabel,
+                    preview.defaultHtf(),
+                    preview.defaultLtf(),
+                    previewTrade
+            ));
         }
+
+        tradeRepository.saveAll(tradesToSave);
+        tradeService.refreshRMultiplesForUser(user.getId());
 
         return new ImportResult(
                 tradesToSave.size(),
                 duplicateCount,
-                report.skippedRows(),
+                preview.skippedCount(),
                 accountLabel,
                 setup.getName()
+        );
+    }
+
+    private void validateImportRequest(MultipartFile file, User user) {
+        if (file == null || file.isEmpty()) {
+            throw new IllegalArgumentException("Please choose an MT5 history file to import.");
+        }
+
+        if (user == null) {
+            throw new IllegalArgumentException("You must be logged in to import trades.");
+        }
+    }
+
+    private ImportOptions normalizeOptions(ImportOptions options) {
+        return new ImportOptions(
+                normalizeOrDefault(options != null ? options.setupName() : null, "MT5 Import"),
+                normalizeOrDefault(options != null ? options.defaultHtf() : null, "H1"),
+                normalizeOrDefault(options != null ? options.defaultLtf() : null, "M5"),
+                normalizeOrDefault(options != null ? options.sessionMode() : null, "AUTO")
         );
     }
 
@@ -255,7 +346,7 @@ public class Mt5ImportService {
 
     private Mt5PositionRow parsePositionRow(Row row, DataFormatter formatter) {
         LocalDateTime entryTime = parseDateTime(getCellText(row, 0, formatter));
-        String positionId = getCellText(row, 1, formatter);
+        String positionId = normalizePositionId(getCellText(row, 1, formatter));
         String symbol = normalizeUpper(getCellText(row, 2, formatter));
         String direction = normalizeDirection(getCellText(row, 3, formatter));
         double volume = parseDouble(getCell(row, 4), formatter);
@@ -297,7 +388,7 @@ public class Mt5ImportService {
 
     private Mt5PositionRow parsePositionRow(Map<String, String> row) {
         LocalDateTime entryTime = parseDateTime(row.getOrDefault("A", ""));
-        String positionId = row.getOrDefault("B", "");
+        String positionId = normalizePositionId(row.getOrDefault("B", ""));
         String symbol = normalizeUpper(row.getOrDefault("C", ""));
         String direction = normalizeDirection(row.getOrDefault("D", ""));
         double volume = parseDouble(row.getOrDefault("E", ""));
@@ -350,6 +441,11 @@ public class Mt5ImportService {
     }
 
     private boolean isDuplicate(User user, Mt5PositionRow row) {
+        String normalizedPositionId = normalizePositionId(row.positionId());
+        if (StringUtils.hasText(normalizedPositionId)) {
+            return tradeRepository.existsByUserIdAndMt5PositionId(user.getId(), normalizedPositionId)
+                    || tradeRepository.countLegacyMt5ImportsByUserIdAndPositionId(user.getId(), normalizedPositionId) > 0;
+        }
         return tradeRepository.existsByUserIdAndEntryTimeAndExitTimeAndSymbolIgnoreCaseAndDirectionIgnoreCaseAndPositionSizeAndEntryPrice(
                 user.getId(),
                 row.entryTime(),
@@ -361,14 +457,63 @@ public class Mt5ImportService {
         );
     }
 
+    private boolean isDuplicate(User user, ImportPreviewTrade row) {
+        String normalizedPositionId = normalizePositionId(row.positionId());
+        if (StringUtils.hasText(normalizedPositionId)) {
+            return tradeRepository.existsByUserIdAndMt5PositionId(user.getId(), normalizedPositionId)
+                    || tradeRepository.countLegacyMt5ImportsByUserIdAndPositionId(user.getId(), normalizedPositionId) > 0;
+        }
+        return tradeRepository.existsByUserIdAndEntryTimeAndExitTimeAndSymbolIgnoreCaseAndDirectionIgnoreCaseAndPositionSizeAndEntryPrice(
+                user.getId(),
+                row.entryTime(),
+                row.exitTime(),
+                row.symbol(),
+                row.direction(),
+                row.volume(),
+                row.entryPrice()
+        );
+    }
+
+    private ImportPreviewTrade preparePreviewTrade(Mt5PositionRow row, String sessionMode, boolean duplicate) {
+        boolean hasReportedStopLoss = row.stopLoss() > 0;
+        boolean hasReportedTakeProfit = row.takeProfit() > 0;
+
+        double resolvedStopLoss = hasReportedStopLoss
+                ? row.stopLoss()
+                : fallbackStopLoss(row.direction(), row.entryPrice(), row.exitPrice(), row.profit());
+        double resolvedTakeProfit = hasReportedTakeProfit
+                ? row.takeProfit()
+                : fallbackTakeProfit(row.direction(), row.entryPrice(), row.exitPrice(), row.profit());
+
+        double netPnl = round2(row.profit() + row.commission() + row.swap());
+        return new ImportPreviewTrade(
+                row.positionId(),
+                row.symbol(),
+                row.direction(),
+                row.volume(),
+                row.entryTime(),
+                row.exitTime(),
+                row.entryPrice(),
+                row.exitPrice(),
+                round5(resolvedStopLoss),
+                round5(resolvedTakeProfit),
+                netPnl,
+                resolveResult(netPnl),
+                resolveSession(sessionMode, row.entryTime()),
+                buildImportNote(row, netPnl, hasReportedStopLoss, hasReportedTakeProfit),
+                !hasReportedStopLoss,
+                !hasReportedTakeProfit,
+                duplicate
+        );
+    }
+
     private Trade buildTrade(
             User user,
             Setup setup,
             String accountLabel,
             String defaultHtf,
             String defaultLtf,
-            String sessionMode,
-            Mt5PositionRow row
+            ImportPreviewTrade row
     ) {
         Trade trade = new Trade();
         trade.setUser(user);
@@ -384,29 +529,17 @@ public class Mt5ImportService {
         trade.setEntryPrice(round5(row.entryPrice()));
         trade.setExitPrice(round5(row.exitPrice()));
         trade.setPositionSize(round5(row.volume()));
-
-        boolean hasReportedStopLoss = row.stopLoss() > 0;
-        boolean hasReportedTakeProfit = row.takeProfit() > 0;
-
-        double resolvedStopLoss = hasReportedStopLoss
-                ? row.stopLoss()
-                : fallbackStopLoss(row.direction(), row.entryPrice(), row.exitPrice(), row.profit());
-        double resolvedTakeProfit = hasReportedTakeProfit
-                ? row.takeProfit()
-                : fallbackTakeProfit(row.direction(), row.entryPrice(), row.exitPrice(), row.profit());
-
-        trade.setStopLoss(round5(resolvedStopLoss));
+        trade.setMt5PositionId(normalizePositionId(row.positionId()));
+        trade.setStopLoss(round5(row.stopLoss()));
         trade.setInitialStopLoss(null);
         trade.setInitialStopLossConfirmed(false);
-        trade.setTakeProfit(round5(resolvedTakeProfit));
-
-        double netPnl = round2(row.profit() + row.commission() + row.swap());
-        trade.setPnl(netPnl);
-        trade.setResult(resolveResult(netPnl));
+        trade.setTakeProfit(round5(row.takeProfit()));
+        trade.setPnl(row.pnl());
+        trade.setResult(row.result());
         trade.setRMultiple(0.0);
         trade.setRMultipleSource("UNKNOWN");
-        trade.setSession(resolveSession(sessionMode, row.entryTime()));
-        trade.setNote(buildImportNote(row, netPnl, hasReportedStopLoss, hasReportedTakeProfit));
+        trade.setSession(row.session());
+        trade.setNote(row.note());
 
         return trade;
     }
@@ -467,6 +600,10 @@ public class Mt5ImportService {
 
     private String normalizeUpper(String value) {
         return value == null ? null : value.trim().toUpperCase(Locale.ENGLISH);
+    }
+
+    private String normalizePositionId(String value) {
+        return StringUtils.hasText(value) ? value.trim() : null;
     }
 
     private String normalizeOrDefault(String value, String fallback) {
@@ -676,6 +813,48 @@ public class Mt5ImportService {
             String accountLabel,
             String setupName
     ) {
+    }
+
+    public record ImportPreview(
+            String previewId,
+            String userId,
+            String sourceFileName,
+            String accountLabel,
+            String setupName,
+            String defaultHtf,
+            String defaultLtf,
+            String sessionMode,
+            int closedPositionCount,
+            int importableCount,
+            int duplicateCount,
+            int skippedCount,
+            boolean proAccess,
+            long remainingTradeSlots,
+            boolean canImport,
+            String blockingMessage,
+            List<ImportPreviewTrade> previewTrades
+    ) implements Serializable {
+    }
+
+    public record ImportPreviewTrade(
+            String positionId,
+            String symbol,
+            String direction,
+            double volume,
+            LocalDateTime entryTime,
+            LocalDateTime exitTime,
+            double entryPrice,
+            double exitPrice,
+            double stopLoss,
+            double takeProfit,
+            double pnl,
+            String result,
+            String session,
+            String note,
+            boolean placeholderStopLoss,
+            boolean placeholderTakeProfit,
+            boolean duplicate
+    ) implements Serializable {
     }
 
     private record ParsedReport(

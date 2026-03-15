@@ -111,6 +111,92 @@
   overflow: visible;
 }
 
+.trade-preview-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
+
+.trade-preview-actions form {
+  margin: 0;
+}
+
+.mt5-preview-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.mt5-preview-chip {
+  min-width: 160px;
+  padding: 12px 14px;
+  border: 1px solid var(--trade-border);
+  border-radius: 16px;
+  background: rgba(248, 250, 252, 0.95);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.mt5-preview-chip-label,
+.mt5-preview-stat-label {
+  color: var(--trade-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.mt5-preview-stats {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.mt5-preview-stat {
+  padding: 16px 18px;
+  border: 1px solid var(--trade-border);
+  border-radius: 18px;
+  background: var(--trade-surface);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.mt5-preview-stat-value {
+  font-size: 1.35rem;
+  line-height: 1;
+}
+
+.mt5-preview-table-wrap {
+  max-height: 560px;
+  overflow: auto !important;
+  border: 1px solid var(--trade-border);
+  border-radius: 20px;
+}
+
+.mt5-preview-table {
+  min-width: 980px;
+}
+
+.mt5-preview-row-duplicate {
+  opacity: 0.72;
+}
+
+.mt5-preview-price-stack,
+.mt5-preview-warning-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.mt5-preview-price-stack span {
+  white-space: nowrap;
+}
+
 .trade-filter-bar {
   display: grid;
   grid-template-columns: minmax(220px, 1.5fr) repeat(4, minmax(120px, 0.9fr)) minmax(300px, 1.7fr);
@@ -553,6 +639,10 @@
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
+  .mt5-preview-stats {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
   .trade-filter-bar {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
@@ -568,6 +658,10 @@
   }
 
   .trade-stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .mt5-preview-stats {
     grid-template-columns: 1fr;
   }
 

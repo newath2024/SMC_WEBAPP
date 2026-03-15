@@ -21,6 +21,8 @@ public interface TradeRepository extends JpaRepository<Trade, String> {
 
     void deleteByUserId(String userId);
 
+    boolean existsByUserIdAndMt5PositionId(String userId, String mt5PositionId);
+
     boolean existsByUserIdAndEntryTimeAndExitTimeAndSymbolIgnoreCaseAndDirectionIgnoreCaseAndPositionSizeAndEntryPrice(
             String userId,
             java.time.LocalDateTime entryTime,
@@ -30,6 +32,14 @@ public interface TradeRepository extends JpaRepository<Trade, String> {
             double positionSize,
             double entryPrice
     );
+
+    @Query("""
+            select count(t)
+            from Trade t
+            where t.user.id = :userId
+              and lower(coalesce(t.note, '')) like lower(concat('Imported from MT5 history | Position #', :positionId, ' |%'))
+            """)
+    long countLegacyMt5ImportsByUserIdAndPositionId(@Param("userId") String userId, @Param("positionId") String positionId);
 
     @Query("""
             select t.setup.id as setupId,

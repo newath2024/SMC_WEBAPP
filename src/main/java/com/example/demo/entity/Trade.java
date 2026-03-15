@@ -78,6 +78,9 @@ public class Trade {
     @Positive
     private double positionSize;
 
+    @Column(name = "mt5_position_id", length = 64)
+    private String mt5PositionId;
+
     private String result; // WIN / LOSS / BE and take partial
 
     private double pnl;
@@ -327,6 +330,14 @@ public class Trade {
 
     public void setPositionSize(double positionSize) {
         this.positionSize = positionSize;
+    }
+
+    public String getMt5PositionId() {
+        return mt5PositionId;
+    }
+
+    public void setMt5PositionId(String mt5PositionId) {
+        this.mt5PositionId = mt5PositionId;
     }
 
     public String getResult() {
