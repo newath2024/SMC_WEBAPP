@@ -341,6 +341,7 @@
                            name="entryTime"
                            th:value="${trade.entryTime != null ? #temporals.format(trade.entryTime, 'yyyy-MM-dd''T''HH:mm') : ''}">
                     <div class="text-danger small" th:if="${#fields.hasErrors('entryTime')}" th:errors="*{entryTime}"></div>
+                    <div class="form-text">Optional for screenshot imports. Only fill this when you know the exact timestamp.</div>
                   </div>
 
                   <div class="col-md-4">
@@ -354,12 +355,37 @@
                            th:if="${editMode}"
                            name="exitTime"
                            th:value="${trade.exitTime != null ? #temporals.format(trade.exitTime, 'yyyy-MM-dd''T''HH:mm') : ''}">
+                    <div class="form-text">Optional for screenshot imports. Leave blank if the chart only supports an estimated holding time.</div>
                   </div>
 
                   <div class="col-md-4">
                     <label class="form-label">Position Size</label>
                     <input id="positionSize" class="form-control" type="number" step="0.01" th:field="*{positionSize}">
                     <div id="volumeHint" class="form-text">Unit: lot</div>
+                  </div>
+
+                  <div class="col-md-3">
+                    <label class="form-label">Estimated Holding Minutes</label>
+                    <input id="estimatedHoldingMinutes" class="form-control" type="number" th:field="*{estimatedHoldingMinutes}" readonly>
+                    <div class="form-text">Used only when exact entry and exit timestamps are missing.</div>
+                  </div>
+
+                  <div class="col-md-3">
+                    <label class="form-label">Estimated LTF Candles</label>
+                    <input id="estimatedLtfCandlesHeld" class="form-control" type="number" th:field="*{estimatedLtfCandlesHeld}" readonly>
+                    <div class="form-text">Equivalent candle count inferred from the AI screenshot flow.</div>
+                  </div>
+
+                  <div class="col-md-3">
+                    <label class="form-label">Session Guess</label>
+                    <input id="sessionGuess" class="form-control" type="text" th:field="*{sessionGuess}" readonly>
+                    <div class="form-text">Estimated only. Exact session is inferred from Entry Time when that timestamp exists.</div>
+                  </div>
+
+                  <div class="col-md-3">
+                    <label class="form-label">Session Confidence</label>
+                    <input id="sessionConfidence" class="form-control" type="text" th:field="*{sessionConfidence}" readonly>
+                    <div class="form-text">AI confidence for the screenshot-based session guess.</div>
                   </div>
 
                   <div class="col-md-3">

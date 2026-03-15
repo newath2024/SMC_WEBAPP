@@ -529,7 +529,7 @@
               <span class="mx-2">&bull;</span>
               <span th:text="${trade.setup != null ? trade.setup.name : '-'}">Setup</span>
               <span class="mx-2">&bull;</span>
-              <span th:text="${#temporals.format(trade.entryTime, 'yyyy-MM-dd HH:mm')}">2026-03-10 10:00</span>
+              <span th:text="${trade.entryTime != null ? #temporals.format(trade.entryTime, 'yyyy-MM-dd HH:mm') : 'No exact entry time'}">2026-03-10 10:00</span>
             </div>
           </div>
           <div class="d-flex gap-2 align-items-start">
@@ -549,7 +549,7 @@
             </div>
           <div class="trade-stat">
             <div class="trade-stat-label">Holding</div>
-            <div class="trade-stat-value" th:text="${trade.holdingMinutes != null ? trade.holdingMinutes + ' min' : '-'}">-</div>
+            <div class="trade-stat-value" th:text="${trade.holdingMinutes != null ? trade.holdingMinutes + ' min' + (trade.exactHoldingMinutes != null ? '' : ' est.') : '-'}">-</div>
           </div>
           <div class="trade-stat">
             <div class="trade-stat-label">TF</div>
@@ -582,17 +582,19 @@
             <div class="trade-summary-stack">
               <div class="trade-summary-row"><div class="trade-summary-label">Account</div><div class="trade-summary-value" th:text="${trade.accountLabel}">Account</div></div>
               <div class="trade-summary-row"><div class="trade-summary-label">Setup</div><div class="trade-summary-value" th:text="${trade.setup != null ? trade.setup.name : '-'}">Setup</div></div>
-              <div class="trade-summary-row"><div class="trade-summary-label">Session</div><div class="trade-summary-value" th:text="${trade.session}">London</div></div>
+              <div class="trade-summary-row"><div class="trade-summary-label">Session</div><div class="trade-summary-value" th:text="${trade.session != null ? trade.session + ' (' + trade.sessionSourceLabel + ')' : '-'}">London</div></div>
+              <div class="trade-summary-row"><div class="trade-summary-label">Session Guess</div><div class="trade-summary-value" th:text="${trade.sessionGuess != null ? trade.sessionGuess + (trade.sessionConfidence != null ? ' (' + trade.sessionConfidence + ')' : '') : '-'}">New York (medium)</div></div>
               <div class="trade-summary-row"><div class="trade-summary-label">HTF / LTF</div><div class="trade-summary-value" th:text="${(trade.htf != null ? trade.htf : '-') + ' / ' + (trade.ltf != null ? trade.ltf : '-')}">H1 / M5</div></div>
             </div>
           </div>
           <div class="trade-summary-block">
             <div class="trade-summary-block-title">Time</div>
             <div class="trade-summary-stack">
-              <div class="trade-summary-row"><div class="trade-summary-label">Entry Time</div><div class="trade-summary-value" th:text="${#temporals.format(trade.entryTime, 'yyyy-MM-dd HH:mm')}">2026-03-10 10:00</div></div>
+              <div class="trade-summary-row"><div class="trade-summary-label">Entry Time</div><div class="trade-summary-value" th:text="${trade.entryTime != null ? #temporals.format(trade.entryTime, 'yyyy-MM-dd HH:mm') : '-'}">2026-03-10 10:00</div></div>
               <div class="trade-summary-row"><div class="trade-summary-label">Exit Time</div><div class="trade-summary-value" th:text="${trade.exitTime != null ? #temporals.format(trade.exitTime, 'yyyy-MM-dd HH:mm') : '-'}">-</div></div>
-              <div class="trade-summary-row"><div class="trade-summary-label">Holding</div><div class="trade-summary-value" th:text="${trade.holdingMinutes != null ? trade.holdingMinutes + ' min' : '-'}">-</div></div>
-              <div class="trade-summary-row"><div class="trade-summary-label">Candles</div><div class="trade-summary-value" th:text="${trade.equivalentCandles != null ? '~' + trade.equivalentCandles + ' candles' : '-'}">-</div></div>
+              <div class="trade-summary-row"><div class="trade-summary-label">Holding</div><div class="trade-summary-value" th:text="${trade.holdingMinutes != null ? trade.holdingMinutes + ' min (' + trade.holdingMinutesSourceLabel + ')' : '-'}">-</div></div>
+              <div class="trade-summary-row"><div class="trade-summary-label">Estimated Holding</div><div class="trade-summary-value" th:text="${trade.estimatedHoldingMinutes != null ? trade.estimatedHoldingMinutes + ' min' : '-'}">-</div></div>
+              <div class="trade-summary-row"><div class="trade-summary-label">Estimated LTF Candles</div><div class="trade-summary-value" th:text="${trade.estimatedLtfCandlesHeld != null ? '~' + trade.estimatedLtfCandlesHeld + ' candles' : '-'}">-</div></div>
             </div>
           </div>
         </div>

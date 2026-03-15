@@ -545,6 +545,28 @@ function toTradeSessionValue(sessionGuess) {
     return '';
 }
 
+function timeframeToMinutes(timeframe) {
+    if (!timeframe) return null;
+    switch (String(timeframe).trim().toUpperCase()) {
+        case 'M1':
+            return 1;
+        case 'M3':
+            return 3;
+        case 'M5':
+            return 5;
+        case 'M15':
+            return 15;
+        case 'M30':
+            return 30;
+        case 'H1':
+            return 60;
+        case 'H4':
+            return 240;
+        default:
+            return null;
+    }
+}
+
 function trySelectSetupByName(setupName) {
     if (!setupName) return false;
     const setupSelect = document.getElementById('setupId');
@@ -693,6 +715,10 @@ function applyTradeChartAnalysis(analysis) {
     const ltfSelect = document.getElementById('ltf');
     const htfSelect = document.getElementById('htf');
     const sessionSelect = document.getElementById('session');
+    const estimatedHoldingInput = document.getElementById('estimatedHoldingMinutes');
+    const estimatedLtfCandlesInput = document.getElementById('estimatedLtfCandlesHeld');
+    const sessionGuessInput = document.getElementById('sessionGuess');
+    const sessionConfidenceInput = document.getElementById('sessionConfidence');
     const entryInput = document.getElementById('entryPrice');
     const stopLossInput = document.getElementById('stopLoss');
     const initialStopLossInput = document.getElementById('initialStopLoss');
@@ -742,7 +768,28 @@ function applyTradeChartAnalysis(analysis) {
         ensureSelectOption(htfSelect, analysis.timeframeHTF);
     }
 
-    if (analysis.sessionGuess && sessionSelect) {
+    if (estimatedHoldingInput) {
+        estimatedHoldingInput.value = analysis.estimatedHoldingMinutes ?? '';
+    }
+
+    if (estimatedLtfCandlesInput) {
+        let estimatedLtfCandles = '';
+        const ltfMinutes = timeframeToMinutes(analysis.timeframeLTF);
+        if (analysis.estimatedHoldingMinutes !== null && analysis.estimatedHoldingMinutes !== undefined && ltfMinutes) {
+            estimatedLtfCandles = Math.round(Number(analysis.estimatedHoldingMinutes) / ltfMinutes);
+        }
+        estimatedLtfCandlesInput.value = estimatedLtfCandles;
+    }
+
+    if (sessionGuessInput) {
+        sessionGuessInput.value = analysis.sessionGuess || '';
+    }
+
+    if (sessionConfidenceInput) {
+        sessionConfidenceInput.value = analysis.sessionConfidence || '';
+    }
+
+    if (!document.getElementById('entryTime')?.value && analysis.sessionGuess && sessionSelect && !sessionSelect.value) {
         const sessionValue = toTradeSessionValue(analysis.sessionGuess);
         if (sessionValue) {
             sessionSelect.value = sessionValue;

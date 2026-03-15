@@ -197,6 +197,10 @@ public class TradeService {
         existing.setResult(formTrade.getResult());
         existing.setSetup(formTrade.getSetup());
         existing.setSession(formTrade.getSession());
+        existing.setEstimatedHoldingMinutes(formTrade.getEstimatedHoldingMinutes());
+        existing.setEstimatedLtfCandlesHeld(formTrade.getEstimatedLtfCandlesHeld());
+        existing.setSessionGuess(formTrade.getSessionGuess());
+        existing.setSessionConfidence(formTrade.getSessionConfidence());
         existing.setNote(formTrade.getNote());
     }
 
@@ -222,6 +226,14 @@ public class TradeService {
             trade.setSession(trade.getSession().trim().toUpperCase());
         }
 
+        if (trade.getSessionGuess() != null) {
+            trade.setSessionGuess(trade.getSessionGuess().trim());
+        }
+
+        if (trade.getSessionConfidence() != null) {
+            trade.setSessionConfidence(trade.getSessionConfidence().trim().toLowerCase());
+        }
+
         if (trade.getSymbol() != null) {
             trade.setSymbol(trade.getSymbol().trim().toUpperCase());
         }
@@ -237,6 +249,28 @@ public class TradeService {
         if (trade.getTradeDate() == null && trade.getEntryTime() != null) {
             trade.setTradeDate(trade.getEntryTime());
         }
+
+        if (trade.getEntryTime() != null) {
+            trade.setSession(resolveSessionFromEntryTime(trade.getEntryTime()));
+        } else if ((trade.getSession() == null || trade.getSession().isBlank())
+                && trade.getSessionGuess() != null
+                && !trade.getSessionGuess().isBlank()) {
+            trade.setSession(trade.getSessionGuess().trim().toUpperCase().replace(' ', '_'));
+        }
+    }
+
+    private String resolveSessionFromEntryTime(java.time.LocalDateTime entryTime) {
+        int hour = entryTime.getHour();
+        if (hour >= 0 && hour < 7) {
+            return "ASIA";
+        }
+        if (hour >= 7 && hour < 13) {
+            return "LONDON";
+        }
+        if (hour >= 13 && hour < 22) {
+            return "NEW_YORK";
+        }
+        return "OTHER";
     }
 
     @Transactional

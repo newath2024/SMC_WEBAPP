@@ -5,6 +5,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -24,10 +25,11 @@ public class Trade {
 
     private LocalDateTime tradeDate;
 
-    @NotNull
+    @Column(name = "entry_time", nullable = true)
     @DateTimeFormat(pattern = "yyyy-MM-dd'T'HH:mm")
     private LocalDateTime entryTime;
 
+    @Column(name = "exit_time", nullable = true)
     @DateTimeFormat(pattern = "yyyy-MM-dd'T'HH:mm")
     private LocalDateTime exitTime;
 
@@ -93,6 +95,18 @@ public class Trade {
 
     private String session; // ASIA / LONDON / NEW_YORK / OTHER
 
+    @Column(name = "estimated_holding_minutes")
+    private Integer estimatedHoldingMinutes;
+
+    @Column(name = "estimated_ltf_candles_held")
+    private Integer estimatedLtfCandlesHeld;
+
+    @Column(name = "session_guess", length = 32)
+    private String sessionGuess;
+
+    @Column(name = "session_confidence", length = 16)
+    private String sessionConfidence;
+
     @Column(columnDefinition = "TEXT")
     private String note;
 
@@ -107,21 +121,34 @@ public class Trade {
         if (id == null) id = UUID.randomUUID().toString();
         if (createdAt == null) createdAt = LocalDateTime.now();
         if (updatedAt == null) updatedAt = LocalDateTime.now();
-        if (tradeDate == null && entryTime != null) tradeDate = entryTime;
+        if (tradeDate == null) {
+            tradeDate = entryTime != null ? entryTime : createdAt;
+        }
     }
 
     @PreUpdate
     public void preUpdate() {
         updatedAt = LocalDateTime.now();
-        if (tradeDate == null && entryTime != null) tradeDate = entryTime;
+        if (tradeDate == null) {
+            tradeDate = entryTime != null ? entryTime : createdAt;
+        }
     }
 
     @Transient
-    public Long getHoldingMinutes() {
+    public Long getExactHoldingMinutes() {
         if (entryTime == null || exitTime == null) {
             return null;
         }
         return Duration.between(entryTime, exitTime).toMinutes();
+    }
+
+    @Transient
+    public Long getHoldingMinutes() {
+        Long exactHolding = getExactHoldingMinutes();
+        if (exactHolding != null) {
+            return exactHolding;
+        }
+        return estimatedHoldingMinutes == null ? null : estimatedHoldingMinutes.longValue();
     }
 
     @Transient
@@ -417,11 +444,118 @@ public class Trade {
     }
 
     public String getSession() {
+        if (entryTime != null) {
+            return inferSessionFromEntryTime(entryTime);
+        }
+        if (StringUtils.hasText(session)) {
+            return session;
+        }
+        if (StringUtils.hasText(sessionGuess)) {
+            return normalizeSessionLabel(sessionGuess);
+        }
         return session;
     }
 
     public void setSession(String session) {
         this.session = session;
+    }
+
+    public Integer getEstimatedHoldingMinutes() {
+        return estimatedHoldingMinutes;
+    }
+
+    public void setEstimatedHoldingMinutes(Integer estimatedHoldingMinutes) {
+        this.estimatedHoldingMinutes = estimatedHoldingMinutes;
+    }
+
+    public Integer getEstimatedLtfCandlesHeld() {
+        return estimatedLtfCandlesHeld;
+    }
+
+    public void setEstimatedLtfCandlesHeld(Integer estimatedLtfCandlesHeld) {
+        this.estimatedLtfCandlesHeld = estimatedLtfCandlesHeld;
+    }
+
+    public String getSessionGuess() {
+        return sessionGuess;
+    }
+
+    public void setSessionGuess(String sessionGuess) {
+        this.sessionGuess = sessionGuess;
+    }
+
+    public String getSessionConfidence() {
+        return sessionConfidence;
+    }
+
+    public void setSessionConfidence(String sessionConfidence) {
+        this.sessionConfidence = sessionConfidence;
+    }
+
+    @Transient
+    public boolean hasExactHoldingMinutes() {
+        return getExactHoldingMinutes() != null;
+    }
+
+    @Transient
+    public boolean hasEstimatedHoldingMinutes() {
+        return getExactHoldingMinutes() == null && estimatedHoldingMinutes != null;
+    }
+
+    @Transient
+    public String getHoldingMinutesSourceLabel() {
+        if (hasExactHoldingMinutes()) {
+            return "Exact";
+        }
+        if (hasEstimatedHoldingMinutes()) {
+            return "Estimated";
+        }
+        return "Unknown";
+    }
+
+    @Transient
+    public boolean hasEstimatedSession() {
+        return entryTime == null && StringUtils.hasText(sessionGuess);
+    }
+
+    @Transient
+    public String getSessionSourceLabel() {
+        if (entryTime != null) {
+            return "Exact";
+        }
+        if (hasEstimatedSession()) {
+            return "Estimated";
+        }
+        if (StringUtils.hasText(session)) {
+            return "Manual";
+        }
+        return "Unknown";
+    }
+
+    private String inferSessionFromEntryTime(LocalDateTime value) {
+        int hour = value.getHour();
+        if (hour >= 0 && hour < 7) {
+            return "ASIA";
+        }
+        if (hour >= 7 && hour < 13) {
+            return "LONDON";
+        }
+        if (hour >= 13 && hour < 22) {
+            return "NEW_YORK";
+        }
+        return "OTHER";
+    }
+
+    private String normalizeSessionLabel(String value) {
+        if (!StringUtils.hasText(value)) {
+            return null;
+        }
+
+        String normalized = value.trim().toUpperCase().replace(' ', '_');
+        if ("NEW_YORK".equals(normalized) || "LONDON".equals(normalized) || "ASIA".equals(normalized) || "OTHER".equals(normalized)) {
+            return normalized;
+        }
+        return value.trim();
     }
 
     public String getNote() {
