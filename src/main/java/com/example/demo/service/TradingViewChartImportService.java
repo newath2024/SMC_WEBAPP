@@ -6,6 +6,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -25,6 +27,8 @@ import java.util.regex.Pattern;
 @Service
 public class TradingViewChartImportService {
 
+    private static final Logger log = LoggerFactory.getLogger(TradingViewChartImportService.class);
+    private static final String DEFAULT_OPENAI_BASE_URL = "https://api.openai.com/v1";
     private static final long MAX_IMAGE_SIZE_BYTES = 10L * 1024L * 1024L;
     private static final Pattern THOUSANDS_GROUPS_WITH_COMMA = Pattern.compile("^-?\\d{1,3}(,\\d{3})+(\\.\\d+)?$");
     private static final Pattern THOUSANDS_GROUPS_WITH_DOT = Pattern.compile("^-?\\d{1,3}(\\.\\d{3})+(,\\d+)?$");
@@ -92,16 +96,29 @@ public class TradingViewChartImportService {
             @Value("${openai.trade-chart-model:gpt-4.1}") String model,
             @Value("${openai.trade-chart-timeout-seconds:60}") long timeoutSeconds
     ) {
+        String configuredBaseUrl = StringUtils.hasText(baseUrl) ? baseUrl.trim() : "";
         this.objectMapper = JsonMapper.builder()
                 .findAndAddModules()
                 .build();
         this.apiKey = apiKey == null ? "" : apiKey.trim();
-        this.baseUrl = stripTrailingSlash(baseUrl);
+        this.baseUrl = normalizeBaseUrl(baseUrl);
         this.model = StringUtils.hasText(model) ? model.trim() : "gpt-4.1";
         this.timeout = Duration.ofSeconds(Math.max(10L, timeoutSeconds));
         this.httpClient = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(15))
                 .build();
+
+        if (StringUtils.hasText(configuredBaseUrl) && !normalizeComparableUrl(configuredBaseUrl).equals(this.baseUrl)) {
+            log.info("Normalized OPENAI_BASE_URL from '{}' to '{}'.", configuredBaseUrl, this.baseUrl);
+        }
+
+        if (isConfigured()) {
+            log.info("TradingView screenshot import configured. baseUrl='{}', model='{}', timeoutSeconds={}.",
+                    this.baseUrl, this.model, this.timeout.toSeconds());
+        } else {
+            log.warn("TradingView screenshot import is disabled because OPENAI_API_KEY is not configured. baseUrl='{}', model='{}'.",
+                    this.baseUrl, this.model);
+        }
     }
 
     public boolean isConfigured() {
@@ -114,9 +131,10 @@ public class TradingViewChartImportService {
 
         String dataUrl = toDataUrl(file);
         String requestBody = buildRequestBody(dataUrl);
+        URI endpointUri = URI.create(baseUrl + "/responses");
 
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(baseUrl + "/responses"))
+                .uri(endpointUri)
                 .header("Authorization", "Bearer " + apiKey)
                 .header("Content-Type", "application/json")
                 .timeout(timeout)
@@ -124,23 +142,38 @@ public class TradingViewChartImportService {
                 .build();
 
         try {
+            log.info("Submitting TradingView screenshot to OpenAI. endpoint='{}', model='{}', file='{}', contentType='{}', sizeBytes={}.",
+                    endpointUri, model, safeFilename(file), safeContentType(file), file.getSize());
+
             HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
             if (response.statusCode() >= 400) {
-                throw new RuntimeException(resolveOpenAiErrorMessage(response.body(), response.statusCode()));
+                String errorMessage = resolveOpenAiErrorMessage(response.body(), response.statusCode());
+                log.warn("OpenAI TradingView screenshot analysis failed. endpoint='{}', model='{}', status={}, message='{}', bodySnippet='{}'.",
+                        endpointUri, model, response.statusCode(), errorMessage, summarizeBody(response.body()));
+                throw new RuntimeException(errorMessage);
             }
 
             JsonNode responseJson = objectMapper.readTree(response.body());
             String outputJson = extractOutputJson(responseJson);
             if (!StringUtils.hasText(outputJson)) {
+                log.warn("OpenAI TradingView screenshot analysis returned no output payload. endpoint='{}', model='{}', status={}.",
+                        endpointUri, model, response.statusCode());
                 throw new RuntimeException("OpenAI did not return a chart analysis payload.");
             }
 
             RawTradeChartAnalysis analysis = parseAnalysis(outputJson);
-            return normalizeAnalysis(analysis);
+            TradeChartAnalysis normalizedAnalysis = normalizeAnalysis(analysis);
+            log.info("OpenAI TradingView screenshot analysis succeeded. endpoint='{}', model='{}', symbol='{}', direction='{}', timeframe='{}'.",
+                    endpointUri, model, normalizedAnalysis.symbol(), normalizedAnalysis.direction(), normalizedAnalysis.timeframe());
+            return normalizedAnalysis;
         } catch (IOException ex) {
+            log.error("Unable to read TradingView screenshot analysis response. endpoint='{}', model='{}'.",
+                    endpointUri, model, ex);
             throw new RuntimeException("Unable to read the TradingView screenshot import response.", ex);
         } catch (InterruptedException ex) {
             Thread.currentThread().interrupt();
+            log.warn("TradingView screenshot analysis was interrupted. endpoint='{}', model='{}'.",
+                    endpointUri, model, ex);
             throw new RuntimeException("TradingView screenshot import was interrupted.", ex);
         }
     }
@@ -276,6 +309,9 @@ public class TradingViewChartImportService {
                 return message;
             }
         } catch (IOException ignored) {
+        }
+        if (statusCode == 404 && isDefaultOpenAiHost(baseUrl)) {
+            return "OpenAI endpoint not found. Leave OPENAI_BASE_URL empty or set it to https://api.openai.com/v1.";
         }
         return "TradingView screenshot analysis failed with status " + statusCode + ".";
     }
@@ -434,12 +470,68 @@ public class TradingViewChartImportService {
         return trimmed.trim();
     }
 
-    private String stripTrailingSlash(String value) {
+    private String normalizeBaseUrl(String value) {
         if (!StringUtils.hasText(value)) {
-            return "https://api.openai.com/v1";
+            return DEFAULT_OPENAI_BASE_URL;
         }
         String trimmed = value.trim();
+        String normalized = trimmed.endsWith("/") ? trimmed.substring(0, trimmed.length() - 1) : trimmed;
+
+        try {
+            URI uri = URI.create(normalized);
+            String host = uri.getHost();
+            String path = uri.getPath() == null ? "" : uri.getPath().trim();
+            if ("api.openai.com".equalsIgnoreCase(host) && (path.isEmpty() || "/".equals(path))) {
+                return normalized + "/v1";
+            }
+        } catch (IllegalArgumentException ignored) {
+        }
+
+        return normalized;
+    }
+
+    private String normalizeComparableUrl(String value) {
+        String trimmed = value == null ? "" : value.trim();
         return trimmed.endsWith("/") ? trimmed.substring(0, trimmed.length() - 1) : trimmed;
+    }
+
+    private boolean isDefaultOpenAiHost(String value) {
+        if (!StringUtils.hasText(value)) {
+            return false;
+        }
+
+        try {
+            URI uri = URI.create(value);
+            return "api.openai.com".equalsIgnoreCase(uri.getHost());
+        } catch (IllegalArgumentException ignored) {
+            return false;
+        }
+    }
+
+    private String safeFilename(MultipartFile file) {
+        if (file == null || !StringUtils.hasText(file.getOriginalFilename())) {
+            return "(unnamed)";
+        }
+        return file.getOriginalFilename().trim();
+    }
+
+    private String safeContentType(MultipartFile file) {
+        if (file == null || !StringUtils.hasText(file.getContentType())) {
+            return "(unknown)";
+        }
+        return file.getContentType().trim();
+    }
+
+    private String summarizeBody(String value) {
+        if (!StringUtils.hasText(value)) {
+            return "";
+        }
+
+        String collapsed = value.trim().replaceAll("\\s+", " ");
+        if (collapsed.length() <= 300) {
+            return collapsed;
+        }
+        return collapsed.substring(0, 297) + "...";
     }
 
     public record TradeChartAnalysis(
