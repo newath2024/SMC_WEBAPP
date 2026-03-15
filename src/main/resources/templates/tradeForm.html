@@ -47,6 +47,75 @@
             <div class="trade-form-layout">
               <section class="trade-form-section">
                 <div class="trade-form-section-header">
+                  <h5 class="mb-1">Import From TradingView Screenshot</h5>
+                  <p class="mb-0">Upload a chart screenshot, let AI extract the visible trade details, then review the prefilled form before saving.</p>
+                </div>
+                <div class="row g-3">
+                  <div class="col-12">
+                    <label class="form-label" for="tradeChartImportImage">TradingView Screenshot</label>
+                    <div class="trade-ai-import-actions">
+                      <input id="tradeChartImportImage"
+                             class="form-control trade-ai-import-file-input"
+                             type="file"
+                             accept="image/png,image/jpeg,image/webp,image/gif"
+                             th:disabled="${!tradeChartImportConfigured}">
+                      <button id="tradeChartImportButton"
+                              class="btn btn-outline-primary trade-ai-import-button"
+                              type="button"
+                              th:disabled="${!tradeChartImportConfigured}">
+                        <i class="bi bi-image me-1"></i>
+                        Analyze Screenshot
+                      </button>
+                    </div>
+                    <div class="form-text" th:if="${tradeChartImportConfigured}">
+                      AI will attempt to extract symbol, direction, entry, stop loss, take profit, timeframe, and a setup guess from the screenshot.
+                    </div>
+                    <div class="form-text text-warning" th:if="${!tradeChartImportConfigured}">
+                      Configure <code>OPENAI_API_KEY</code> to enable TradingView screenshot import.
+                    </div>
+                  </div>
+                  <div class="col-12">
+                    <div id="tradeChartImportStatus" class="alert d-none mb-0" role="status" aria-live="polite"></div>
+                  </div>
+                  <div class="col-12">
+                    <div id="tradeChartImportSummary" class="trade-ai-import-summary d-none">
+                      <div class="trade-ai-import-grid">
+                        <div class="trade-ai-import-item">
+                          <span class="trade-ai-import-label">Symbol</span>
+                          <strong id="tradeChartImportSymbol" class="trade-ai-import-value">-</strong>
+                        </div>
+                        <div class="trade-ai-import-item">
+                          <span class="trade-ai-import-label">Direction</span>
+                          <strong id="tradeChartImportDirection" class="trade-ai-import-value">-</strong>
+                        </div>
+                        <div class="trade-ai-import-item">
+                          <span class="trade-ai-import-label">Entry</span>
+                          <strong id="tradeChartImportEntry" class="trade-ai-import-value">-</strong>
+                        </div>
+                        <div class="trade-ai-import-item">
+                          <span class="trade-ai-import-label">Stop Loss</span>
+                          <strong id="tradeChartImportStopLoss" class="trade-ai-import-value">-</strong>
+                        </div>
+                        <div class="trade-ai-import-item">
+                          <span class="trade-ai-import-label">Take Profit</span>
+                          <strong id="tradeChartImportTakeProfit" class="trade-ai-import-value">-</strong>
+                        </div>
+                        <div class="trade-ai-import-item">
+                          <span class="trade-ai-import-label">Timeframe</span>
+                          <strong id="tradeChartImportTimeframe" class="trade-ai-import-value">-</strong>
+                        </div>
+                        <div class="trade-ai-import-item trade-ai-import-item-wide">
+                          <span class="trade-ai-import-label">Setup Guess</span>
+                          <strong id="tradeChartImportSetupGuess" class="trade-ai-import-value">-</strong>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              <section class="trade-form-section">
+                <div class="trade-form-section-header">
                   <h5 class="mb-1">Core Setup</h5>
                   <p class="mb-0">Capture the trade identity and context.</p>
                 </div>
@@ -83,7 +152,7 @@
 
                   <div class="col-md-4">
                     <label class="form-label">Setup</label>
-                    <select class="form-select" name="setupId">
+                    <select id="setupId" class="form-select" name="setupId">
                       <option value="">-- Select setup --</option>
                       <option th:each="s : ${setups}"
                               th:value="${s.id}"
@@ -95,7 +164,7 @@
 
                   <div class="col-md-4">
                     <label class="form-label">Session</label>
-                    <select class="form-select" th:field="*{session}">
+                    <select id="session" class="form-select" th:field="*{session}">
                       <option value="">-- Select --</option>
                       <option value="ASIA">Asia</option>
                       <option value="LONDON">London</option>
@@ -116,7 +185,7 @@
 
                   <div class="col-md-4">
                     <label class="form-label">HTF</label>
-                    <select class="form-select" th:field="*{htf}">
+                    <select id="htf" class="form-select" th:field="*{htf}">
                       <option value="">-- Select --</option>
                       <option value="H4">H4</option>
                       <option value="H1">H1</option>
@@ -130,7 +199,7 @@
 
                   <div class="col-md-4">
                     <label class="form-label">LTF</label>
-                    <select class="form-select" th:field="*{ltf}">
+                    <select id="ltf" class="form-select" th:field="*{ltf}">
                       <option value="">-- Select --</option>
                       <option value="H1">H1</option>
                       <option value="M30">M30</option>
@@ -281,7 +350,7 @@
 
                   <div class="col-12">
                     <label class="form-label">Note</label>
-                    <textarea class="form-control" rows="4" th:field="*{note}"></textarea>
+                    <textarea id="tradeNote" class="form-control" rows="4" th:field="*{note}"></textarea>
                   </div>
                 </div>
               </section>
