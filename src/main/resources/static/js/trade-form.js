@@ -247,6 +247,12 @@ function setTradeChartImportSummaryVisible(visible) {
     summaryEl.classList.toggle('d-none', !visible);
 }
 
+function setTradeChartImportReviewActionsVisible(visible) {
+    const actionsEl = document.getElementById('tradeChartImportReviewActions');
+    if (!actionsEl) return;
+    actionsEl.classList.toggle('d-none', !visible);
+}
+
 function setTradeChartImportBusy(isBusy) {
     const button = getTradeChartImportButton();
     const input = getTradeChartImportInput();
@@ -302,6 +308,7 @@ function renderTradeChartImportSummary(analysis) {
     });
 
     setTradeChartImportSummaryVisible(true);
+    setTradeChartImportReviewActionsVisible(true);
 }
 
 function ensureSelectOption(select, value) {
@@ -487,8 +494,9 @@ async function handleTradeChartImport() {
 
         renderTradeChartImportSummary(analysis);
         applyTradeChartAnalysis(analysis);
-        setTradeChartImportStatus('Screenshot analyzed. Review the imported values before saving the trade.', 'success');
+        setTradeChartImportStatus('Screenshot analyzed. The values were added to the form below. Review them, then click Save Trade.', 'success');
     } catch (error) {
+        setTradeChartImportReviewActionsVisible(false);
         setTradeChartImportStatus(error.message || 'TradingView screenshot analysis failed.', 'danger');
     } finally {
         setTradeChartImportBusy(false);

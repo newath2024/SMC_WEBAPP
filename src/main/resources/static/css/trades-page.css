@@ -639,6 +639,34 @@
   white-space: nowrap;
 }
 
+.trade-ai-import-review-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 18px;
+  border: 1px solid rgba(37, 99, 235, 0.18);
+  border-radius: 18px;
+  background: linear-gradient(135deg, rgba(239, 246, 255, 0.92), rgba(248, 250, 252, 0.95));
+}
+
+.trade-ai-import-review-title {
+  color: #0f172a;
+  font-size: 0.98rem;
+  font-weight: 700;
+}
+
+.trade-ai-import-review-copy {
+  color: var(--trade-muted);
+  font-size: 0.92rem;
+}
+
+.trade-ai-import-review-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
 .trade-ai-import-summary {
   padding: 18px;
   border: 1px solid var(--trade-border);
@@ -691,6 +719,11 @@
   margin-top: 20px;
 }
 
+#tradeCoreSetupSection,
+#tradeFormFooter {
+  scroll-margin-top: 100px;
+}
+
 @media (max-width: 1199.98px) {
   .trade-stats-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -720,6 +753,19 @@
 
   .trade-stats-grid {
     grid-template-columns: 1fr;
+  }
+
+  .trade-ai-import-review-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .trade-ai-import-review-buttons {
+    flex-direction: column;
+  }
+
+  .trade-ai-import-review-buttons .btn {
+    width: 100%;
   }
 
   .trade-ai-import-actions {
