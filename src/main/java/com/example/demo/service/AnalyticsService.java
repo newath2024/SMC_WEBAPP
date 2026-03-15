@@ -224,11 +224,15 @@ public class AnalyticsService {
         double totalR = 0.0;
 
         for (Trade trade : trades) {
-            if ("WIN".equalsIgnoreCase(trade.getResult())) {
+            String result = trade.getResult() == null ? "" : trade.getResult().trim();
+            if ("WIN".equalsIgnoreCase(result)) {
                 winTrades++;
-            } else if ("LOSS".equalsIgnoreCase(trade.getResult())) {
+            } else if ("LOSS".equalsIgnoreCase(result)) {
                 lossTrades++;
-            } else if ("BE and take partial".equalsIgnoreCase(trade.getResult())) {
+            } else if ("BREAKEVEN".equalsIgnoreCase(result)
+                    || "BE".equalsIgnoreCase(result)
+                    || "BE and take partial".equalsIgnoreCase(result)
+                    || result.toUpperCase(Locale.ROOT).contains("PARTIAL")) {
                 beTrades++;
             }
 

@@ -1,8 +1,12 @@
 const MAX_SETUP_IMAGE_SIZE_BYTES = 1024 * 1024; // 1MB per file
 const MAX_TRADE_CHART_IMPORT_SIZE_BYTES = 10 * 1024 * 1024; // 10MB per file
+const MAX_TRADE_CHART_IMPORT_FILES = 5;
+const MAX_TRADE_CHART_IMPORT_TOTAL_BYTES = 25 * 1024 * 1024; // 25MB total per analysis
 let isSubmittingTradeForm = false;
 let isAnalyzingTradeChart = false;
 let initialStopLossManuallyEdited = false;
+let selectedTradeChartImportFiles = [];
+let latestTradeChartImportAnalysis = null;
 
 function parseNum(value) {
     if (value === null || value === undefined || value === '') return null;
@@ -191,6 +195,10 @@ function getTradeChartImportButton() {
     return document.getElementById('tradeChartImportButton');
 }
 
+function getTradeChartImportFiles() {
+    return selectedTradeChartImportFiles.map((entry) => entry.file);
+}
+
 function getSetupImagesInput() {
     return document.getElementById('setupImagesInput')
         || document.querySelector('input[name="setupImages"]');
@@ -241,6 +249,119 @@ function setTradeChartImportStatus(message, tone) {
     statusEl.textContent = message;
 }
 
+function setTradeChartImportFilesInfo(message) {
+    const infoEl = document.getElementById('tradeChartImportFilesInfo');
+    if (!infoEl) return;
+    infoEl.textContent = message || '';
+}
+
+function getTradeChartImportFileKey(file) {
+    if (!file) return '';
+    return [file.name || '', file.size || 0, file.lastModified || 0].join('::');
+}
+
+function getTradeChartImportRoleLabel(index) {
+    switch (index) {
+        case 0:
+            return 'HTF';
+        case 1:
+            return 'LTF';
+        case 2:
+            return 'Result';
+        default:
+            return `Support ${index - 2}`;
+    }
+}
+
+function renderTradeChartImportQueuedFiles() {
+    const container = document.getElementById('tradeChartImportQueuedFiles');
+    if (!container) return;
+
+    if (selectedTradeChartImportFiles.length === 0) {
+        container.innerHTML = '';
+        container.classList.add('d-none');
+        return;
+    }
+
+    container.classList.remove('d-none');
+    container.innerHTML = selectedTradeChartImportFiles.map((entry, index) => `
+        <div class="trade-ai-import-queued-file">
+            <div class="trade-ai-import-queued-file-main">
+                <span class="trade-ai-import-queued-file-index">${getTradeChartImportRoleLabel(index)}</span>
+                <div class="trade-ai-import-queued-file-copy">
+                    <strong>${entry.file.name}</strong>
+                    <span>${formatFileSize(entry.file.size)}</span>
+                </div>
+            </div>
+            <button class="btn btn-outline-secondary btn-sm trade-ai-import-remove-button" type="button" data-file-key="${entry.key}">
+                Remove
+            </button>
+        </div>
+    `).join('');
+}
+
+function updateTradeChartImportButtonState() {
+    const button = getTradeChartImportButton();
+    const input = getTradeChartImportInput();
+    if (!button) return;
+
+    if (!button.dataset.originalHtml) {
+        button.dataset.originalHtml = button.innerHTML || 'Analyze Screenshots';
+    }
+
+    const permanentlyDisabled = !!input?.hasAttribute('data-permanently-disabled');
+    button.disabled = permanentlyDisabled || isAnalyzingTradeChart || selectedTradeChartImportFiles.length === 0;
+}
+
+function refreshTradeChartImportQueueUi() {
+    renderTradeChartImportQueuedFiles();
+    updateTradeChartImportFilesInfo();
+    updateTradeChartImportButtonState();
+}
+
+function queueTradeChartImportFiles(files) {
+    const incomingFiles = Array.from(files || []);
+    if (incomingFiles.length === 0) {
+        return;
+    }
+
+    const remainingSlots = MAX_TRADE_CHART_IMPORT_FILES - selectedTradeChartImportFiles.length;
+    if (remainingSlots <= 0) {
+        throw new Error('You already added 5 screenshots. Remove one before adding another.');
+    }
+
+    const dedupedIncoming = incomingFiles.filter((file) => {
+        const key = getTradeChartImportFileKey(file);
+        return key && !selectedTradeChartImportFiles.some((entry) => entry.key === key);
+    });
+
+    if (dedupedIncoming.length === 0) {
+        throw new Error('Those screenshots were already added.');
+    }
+
+    if (dedupedIncoming.length > remainingSlots) {
+        throw new Error(`You can add ${remainingSlots} more screenshot(s) only.`);
+    }
+
+    validateTradeChartImportFiles([
+        ...selectedTradeChartImportFiles.map((entry) => entry.file),
+        ...dedupedIncoming
+    ]);
+
+    dedupedIncoming.forEach((file) => {
+        selectedTradeChartImportFiles.push({
+            key: getTradeChartImportFileKey(file),
+            file
+        });
+    });
+}
+
+function removeTradeChartImportFile(fileKey) {
+    selectedTradeChartImportFiles = selectedTradeChartImportFiles.filter((entry) => entry.key !== fileKey);
+    refreshTradeChartImportQueueUi();
+    resetTradeChartImportPreview();
+}
+
 function setTradeChartImportSummaryVisible(visible) {
     const summaryEl = document.getElementById('tradeChartImportSummary');
     if (!summaryEl) return;
@@ -253,6 +374,12 @@ function setTradeChartImportReviewActionsVisible(visible) {
     actionsEl.classList.toggle('d-none', !visible);
 }
 
+function setTradeChartImportSetupSuggestionVisible(visible) {
+    const suggestionEl = document.getElementById('tradeChartImportSetupSuggestion');
+    if (!suggestionEl) return;
+    suggestionEl.classList.toggle('d-none', !visible);
+}
+
 function setTradeChartImportBusy(isBusy) {
     const button = getTradeChartImportButton();
     const input = getTradeChartImportInput();
@@ -263,11 +390,32 @@ function setTradeChartImportBusy(isBusy) {
     }
     if (button) {
         if (!button.dataset.originalHtml) {
-            button.dataset.originalHtml = button.innerHTML || 'Analyze Screenshot';
+            button.dataset.originalHtml = button.innerHTML || 'Analyze Screenshots';
         }
-        button.disabled = isBusy || !!input?.disabled;
-        button.innerHTML = isBusy ? 'Analyzing Screenshot...' : button.dataset.originalHtml;
+        button.innerHTML = isBusy ? 'Analyzing Screenshots...' : button.dataset.originalHtml;
     }
+
+    updateTradeChartImportButtonState();
+}
+
+function resetTradeChartImportPreview() {
+    latestTradeChartImportAnalysis = null;
+    setTradeChartImportStatus('', 'info');
+    setTradeChartImportSummaryVisible(false);
+    setTradeChartImportReviewActionsVisible(false);
+    setTradeChartImportSetupSuggestionVisible(false);
+}
+
+function updateTradeChartImportFilesInfo() {
+    const files = getTradeChartImportFiles();
+    if (files.length === 0) {
+        setTradeChartImportFilesInfo('No screenshots added yet. Choose one to start building the import set.');
+        return;
+    }
+
+    const totalBytes = files.reduce((sum, file) => sum + file.size, 0);
+    const names = files.map((file, index) => `${getTradeChartImportRoleLabel(index)}: ${file.name} (${formatFileSize(file.size)})`);
+    setTradeChartImportFilesInfo(`Added ${files.length}/${MAX_TRADE_CHART_IMPORT_FILES} screenshot(s) | Total: ${formatFileSize(totalBytes)} | ${names.join(' | ')}`);
 }
 
 function formatImportedPrice(value) {
@@ -289,15 +437,69 @@ function formatImportedValue(value) {
     return text ? text : '-';
 }
 
+function formatExitReason(value) {
+    if (value === null || value === undefined) {
+        return '-';
+    }
+
+    const text = String(value).trim();
+    if (!text) {
+        return '-';
+    }
+
+    return text.replaceAll('_', ' ');
+}
+
+function renderTradeChartImportSetupResolution(analysis) {
+    const matchedNameEl = document.getElementById('tradeChartImportMatchedSetupName');
+    const matchedConfidenceEl = document.getElementById('tradeChartImportMatchedSetupConfidence');
+    const suggestedNameEl = document.getElementById('tradeChartImportSuggestedSetupName');
+    const suggestedDescriptionEl = document.getElementById('tradeChartImportSuggestedSetupDescription');
+
+    if (matchedNameEl) {
+        matchedNameEl.textContent = formatImportedValue(analysis.matchedSetupName);
+    }
+    if (matchedConfidenceEl) {
+        matchedConfidenceEl.textContent = formatImportedValue(analysis.matchedSetupConfidence);
+    }
+    if (suggestedNameEl) {
+        suggestedNameEl.textContent = formatImportedValue(analysis.newSetupSuggestedName);
+    }
+    if (suggestedDescriptionEl) {
+        suggestedDescriptionEl.textContent = analysis.newSetupSuggestedDescription
+            ? analysis.newSetupSuggestedDescription
+            : 'Create a setup from the AI suggestion only if it matches how you actually classify this trade.';
+    }
+
+    setTradeChartImportSetupSuggestionVisible(!analysis.matchedSetupId && !!analysis.newSetupSuggestedName);
+}
+
 function renderTradeChartImportSummary(analysis) {
     const mappings = [
         ['tradeChartImportSymbol', formatImportedValue(analysis.symbol)],
         ['tradeChartImportDirection', formatImportedValue(analysis.direction)],
+        ['tradeChartImportTimeframeHTF', formatImportedValue(analysis.timeframeHTF)],
+        ['tradeChartImportTimeframeLTF', formatImportedValue(analysis.timeframeLTF)],
+        ['tradeChartImportTimeframeResult', formatImportedValue(analysis.timeframeResult)],
         ['tradeChartImportEntry', formatImportedPrice(analysis.entryPrice)],
         ['tradeChartImportStopLoss', formatImportedPrice(analysis.stopLoss)],
         ['tradeChartImportTakeProfit', formatImportedPrice(analysis.takeProfit)],
-        ['tradeChartImportTimeframe', formatImportedValue(analysis.timeframe)],
-        ['tradeChartImportSetupGuess', formatImportedValue(analysis.setupGuess)]
+        ['tradeChartImportResult', formatImportedValue(analysis.result)],
+        ['tradeChartImportExitPrice', formatImportedPrice(analysis.exitPrice)],
+        ['tradeChartImportExitReason', formatExitReason(analysis.exitReason)],
+        ['tradeChartImportEntrySource', formatImportedValue(analysis.entrySource)],
+        ['tradeChartImportStopLossSource', formatImportedValue(analysis.stopLossSource)],
+        ['tradeChartImportTakeProfitSource', formatImportedValue(analysis.takeProfitSource)],
+        ['tradeChartImportSessionGuess', formatImportedValue(analysis.sessionGuess)],
+        ['tradeChartImportSessionConfidence', formatImportedValue(analysis.sessionConfidence)],
+        ['tradeChartImportEstimatedResultCandlesHeld', formatImportedValue(analysis.estimatedResultCandlesHeld)],
+        ['tradeChartImportEstimatedHoldingMinutes', formatImportedValue(analysis.estimatedHoldingMinutes)],
+        ['tradeChartImportConfidence', formatImportedValue(analysis.confidence)],
+        ['tradeChartImportHtfBias', formatImportedValue(analysis.htfBias)],
+        ['tradeChartImportHtfStructure', formatImportedValue(analysis.htfStructure)],
+        ['tradeChartImportLtfTrigger', formatImportedValue(analysis.ltfTrigger)],
+        ['tradeChartImportSetupGuess', formatImportedValue(analysis.setupGuess)],
+        ['tradeChartImportTradeIdea', formatImportedValue(analysis.tradeIdea)]
     ];
 
     mappings.forEach(([id, value]) => {
@@ -307,6 +509,7 @@ function renderTradeChartImportSummary(analysis) {
         }
     });
 
+    renderTradeChartImportSetupResolution(analysis);
     setTradeChartImportSummaryVisible(true);
     setTradeChartImportReviewActionsVisible(true);
 }
@@ -330,6 +533,18 @@ function ensureSelectOption(select, value) {
     select.value = normalized;
 }
 
+function toTradeSessionValue(sessionGuess) {
+    if (!sessionGuess) return '';
+
+    const normalized = String(sessionGuess).trim().toLowerCase();
+    if (!normalized) return '';
+    if (normalized.includes('new york') || normalized === 'ny') return 'NEW_YORK';
+    if (normalized.includes('london')) return 'LONDON';
+    if (normalized.includes('asia') || normalized.includes('tokyo') || normalized.includes('sydney')) return 'ASIA';
+    if (normalized.includes('other')) return 'OTHER';
+    return '';
+}
+
 function trySelectSetupByName(setupName) {
     if (!setupName) return false;
     const setupSelect = document.getElementById('setupId');
@@ -351,13 +566,99 @@ function trySelectSetupByName(setupName) {
     return true;
 }
 
+function trySelectSetupById(setupId) {
+    if (!setupId) return false;
+    const setupSelect = document.getElementById('setupId');
+    if (!setupSelect) return false;
+
+    const matchedOption = Array.from(setupSelect.options || []).find((option) => option.value === setupId);
+    if (!matchedOption) {
+        return false;
+    }
+
+    setupSelect.value = matchedOption.value;
+    return true;
+}
+
+function normalizeImportedResultForForm(result) {
+    if (!result) return '';
+    const normalized = String(result).trim().toUpperCase();
+    switch (normalized) {
+        case 'WIN':
+        case 'LOSS':
+        case 'BREAKEVEN':
+        case 'PARTIAL_WIN':
+            return normalized;
+        case 'BE':
+            return 'BREAKEVEN';
+        default:
+            return '';
+    }
+}
+
 function buildTradeChartImportNote(analysis) {
-    const fragments = ['Imported from TradingView screenshot'];
-    if (analysis.timeframe) {
-        fragments.push(`Timeframe: ${analysis.timeframe}`);
+    const fragments = ['Imported from TradingView screenshots'];
+    if (analysis.timeframeHTF) {
+        fragments.push(`HTF: ${analysis.timeframeHTF}`);
+    }
+    if (analysis.timeframeLTF) {
+        fragments.push(`LTF: ${analysis.timeframeLTF}`);
+    }
+    if (analysis.timeframeResult) {
+        fragments.push(`Result TF: ${analysis.timeframeResult}`);
+    }
+    if (analysis.sessionGuess) {
+        const sessionDetail = analysis.sessionConfidence
+            ? `${analysis.sessionGuess} (${analysis.sessionConfidence})`
+            : analysis.sessionGuess;
+        fragments.push(`Session: ${sessionDetail}`);
+    }
+    if (analysis.estimatedResultCandlesHeld !== null && analysis.estimatedResultCandlesHeld !== undefined) {
+        fragments.push(`Estimated result candles held: ${analysis.estimatedResultCandlesHeld}`);
+    }
+    if (analysis.estimatedHoldingMinutes !== null && analysis.estimatedHoldingMinutes !== undefined) {
+        fragments.push(`Estimated holding minutes: ${analysis.estimatedHoldingMinutes}`);
+    }
+    if (analysis.result) {
+        fragments.push(`Result: ${analysis.result}`);
+    }
+    if (analysis.exitReason) {
+        fragments.push(`Exit reason: ${analysis.exitReason}`);
+    }
+    if (analysis.exitPrice !== null && analysis.exitPrice !== undefined) {
+        fragments.push(`Exit price: ${formatImportedPrice(analysis.exitPrice)}`);
+    }
+    if (analysis.htfBias) {
+        fragments.push(`HTF bias: ${analysis.htfBias}`);
+    }
+    if (analysis.htfStructure) {
+        fragments.push(`HTF structure: ${analysis.htfStructure}`);
+    }
+    if (analysis.ltfTrigger) {
+        fragments.push(`LTF trigger: ${analysis.ltfTrigger}`);
+    }
+    if (analysis.entrySource) {
+        fragments.push(`Entry source: ${analysis.entrySource}`);
+    }
+    if (analysis.stopLossSource) {
+        fragments.push(`Stop loss source: ${analysis.stopLossSource}`);
+    }
+    if (analysis.takeProfitSource) {
+        fragments.push(`Take profit source: ${analysis.takeProfitSource}`);
     }
     if (analysis.setupGuess) {
         fragments.push(`Setup guess: ${analysis.setupGuess}`);
+    }
+    if (analysis.matchedSetupName) {
+        const matchDetail = analysis.matchedSetupConfidence
+            ? `${analysis.matchedSetupName} (${analysis.matchedSetupConfidence})`
+            : analysis.matchedSetupName;
+        fragments.push(`Matched setup: ${matchDetail}`);
+    } else if (analysis.newSetupSuggestedName) {
+        fragments.push(`Suggested setup: ${analysis.newSetupSuggestedName}`);
+    }
+    if (analysis.confidence) {
+        fragments.push(`Confidence: ${analysis.confidence}`);
     }
     return fragments.join(' | ');
 }
@@ -370,9 +671,17 @@ function mergeTradeChartImportNote(analysis) {
     const existingLines = String(noteInput.value || '')
         .split(/\r?\n/)
         .map((line) => line.trim())
-        .filter((line) => line && !line.startsWith('Imported from TradingView screenshot'));
+        .filter((line) => line
+            && !line.startsWith('Imported from TradingView screenshot')
+            && !line.startsWith('Imported from TradingView screenshots')
+            && !line.startsWith('Trade idea: '));
 
-    noteInput.value = [importNote, ...existingLines].join('\n');
+    const noteLines = [importNote];
+    if (analysis.tradeIdea) {
+        noteLines.push(`Trade idea: ${analysis.tradeIdea}`);
+    }
+
+    noteInput.value = [...noteLines, ...existingLines].join('\n');
 }
 
 function applyTradeChartAnalysis(analysis) {
@@ -380,12 +689,15 @@ function applyTradeChartAnalysis(analysis) {
 
     const symbolSelect = document.getElementById('symbol');
     const directionSelect = document.getElementById('direction');
+    const resultSelect = document.getElementById('result');
     const ltfSelect = document.getElementById('ltf');
     const htfSelect = document.getElementById('htf');
+    const sessionSelect = document.getElementById('session');
     const entryInput = document.getElementById('entryPrice');
     const stopLossInput = document.getElementById('stopLoss');
     const initialStopLossInput = document.getElementById('initialStopLoss');
     const takeProfitInput = document.querySelector('input[name="takeProfit"]');
+    const exitPriceInput = document.getElementById('exitPrice');
 
     if (analysis.symbol && symbolSelect) {
         ensureSelectOption(symbolSelect, analysis.symbol);
@@ -393,6 +705,11 @@ function applyTradeChartAnalysis(analysis) {
 
     if (analysis.direction && directionSelect) {
         ensureSelectOption(directionSelect, analysis.direction);
+    }
+
+    const importedResult = normalizeImportedResultForForm(analysis.result);
+    if (importedResult && resultSelect) {
+        ensureSelectOption(resultSelect, importedResult);
     }
 
     if (analysis.entryPrice !== null && analysis.entryPrice !== undefined && entryInput) {
@@ -413,16 +730,30 @@ function applyTradeChartAnalysis(analysis) {
         takeProfitInput.value = analysis.takeProfit;
     }
 
-    if (analysis.timeframe) {
-        if (ltfSelect) {
-            ensureSelectOption(ltfSelect, analysis.timeframe);
-        }
-        if (htfSelect && !htfSelect.value && (analysis.timeframe === 'H4' || analysis.timeframe === 'H1')) {
-            ensureSelectOption(htfSelect, analysis.timeframe);
+    if (analysis.exitPrice !== null && analysis.exitPrice !== undefined && exitPriceInput) {
+        exitPriceInput.value = analysis.exitPrice;
+    }
+
+    if (analysis.timeframeLTF && ltfSelect) {
+        ensureSelectOption(ltfSelect, analysis.timeframeLTF);
+    }
+
+    if (analysis.timeframeHTF && htfSelect) {
+        ensureSelectOption(htfSelect, analysis.timeframeHTF);
+    }
+
+    if (analysis.sessionGuess && sessionSelect) {
+        const sessionValue = toTradeSessionValue(analysis.sessionGuess);
+        if (sessionValue) {
+            sessionSelect.value = sessionValue;
         }
     }
 
-    if (analysis.setupGuess) {
+    if (analysis.matchedSetupId) {
+        trySelectSetupById(analysis.matchedSetupId);
+    } else if (analysis.matchedSetupName) {
+        trySelectSetupByName(analysis.matchedSetupName);
+    } else if (analysis.setupGuess) {
         trySelectSetupByName(analysis.setupGuess);
     }
 
@@ -431,21 +762,62 @@ function applyTradeChartAnalysis(analysis) {
     calculateLiveMetrics();
 }
 
-function validateTradeChartImportFile(file) {
-    if (!file) {
-        throw new Error('Choose a TradingView screenshot first.');
+async function createSetupFromSuggestion(name, description) {
+    const formData = new FormData();
+    formData.append('name', name);
+    if (description) {
+        formData.append('description', description);
     }
-    if (!file.type || !file.type.startsWith('image/')) {
+
+    const response = await fetch('/api/trades/import/setup-suggestion', {
+        method: 'POST',
+        body: formData,
+        credentials: 'same-origin'
+    });
+
+    let payload = null;
+    try {
+        payload = await response.json();
+    } catch (ignored) {
+    }
+
+    if (!response.ok) {
+        const message = payload && payload.message
+            ? payload.message
+            : 'Could not create setup from suggestion.';
+        throw new Error(message);
+    }
+
+    return payload;
+}
+
+function validateTradeChartImportFiles(files) {
+    if (!files || files.length === 0) {
+        throw new Error('Choose between 1 and 5 TradingView screenshots first.');
+    }
+    if (files.length > MAX_TRADE_CHART_IMPORT_FILES) {
+        throw new Error('Choose up to 5 TradingView screenshots at a time.');
+    }
+
+    const totalBytes = files.reduce((sum, file) => sum + file.size, 0);
+    if (totalBytes > MAX_TRADE_CHART_IMPORT_TOTAL_BYTES) {
+        throw new Error('Selected TradingView screenshots are too large together. Keep the total upload size at 25MB or below.');
+    }
+
+    const invalidType = files.find((file) => !file.type || !file.type.startsWith('image/'));
+    if (invalidType) {
         throw new Error('Only image files are supported for TradingView screenshot import.');
     }
-    if (file.size > MAX_TRADE_CHART_IMPORT_SIZE_BYTES) {
-        throw new Error('TradingView screenshot must be 10MB or smaller.');
+
+    const oversized = files.find((file) => file.size > MAX_TRADE_CHART_IMPORT_SIZE_BYTES);
+    if (oversized) {
+        throw new Error(`Each TradingView screenshot must be 10MB or smaller. Oversized: ${oversized.name}`);
     }
 }
 
-async function analyzeTradeChartImage(file) {
+async function analyzeTradeChartImages(files) {
     const formData = new FormData();
-    formData.append('file', file);
+    files.forEach((file) => formData.append('files', file));
 
     const response = await fetch('/api/trades/import/tradingview-image', {
         method: 'POST',
@@ -479,24 +851,29 @@ async function handleTradeChartImport() {
         return;
     }
 
-    const file = input.files && input.files[0] ? input.files[0] : null;
+    const files = getTradeChartImportFiles();
 
     try {
-        validateTradeChartImportFile(file);
+        validateTradeChartImportFiles(files);
         setTradeChartImportBusy(true);
-        setTradeChartImportStatus('Analyzing TradingView screenshot...', 'info');
+        setTradeChartImportStatus(`Analyzing ${files.length} TradingView screenshot(s)...`, 'info');
 
-        const payload = await analyzeTradeChartImage(file);
+        const payload = await analyzeTradeChartImages(files);
         const analysis = payload && payload.analysis ? payload.analysis : null;
+        const imageCount = payload && payload.imageCount ? payload.imageCount : files.length;
         if (!analysis) {
             throw new Error('TradingView screenshot analysis returned no data.');
         }
 
+        latestTradeChartImportAnalysis = analysis;
         renderTradeChartImportSummary(analysis);
         applyTradeChartAnalysis(analysis);
-        setTradeChartImportStatus('Screenshot analyzed. The values were added to the form below. Review them, then click Save Trade.', 'success');
+        setTradeChartImportStatus(`${imageCount} screenshot(s) analyzed together. The combined values were added to the form below. Review them, then click Save Trade.`, 'success');
     } catch (error) {
+        latestTradeChartImportAnalysis = null;
+        setTradeChartImportSummaryVisible(false);
         setTradeChartImportReviewActionsVisible(false);
+        setTradeChartImportSetupSuggestionVisible(false);
         setTradeChartImportStatus(error.message || 'TradingView screenshot analysis failed.', 'danger');
     } finally {
         setTradeChartImportBusy(false);
@@ -658,6 +1035,21 @@ function initTradeFormPage() {
         tradeChartImportButton.addEventListener('click', handleTradeChartImport);
     }
 
+    if (tradeChartImportInput) {
+        tradeChartImportInput.addEventListener('change', function () {
+            try {
+                queueTradeChartImportFiles(tradeChartImportInput.files);
+                refreshTradeChartImportQueueUi();
+                resetTradeChartImportPreview();
+                setTradeChartImportStatus(`${selectedTradeChartImportFiles.length} screenshot(s) ready. Add more or click Analyze Screenshots.`, 'info');
+            } catch (error) {
+                setTradeChartImportStatus(error.message || 'Could not add selected screenshots.', 'danger');
+            } finally {
+                tradeChartImportInput.value = '';
+            }
+        });
+    }
+
     if (tradeChartImportInput && tradeChartImportInput.disabled) {
         tradeChartImportInput.setAttribute('data-permanently-disabled', 'true');
     }
@@ -696,6 +1088,61 @@ function initTradeFormPage() {
     }
 
     document.addEventListener('click', async function (event) {
+        const removeImportFileButton = event.target.closest('.trade-ai-import-remove-button');
+        if (removeImportFileButton) {
+            const fileKey = removeImportFileButton.getAttribute('data-file-key');
+            if (fileKey) {
+                removeTradeChartImportFile(fileKey);
+            }
+            return;
+        }
+
+        const createSetupButton = event.target.closest('#tradeChartImportCreateSetupButton');
+        if (createSetupButton) {
+            if (!latestTradeChartImportAnalysis || !latestTradeChartImportAnalysis.newSetupSuggestedName) {
+                setTradeChartImportStatus('No setup suggestion is available to create.', 'warning');
+                return;
+            }
+
+            createSetupButton.disabled = true;
+            try {
+                const payload = await createSetupFromSuggestion(
+                    latestTradeChartImportAnalysis.newSetupSuggestedName,
+                    latestTradeChartImportAnalysis.newSetupSuggestedDescription
+                );
+
+                const setupSelect = document.getElementById('setupId');
+                if (setupSelect && payload && payload.setupId && payload.setupName) {
+                    let option = Array.from(setupSelect.options || []).find((candidate) => candidate.value === payload.setupId);
+                    if (!option) {
+                        option = document.createElement('option');
+                        option.value = payload.setupId;
+                        option.textContent = payload.setupName;
+                        setupSelect.appendChild(option);
+                    }
+                    setupSelect.value = payload.setupId;
+                }
+
+                latestTradeChartImportAnalysis = {
+                    ...latestTradeChartImportAnalysis,
+                    matchedSetupId: payload.setupId || null,
+                    matchedSetupName: payload.setupName || latestTradeChartImportAnalysis.newSetupSuggestedName,
+                    matchedSetupConfidence: 'user-confirmed',
+                    newSetupSuggestedName: null,
+                    newSetupSuggestedDescription: null
+                };
+
+                renderTradeChartImportSummary(latestTradeChartImportAnalysis);
+                mergeTradeChartImportNote(latestTradeChartImportAnalysis);
+                setTradeChartImportStatus('Setup created from the AI suggestion and selected in Core Setup.', 'success');
+            } catch (error) {
+                setTradeChartImportStatus(error.message || 'Could not create setup from suggestion.', 'danger');
+            } finally {
+                createSetupButton.disabled = false;
+            }
+            return;
+        }
+
         const button = event.target.closest('.js-delete-trade-image');
         if (!button) {
             return;
@@ -750,6 +1197,7 @@ function initTradeFormPage() {
     updateVolumeHint();
     calculateLiveMetrics();
     validateSetupImages();
+    refreshTradeChartImportQueueUi();
 }
 
 if (document.readyState === 'loading') {

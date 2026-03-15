@@ -634,9 +634,76 @@
   min-width: 0;
 }
 
+.trade-ai-import-file-input::file-selector-button {
+  cursor: pointer;
+}
+
 .trade-ai-import-button {
   flex: 0 0 320px;
   white-space: nowrap;
+}
+
+.trade-ai-import-queued-files {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.trade-ai-import-queued-file {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 12px 14px;
+  border: 1px solid var(--trade-border);
+  border-radius: 16px;
+  background: rgba(248, 250, 252, 0.92);
+}
+
+.trade-ai-import-queued-file-main {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.trade-ai-import-queued-file-index {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 56px;
+  height: 32px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: rgba(37, 99, 235, 0.12);
+  color: #1d4ed8;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  flex: 0 0 auto;
+}
+
+.trade-ai-import-queued-file-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.trade-ai-import-queued-file-copy strong,
+.trade-ai-import-queued-file-copy span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.trade-ai-import-queued-file-copy span {
+  color: var(--trade-muted);
+  font-size: 0.85rem;
+}
+
+.trade-ai-import-remove-button {
+  flex: 0 0 auto;
 }
 
 .trade-ai-import-review-actions {
@@ -648,6 +715,17 @@
   border: 1px solid rgba(37, 99, 235, 0.18);
   border-radius: 18px;
   background: linear-gradient(135deg, rgba(239, 246, 255, 0.92), rgba(248, 250, 252, 0.95));
+}
+
+.trade-ai-import-suggestion {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 18px;
+  border: 1px solid rgba(245, 158, 11, 0.22);
+  border-radius: 18px;
+  background: linear-gradient(135deg, rgba(255, 251, 235, 0.96), rgba(255, 247, 237, 0.96));
 }
 
 .trade-ai-import-review-title {
@@ -692,6 +770,10 @@
 
 .trade-ai-import-item-wide {
   grid-column: span 2;
+}
+
+.trade-ai-import-item-full {
+  grid-column: 1 / -1;
 }
 
 .trade-ai-import-label {
@@ -760,6 +842,16 @@
     align-items: stretch;
   }
 
+  .trade-ai-import-suggestion {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .trade-ai-import-queued-file {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
   .trade-ai-import-review-buttons {
     flex-direction: column;
   }
@@ -783,6 +875,10 @@
   }
 
   .trade-ai-import-item-wide {
+    grid-column: span 1;
+  }
+
+  .trade-ai-import-item-full {
     grid-column: span 1;
   }
 
