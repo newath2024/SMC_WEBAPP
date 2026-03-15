@@ -33,6 +33,8 @@ import java.util.Objects;
 @RequestMapping("/trades")
 public class TradeController {
 
+    private static final String MT5_IMPORT_PREVIEW_SESSION_KEY = "mt5ImportPreview";
+
     private final TradeService tradeService;
     private final UserService userService;
     private final SetupService setupService;
@@ -57,6 +59,26 @@ public class TradeController {
         this.tradeImageService = tradeImageService;
         this.tradeReviewService = tradeReviewService;
         this.mt5ImportService = mt5ImportService;
+    }
+
+    private Mt5ImportService.ImportPreview getStoredImportPreview(HttpSession session, User currentUser) {
+        Object attribute = session.getAttribute(MT5_IMPORT_PREVIEW_SESSION_KEY);
+        if (!(attribute instanceof Mt5ImportService.ImportPreview preview)) {
+            return null;
+        }
+        if (currentUser == null || !Objects.equals(preview.userId(), currentUser.getId())) {
+            session.removeAttribute(MT5_IMPORT_PREVIEW_SESSION_KEY);
+            return null;
+        }
+        return preview;
+    }
+
+    private void storeImportPreview(HttpSession session, Mt5ImportService.ImportPreview preview) {
+        session.setAttribute(MT5_IMPORT_PREVIEW_SESSION_KEY, preview);
+    }
+
+    private void clearImportPreview(HttpSession session) {
+        session.removeAttribute(MT5_IMPORT_PREVIEW_SESSION_KEY);
     }
 
     private void fillTradeFormData(Model model, User currentUser) {
@@ -144,6 +166,7 @@ public class TradeController {
         boolean adminView = userService.isAdmin(currentUser);
 
         fillTradeListData(model, currentUser, trades, filteredView, tableOnlyView, adminView, setup, sessionFilter, symbol, from, to);
+        model.addAttribute("mt5ImportPreview", getStoredImportPreview(session, currentUser));
 
         return "trades";
     }
@@ -186,11 +209,48 @@ public class TradeController {
         }
 
         try {
-            Mt5ImportService.ImportResult result = mt5ImportService.importWorkbook(
+            Mt5ImportService.ImportPreview preview = mt5ImportService.previewWorkbook(
                     file,
                     currentUser,
                     new Mt5ImportService.ImportOptions(setupName, defaultHtf, defaultLtf, sessionMode)
             );
+            storeImportPreview(session, preview);
+            redirectAttributes.addFlashAttribute("importInfo", "Preview ready. Review the parsed trades below, then confirm to import.");
+        } catch (IllegalArgumentException | IllegalStateException ex) {
+            clearImportPreview(session);
+            redirectAttributes.addFlashAttribute("importError", ex.getMessage());
+        }
+
+        return "redirect:/trades";
+    }
+
+    @PostMapping("/import/confirm")
+    public String confirmMt5Import(
+            @RequestParam("previewId") String previewId,
+            RedirectAttributes redirectAttributes,
+            HttpSession session
+    ) {
+        User currentUser = userService.getCurrentUser(session);
+        if (currentUser == null) {
+            return "redirect:/login";
+        }
+        if (userService.isAdmin(currentUser)) {
+            return "redirect:/trades";
+        }
+
+        Mt5ImportService.ImportPreview preview = getStoredImportPreview(session, currentUser);
+        if (preview == null) {
+            redirectAttributes.addFlashAttribute("importError", "No MT5 import preview is available. Please upload the file again.");
+            return "redirect:/trades";
+        }
+        if (!Objects.equals(preview.previewId(), previewId)) {
+            redirectAttributes.addFlashAttribute("importError", "This preview is outdated. Please review the latest MT5 preview before confirming.");
+            return "redirect:/trades";
+        }
+
+        try {
+            Mt5ImportService.ImportResult result = mt5ImportService.confirmImport(currentUser, preview);
+            clearImportPreview(session);
 
             String successMessage = "Imported " + result.importedCount()
                     + " trades into setup '" + result.setupName()
@@ -200,6 +260,29 @@ public class TradeController {
             redirectAttributes.addFlashAttribute("importSuccess", successMessage);
         } catch (IllegalArgumentException | IllegalStateException ex) {
             redirectAttributes.addFlashAttribute("importError", ex.getMessage());
+        }
+
+        return "redirect:/trades";
+    }
+
+    @PostMapping("/import/cancel")
+    public String cancelMt5Import(
+            @RequestParam("previewId") String previewId,
+            RedirectAttributes redirectAttributes,
+            HttpSession session
+    ) {
+        User currentUser = userService.getCurrentUser(session);
+        if (currentUser == null) {
+            return "redirect:/login";
+        }
+        if (userService.isAdmin(currentUser)) {
+            return "redirect:/trades";
+        }
+
+        Mt5ImportService.ImportPreview preview = getStoredImportPreview(session, currentUser);
+        if (preview != null && Objects.equals(preview.previewId(), previewId)) {
+            clearImportPreview(session);
+            redirectAttributes.addFlashAttribute("importInfo", "MT5 import preview cleared.");
         }
 
         return "redirect:/trades";
