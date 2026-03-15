@@ -9,6 +9,7 @@ import com.example.demo.service.Mt5ImportService;
 import com.example.demo.service.TradeImageService;
 import com.example.demo.service.TradeReviewService;
 import com.example.demo.service.SetupService;
+import com.example.demo.service.TradingViewChartImportService;
 import com.example.demo.service.TradeService;
 import com.example.demo.service.UserService;
 import jakarta.servlet.http.HttpSession;
@@ -42,6 +43,7 @@ public class TradeController {
     private final TradeImageService tradeImageService;
     private final TradeReviewService tradeReviewService;
     private final Mt5ImportService mt5ImportService;
+    private final TradingViewChartImportService tradingViewChartImportService;
 
     public TradeController(
             TradeService tradeService,
@@ -50,7 +52,8 @@ public class TradeController {
             MistakeTagService mistakeTagService,
             TradeImageService tradeImageService,
             TradeReviewService tradeReviewService,
-            Mt5ImportService mt5ImportService
+            Mt5ImportService mt5ImportService,
+            TradingViewChartImportService tradingViewChartImportService
     ) {
         this.tradeService = tradeService;
         this.userService = userService;
@@ -59,6 +62,7 @@ public class TradeController {
         this.tradeImageService = tradeImageService;
         this.tradeReviewService = tradeReviewService;
         this.mt5ImportService = mt5ImportService;
+        this.tradingViewChartImportService = tradingViewChartImportService;
     }
 
     private Mt5ImportService.ImportPreview getStoredImportPreview(HttpSession session, User currentUser) {
@@ -88,6 +92,7 @@ public class TradeController {
         model.addAttribute("tradeUsage", Math.min(tradeService.findAllByUser(currentUser.getId()).size(), userService.resolveTradeLimit(currentUser)));
         model.addAttribute("tradeUsageLimit", userService.hasProAccess(currentUser) ? 0 : userService.resolveTradeLimit(currentUser));
         model.addAttribute("hasProAccess", userService.hasProAccess(currentUser));
+        model.addAttribute("tradeChartImportConfigured", tradingViewChartImportService.isConfigured());
     }
 
     private void fillTradeListData(
