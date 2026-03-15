@@ -47,16 +47,17 @@
             <div class="trade-form-layout">
               <section class="trade-form-section">
                 <div class="trade-form-section-header">
-                  <h5 class="mb-1">Import From TradingView Screenshot</h5>
-                  <p class="mb-0">Upload a chart screenshot, let AI extract the visible trade details, then review the prefilled form before saving.</p>
+                  <h5 class="mb-1">Import From TradingView Screenshots</h5>
+                  <p class="mb-0">Upload one or more chart screenshots, let AI extract the visible trade details, then review the prefilled form before saving.</p>
                 </div>
                 <div class="row g-3">
                   <div class="col-12">
-                    <label class="form-label" for="tradeChartImportImage">TradingView Screenshot</label>
+                    <label class="form-label" for="tradeChartImportImage">TradingView Screenshots</label>
                     <div class="trade-ai-import-actions">
                       <input id="tradeChartImportImage"
                              class="form-control trade-ai-import-file-input"
                              type="file"
+                             multiple
                              accept="image/png,image/jpeg,image/webp,image/gif"
                              th:disabled="${!tradeChartImportConfigured}">
                       <button id="tradeChartImportButton"
@@ -64,11 +65,13 @@
                               type="button"
                               th:disabled="${!tradeChartImportConfigured}">
                         <i class="bi bi-image me-1"></i>
-                        Analyze Screenshot
+                        Analyze Screenshots
                       </button>
                     </div>
+                    <div id="tradeChartImportFilesInfo" class="form-text"></div>
+                    <div id="tradeChartImportQueuedFiles" class="trade-ai-import-queued-files d-none"></div>
                     <div class="form-text" th:if="${tradeChartImportConfigured}">
-                      AI will attempt to extract symbol, direction, entry, stop loss, take profit, timeframe, and a setup guess from the screenshot.
+                      Add up to 5 screenshots for the same trade, including HTF context, LTF execution, and result screenshots. AI will prioritize the TradingView position tool for entry, stop loss, and take profit, then infer bias, trigger, session, and estimated holding time.
                     </div>
                     <div class="form-text text-warning" th:if="${!tradeChartImportConfigured}">
                       Configure <code>OPENAI_API_KEY</code> to enable TradingView screenshot import.
@@ -89,6 +92,18 @@
                           <strong id="tradeChartImportDirection" class="trade-ai-import-value">-</strong>
                         </div>
                         <div class="trade-ai-import-item">
+                          <span class="trade-ai-import-label">HTF</span>
+                          <strong id="tradeChartImportTimeframeHTF" class="trade-ai-import-value">-</strong>
+                        </div>
+                        <div class="trade-ai-import-item">
+                          <span class="trade-ai-import-label">LTF</span>
+                          <strong id="tradeChartImportTimeframeLTF" class="trade-ai-import-value">-</strong>
+                        </div>
+                        <div class="trade-ai-import-item">
+                          <span class="trade-ai-import-label">Result TF</span>
+                          <strong id="tradeChartImportTimeframeResult" class="trade-ai-import-value">-</strong>
+                        </div>
+                        <div class="trade-ai-import-item">
                           <span class="trade-ai-import-label">Entry</span>
                           <strong id="tradeChartImportEntry" class="trade-ai-import-value">-</strong>
                         </div>
@@ -101,12 +116,80 @@
                           <strong id="tradeChartImportTakeProfit" class="trade-ai-import-value">-</strong>
                         </div>
                         <div class="trade-ai-import-item">
-                          <span class="trade-ai-import-label">Timeframe</span>
-                          <strong id="tradeChartImportTimeframe" class="trade-ai-import-value">-</strong>
+                          <span class="trade-ai-import-label">Confidence</span>
+                          <strong id="tradeChartImportConfidence" class="trade-ai-import-value">-</strong>
+                        </div>
+                        <div class="trade-ai-import-item">
+                          <span class="trade-ai-import-label">Result</span>
+                          <strong id="tradeChartImportResult" class="trade-ai-import-value">-</strong>
+                        </div>
+                        <div class="trade-ai-import-item">
+                          <span class="trade-ai-import-label">Exit Price</span>
+                          <strong id="tradeChartImportExitPrice" class="trade-ai-import-value">-</strong>
+                        </div>
+                        <div class="trade-ai-import-item">
+                          <span class="trade-ai-import-label">Exit Reason</span>
+                          <strong id="tradeChartImportExitReason" class="trade-ai-import-value">-</strong>
+                        </div>
+                        <div class="trade-ai-import-item trade-ai-import-item-wide">
+                          <span class="trade-ai-import-label">Entry Source</span>
+                          <strong id="tradeChartImportEntrySource" class="trade-ai-import-value">-</strong>
+                        </div>
+                        <div class="trade-ai-import-item trade-ai-import-item-wide">
+                          <span class="trade-ai-import-label">Stop Loss Source</span>
+                          <strong id="tradeChartImportStopLossSource" class="trade-ai-import-value">-</strong>
+                        </div>
+                        <div class="trade-ai-import-item trade-ai-import-item-wide">
+                          <span class="trade-ai-import-label">Take Profit Source</span>
+                          <strong id="tradeChartImportTakeProfitSource" class="trade-ai-import-value">-</strong>
+                        </div>
+                        <div class="trade-ai-import-item">
+                          <span class="trade-ai-import-label">Session Guess</span>
+                          <strong id="tradeChartImportSessionGuess" class="trade-ai-import-value">-</strong>
+                        </div>
+                        <div class="trade-ai-import-item">
+                          <span class="trade-ai-import-label">Session Confidence</span>
+                          <strong id="tradeChartImportSessionConfidence" class="trade-ai-import-value">-</strong>
+                        </div>
+                        <div class="trade-ai-import-item">
+                          <span class="trade-ai-import-label">Est. Result Candles Held</span>
+                          <strong id="tradeChartImportEstimatedResultCandlesHeld" class="trade-ai-import-value">-</strong>
+                        </div>
+                        <div class="trade-ai-import-item">
+                          <span class="trade-ai-import-label">Est. Holding Minutes</span>
+                          <strong id="tradeChartImportEstimatedHoldingMinutes" class="trade-ai-import-value">-</strong>
+                        </div>
+                        <div class="trade-ai-import-item trade-ai-import-item-wide">
+                          <span class="trade-ai-import-label">HTF Bias</span>
+                          <strong id="tradeChartImportHtfBias" class="trade-ai-import-value">-</strong>
+                        </div>
+                        <div class="trade-ai-import-item trade-ai-import-item-wide">
+                          <span class="trade-ai-import-label">HTF Structure</span>
+                          <strong id="tradeChartImportHtfStructure" class="trade-ai-import-value">-</strong>
+                        </div>
+                        <div class="trade-ai-import-item trade-ai-import-item-wide">
+                          <span class="trade-ai-import-label">LTF Trigger</span>
+                          <strong id="tradeChartImportLtfTrigger" class="trade-ai-import-value">-</strong>
                         </div>
                         <div class="trade-ai-import-item trade-ai-import-item-wide">
                           <span class="trade-ai-import-label">Setup Guess</span>
                           <strong id="tradeChartImportSetupGuess" class="trade-ai-import-value">-</strong>
+                        </div>
+                        <div class="trade-ai-import-item trade-ai-import-item-wide">
+                          <span class="trade-ai-import-label">Matched Setup</span>
+                          <strong id="tradeChartImportMatchedSetupName" class="trade-ai-import-value">-</strong>
+                        </div>
+                        <div class="trade-ai-import-item">
+                          <span class="trade-ai-import-label">Match Confidence</span>
+                          <strong id="tradeChartImportMatchedSetupConfidence" class="trade-ai-import-value">-</strong>
+                        </div>
+                        <div class="trade-ai-import-item trade-ai-import-item-wide">
+                          <span class="trade-ai-import-label">Suggested Setup</span>
+                          <strong id="tradeChartImportSuggestedSetupName" class="trade-ai-import-value">-</strong>
+                        </div>
+                        <div class="trade-ai-import-item trade-ai-import-item-full">
+                          <span class="trade-ai-import-label">Trade Idea</span>
+                          <strong id="tradeChartImportTradeIdea" class="trade-ai-import-value">-</strong>
                         </div>
                       </div>
                     </div>
@@ -120,6 +203,19 @@
                       <div class="trade-ai-import-review-buttons">
                         <a class="btn btn-outline-secondary btn-sm" href="#tradeCoreSetupSection">Review Imported Fields</a>
                         <a class="btn btn-primary btn-sm" href="#tradeFormFooter" th:text="${editMode ? 'Jump to Update Trade' : 'Jump to Save Trade'}">Jump to Save Trade</a>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-12">
+                    <div id="tradeChartImportSetupSuggestion" class="trade-ai-import-suggestion d-none">
+                      <div>
+                        <p class="trade-ai-import-review-title mb-1">No strong setup match was found.</p>
+                        <p id="tradeChartImportSuggestedSetupDescription" class="trade-ai-import-review-copy mb-0">Create a setup from the AI suggestion only if it matches how you actually classify this trade.</p>
+                      </div>
+                      <div class="trade-ai-import-review-buttons">
+                        <button id="tradeChartImportCreateSetupButton" class="btn btn-outline-primary btn-sm" type="button">
+                          Create Setup From Suggestion
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -191,6 +287,8 @@
                       <option value="">-- Select --</option>
                       <option value="WIN">WIN</option>
                       <option value="LOSS">LOSS</option>
+                      <option value="BREAKEVEN">BREAKEVEN</option>
+                      <option value="PARTIAL_WIN">PARTIAL WIN</option>
                       <option value="BE and take partial">BE and take partial</option>
                     </select>
                   </div>
