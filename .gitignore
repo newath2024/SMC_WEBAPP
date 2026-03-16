@@ -32,8 +32,13 @@ build/
 ### VS Code ###
 .vscode/
 
+### Local Data / Secrets ###
+.env.local
 data/
 *.db
-.env.local
-data/trading_journal.db
-data/trading_journal.db
+*.db-shm
+*.db-wal
+*.db-journal
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
