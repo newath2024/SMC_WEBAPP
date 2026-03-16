@@ -35,3 +35,4 @@ build/
 data/
 *.db
 .env.local
+data/trading_journal.db
