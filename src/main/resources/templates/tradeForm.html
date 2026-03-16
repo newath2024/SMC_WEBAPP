@@ -13,7 +13,7 @@
   <link th:href="@{/css/sidebar-toggle.css}" href="/css/sidebar-toggle.css" rel="stylesheet">
   <link th:href="@{/css/analytics-dashboard.css}" href="/css/analytics-dashboard.css" rel="stylesheet">
   <link th:href="@{/css/app-page.css}" href="/css/app-page.css" rel="stylesheet">
-  <link th:href="@{/css/trades-page.css}" href="/css/trades-page.css" rel="stylesheet">
+  <link th:href="@{/css/trades-page.css(v='20260316c')}" href="/css/trades-page.css?v=20260316c" rel="stylesheet">
 </head>
 <body class="dashboard-body app-page-body trade-page-body">
 
@@ -37,7 +37,292 @@
       </section>
 
       <section class="card shadow-sm trade-form-card">
-        <div class="card-body">
+        <div id="tradeEntryWizard"
+             class="card-body"
+             th:with="requestedMode=${param.mode != null and (param.mode[0] == 'screenshot' or param.mode[0] == 'mt5' or param.mode[0] == 'manual') ? param.mode[0] : ''}, initialMode=${editMode ? 'manual' : (error != null ? 'manual' : (requestedMode != '' ? requestedMode : ((mt5ImportPreview != null or importSuccess != null or importError != null or importInfo != null) ? 'mt5' : '')))}"
+             th:attr="data-wizard-enabled=${!editMode},data-initial-mode=${initialMode}">
+          <section id="tradeEntryModeSelector"
+                   class="trade-entry-mode-selector"
+                   th:if="${!editMode}"
+                   th:classappend="${initialMode != '' ? ' d-none' : ''}">
+            <div class="trade-entry-mode-surface">
+              <div class="trade-entry-mode-header">
+                <span class="trade-entry-mode-eyebrow">Get Started</span>
+                <h3 class="trade-entry-mode-title mb-2">Choose how to add this trade</h3>
+                <p class="trade-entry-mode-subtitle mb-0">Pick the workflow that matches your source, then continue only with the fields that matter for that path.</p>
+              </div>
+              <div class="trade-entry-mode-grid">
+                <article class="trade-entry-mode-card trade-entry-mode-card-screenshot">
+                  <div class="trade-entry-mode-card-head">
+                    <div class="trade-entry-mode-icon">
+                      <i class="bi bi-camera-reels"></i>
+                    </div>
+                    <span class="trade-entry-mode-label">AI Import</span>
+                  </div>
+                  <div class="trade-entry-mode-copy">
+                    <h5 class="mb-1">Screenshot Import</h5>
+                    <p class="mb-0">Upload HTF, LTF, and result screenshots. AI reads the chart and opens the review form with prefilled values.</p>
+                  </div>
+                  <a class="btn btn-primary trade-entry-mode-button"
+                     th:href="@{/trades/new(mode='screenshot')}"
+                     data-trade-mode-select="screenshot"
+                     th:classappend="${!tradeChartImportConfigured ? ' disabled' : ''}"
+                     th:attr="aria-disabled=${!tradeChartImportConfigured}">
+                    Analyze Screenshots
+                  </a>
+                  <div class="form-text text-warning" th:if="${!tradeChartImportConfigured}">
+                    Configure <code>OPENAI_API_KEY</code> to enable screenshot import.
+                  </div>
+                </article>
+
+                <article class="trade-entry-mode-card trade-entry-mode-card-mt5">
+                  <div class="trade-entry-mode-card-head">
+                    <div class="trade-entry-mode-icon">
+                      <i class="bi bi-file-earmark-spreadsheet"></i>
+                    </div>
+                    <span class="trade-entry-mode-label">Bulk Import</span>
+                  </div>
+                  <div class="trade-entry-mode-copy">
+                    <h5 class="mb-1">MT5 History Import</h5>
+                    <p class="mb-0">Upload an MT5 history export, preview parsed trades, and confirm the import into your journal.</p>
+                  </div>
+                  <a class="btn btn-primary trade-entry-mode-button" th:href="@{/trades/new(mode='mt5')}" data-trade-mode-select="mt5">
+                    Preview MT5 File
+                  </a>
+                </article>
+
+                <article class="trade-entry-mode-card trade-entry-mode-card-manual">
+                  <div class="trade-entry-mode-card-head">
+                    <div class="trade-entry-mode-icon">
+                      <i class="bi bi-pencil-square"></i>
+                    </div>
+                    <span class="trade-entry-mode-label">Direct Input</span>
+                  </div>
+                  <div class="trade-entry-mode-copy">
+                    <h5 class="mb-1">Manual Entry</h5>
+                    <p class="mb-0">Open the trade form directly and enter the setup, execution, and review details yourself.</p>
+                  </div>
+                  <a class="btn btn-primary trade-entry-mode-button" th:href="@{/trades/new(mode='manual')}" data-trade-mode-select="manual">
+                    Start Manual Entry
+                  </a>
+                </article>
+              </div>
+            </div>
+          </section>
+
+          <div id="tradeMt5ModePanel"
+               class="trade-form-layout mb-4"
+               th:if="${!editMode}"
+               th:classappend="${initialMode == 'mt5' ? '' : ' d-none'}">
+            <section class="trade-form-section">
+              <div class="trade-mode-panel-header">
+                <div>
+                  <span class="trade-mode-step">MT5 Import</span>
+                  <h5 class="mb-1">Step 1. Upload MT5 History</h5>
+                  <p class="trade-list-copy mb-0">Upload an MT5 history export (.xlsx or .xls). We parse closed positions from the Positions section, skip Orders and Deals, then let you preview trades before saving them directly into the journal.</p>
+                </div>
+                <a class="btn btn-outline-secondary btn-sm" th:href="@{/trades/new}" data-trade-mode-reset>
+                  Choose Another Method
+                </a>
+              </div>
+
+              <div class="alert alert-success mb-3" th:if="${importSuccess != null}" th:text="${importSuccess}">
+                Import completed.
+              </div>
+
+              <div class="alert alert-danger mb-3" th:if="${importError != null}" th:text="${importError}">
+                Import failed.
+              </div>
+
+              <div class="alert alert-info mb-3" th:if="${importInfo != null}" th:text="${importInfo}">
+                Preview ready.
+              </div>
+
+              <form class="row g-3 align-items-start" method="post" th:action="@{/trades/import}" enctype="multipart/form-data">
+                <div class="col-12 col-xl-4">
+                  <label class="form-label" for="mt5File">MT5 File</label>
+                  <input id="mt5File" class="form-control" type="file" name="file" accept=".xlsx,.xls" required>
+                  <div class="form-text">Use the MT5 trade history report file you exported from desktop.</div>
+                </div>
+                <div class="col-12 col-md-4 col-xl-2">
+                  <label class="form-label" for="setupName">Setup Name</label>
+                  <input id="setupName" class="form-control" type="text" name="setupName" value="MT5 Import">
+                </div>
+                <div class="col-6 col-md-2 col-xl-2">
+                  <label class="form-label" for="defaultHtf">Default HTF</label>
+                  <select id="defaultHtf" class="form-select" name="defaultHtf">
+                    <option value="H4">H4</option>
+                    <option value="H1" selected>H1</option>
+                    <option value="M30">M30</option>
+                    <option value="M15">M15</option>
+                  </select>
+                </div>
+                <div class="col-6 col-md-2 col-xl-2">
+                  <label class="form-label" for="defaultLtf">Default LTF</label>
+                  <select id="defaultLtf" class="form-select" name="defaultLtf">
+                    <option value="M15">M15</option>
+                    <option value="M5" selected>M5</option>
+                    <option value="M1">M1</option>
+                  </select>
+                </div>
+                <div class="col-12 col-md-4 col-xl-2">
+                  <label class="form-label" for="sessionMode">Session</label>
+                  <select id="sessionMode" class="form-select" name="sessionMode">
+                    <option value="AUTO" selected>Auto infer</option>
+                    <option value="ASIA">Asia</option>
+                    <option value="LONDON">London</option>
+                    <option value="NEW_YORK">New York</option>
+                    <option value="OTHER">Other</option>
+                  </select>
+                </div>
+                <div class="col-12">
+                  <button class="btn btn-outline-primary" type="submit">
+                    <i class="bi bi-upload me-1"></i>
+                    Preview Trades
+                  </button>
+                </div>
+              </form>
+            </section>
+
+            <section class="trade-form-section" th:if="${mt5ImportPreview != null}">
+              <div class="trade-mode-panel-header">
+                <div>
+                  <span class="trade-mode-step">MT5 Preview</span>
+                  <h5 class="mb-1">Step 2. Review Parsed Trades</h5>
+                  <p class="trade-list-copy mb-0">Check the parsed trades below. Confirm import to save them, or discard this preview and upload another file if you need to change the defaults.</p>
+                </div>
+                <div class="trade-preview-actions">
+                  <form method="post" th:action="@{/trades/import/cancel}">
+                    <input type="hidden" name="previewId" th:value="${mt5ImportPreview.previewId}">
+                    <button class="btn btn-outline-secondary" type="submit">Discard Preview</button>
+                  </form>
+                  <form method="post" th:action="@{/trades/import/confirm}">
+                    <input type="hidden" name="previewId" th:value="${mt5ImportPreview.previewId}">
+                    <button class="btn btn-primary" type="submit" th:disabled="${!mt5ImportPreview.canImport}">
+                      <i class="bi bi-check2-circle me-1"></i>
+                      <span th:text="${'Step 3. Import Selected Trades (' + mt5ImportPreview.importableCount + ')'}">Step 3. Import Selected Trades</span>
+                    </button>
+                  </form>
+                </div>
+              </div>
+
+              <div class="mt5-preview-meta">
+                <div class="mt5-preview-chip">
+                  <span class="mt5-preview-chip-label">File</span>
+                  <strong th:text="${mt5ImportPreview.sourceFileName}">mt5-history.xlsx</strong>
+                </div>
+                <div class="mt5-preview-chip">
+                  <span class="mt5-preview-chip-label">Account</span>
+                  <strong th:text="${mt5ImportPreview.accountLabel}">MT5 Account</strong>
+                </div>
+                <div class="mt5-preview-chip">
+                  <span class="mt5-preview-chip-label">Setup</span>
+                  <strong th:text="${mt5ImportPreview.setupName}">MT5 Import</strong>
+                </div>
+                <div class="mt5-preview-chip">
+                  <span class="mt5-preview-chip-label">Defaults</span>
+                  <strong th:text="${mt5ImportPreview.defaultHtf + ' / ' + mt5ImportPreview.defaultLtf}">H1 / M5</strong>
+                </div>
+                <div class="mt5-preview-chip">
+                  <span class="mt5-preview-chip-label">Session</span>
+                  <strong th:text="${mt5ImportPreview.sessionMode == 'AUTO' ? 'Auto infer' : (mt5ImportPreview.sessionMode == 'NEW_YORK' ? 'New York' : (mt5ImportPreview.sessionMode == 'LONDON' ? 'London' : (mt5ImportPreview.sessionMode == 'ASIA' ? 'Asia' : (mt5ImportPreview.sessionMode == 'OTHER' ? 'Other' : #strings.replace(mt5ImportPreview.sessionMode, '_', ' ')))))}">Auto infer</strong>
+                </div>
+              </div>
+
+              <div class="mt5-preview-stats">
+                <article class="mt5-preview-stat">
+                  <span class="mt5-preview-stat-label">Closed positions</span>
+                  <strong class="mt5-preview-stat-value" th:text="${mt5ImportPreview.closedPositionCount}">0</strong>
+                </article>
+                <article class="mt5-preview-stat">
+                  <span class="mt5-preview-stat-label">Ready to import</span>
+                  <strong class="mt5-preview-stat-value" th:text="${mt5ImportPreview.importableCount}">0</strong>
+                </article>
+                <article class="mt5-preview-stat">
+                  <span class="mt5-preview-stat-label">Duplicates</span>
+                  <strong class="mt5-preview-stat-value" th:text="${mt5ImportPreview.duplicateCount}">0</strong>
+                </article>
+                <article class="mt5-preview-stat">
+                  <span class="mt5-preview-stat-label">Skipped rows</span>
+                  <strong class="mt5-preview-stat-value" th:text="${mt5ImportPreview.skippedCount}">0</strong>
+                </article>
+                <article class="mt5-preview-stat">
+                  <span class="mt5-preview-stat-label" th:text="${mt5ImportPreview.proAccess ? 'Trade slots' : 'Slots left'}">Trade slots</span>
+                  <strong class="mt5-preview-stat-value" th:text="${mt5ImportPreview.proAccess ? 'Unlimited' : mt5ImportPreview.remainingTradeSlots}">0</strong>
+                </article>
+              </div>
+
+              <div class="alert alert-warning mb-3" th:if="${mt5ImportPreview.blockingMessage != null}" th:text="${mt5ImportPreview.blockingMessage}">
+                This preview cannot be imported yet.
+              </div>
+
+              <div class="table-responsive mt5-preview-table-wrap">
+                <table class="table align-middle trade-table mt5-preview-table">
+                  <thead>
+                  <tr>
+                    <th>Status</th>
+                    <th>Trade</th>
+                    <th>Entry</th>
+                    <th>Exit</th>
+                    <th>Prices</th>
+                    <th class="text-end">Volume</th>
+                    <th class="text-end">Net PnL</th>
+                    <th>Warnings</th>
+                  </tr>
+                  </thead>
+                  <tbody>
+                  <tr th:each="previewTrade : ${mt5ImportPreview.previewTrades}"
+                      th:classappend="${previewTrade.duplicate} ? ' mt5-preview-row-duplicate' : ''">
+                    <td>
+                      <span class="badge rounded-pill text-bg-secondary" th:if="${previewTrade.duplicate}">Duplicate</span>
+                      <span class="badge rounded-pill text-bg-success" th:if="${!previewTrade.duplicate}">Ready</span>
+                    </td>
+                    <td>
+                      <div class="fw-semibold" th:text="${previewTrade.symbol}">XAUUSD</div>
+                      <div class="small text-muted">
+                        <span th:text="${previewTrade.direction}">BUY</span>
+                        <span class="mx-1">|</span>
+                        <span th:text="${previewTrade.positionId != null and !#strings.isEmpty(previewTrade.positionId) ? 'Pos #' + previewTrade.positionId : 'No position id'}">Pos #123</span>
+                      </div>
+                      <div class="small text-muted"
+                           th:text="${previewTrade.session == 'NEW_YORK' ? 'New York' : (previewTrade.session == 'LONDON' ? 'London' : (previewTrade.session == 'ASIA' ? 'Asia' : (previewTrade.session == 'OTHER' ? 'Other' : #strings.replace(previewTrade.session, '_', ' '))))}">London</div>
+                    </td>
+                    <td>
+                      <div th:text="${#temporals.format(previewTrade.entryTime, 'dd MMM yyyy')}">10 Mar 2026</div>
+                      <div class="small text-muted" th:text="${#temporals.format(previewTrade.entryTime, 'HH:mm')}">09:30</div>
+                    </td>
+                    <td>
+                      <div th:text="${#temporals.format(previewTrade.exitTime, 'dd MMM yyyy')}">10 Mar 2026</div>
+                      <div class="small text-muted" th:text="${#temporals.format(previewTrade.exitTime, 'HH:mm')}">10:15</div>
+                    </td>
+                    <td>
+                      <div class="mt5-preview-price-stack">
+                        <span><strong>E:</strong> <span th:text="${#numbers.formatDecimal(previewTrade.entryPrice, 1, 5)}">0.00000</span></span>
+                        <span><strong>SL:</strong> <span th:text="${#numbers.formatDecimal(previewTrade.stopLoss, 1, 5)}">0.00000</span></span>
+                        <span><strong>TP:</strong> <span th:text="${#numbers.formatDecimal(previewTrade.takeProfit, 1, 5)}">0.00000</span></span>
+                        <span><strong>X:</strong> <span th:text="${#numbers.formatDecimal(previewTrade.exitPrice, 1, 5)}">0.00000</span></span>
+                      </div>
+                    </td>
+                    <td class="text-end" th:text="${#numbers.formatDecimal(previewTrade.volume, 1, 2)}">0.00</td>
+                    <td class="text-end">
+                      <div th:classappend="${previewTrade.pnl > 0 ? ' text-success' : (previewTrade.pnl < 0 ? ' text-danger' : ' text-muted')}"
+                           th:text="${(previewTrade.pnl > 0 ? '+' : '') + #numbers.formatDecimal(previewTrade.pnl, 1, 2)}">+0.00</div>
+                      <div class="small text-muted" th:text="${previewTrade.result}">WIN</div>
+                    </td>
+                    <td>
+                      <div class="mt5-preview-warning-list" th:if="${previewTrade.placeholderStopLoss or previewTrade.placeholderTakeProfit}">
+                        <span class="badge rounded-pill text-bg-warning" th:if="${previewTrade.placeholderStopLoss}">SL placeholder</span>
+                        <span class="badge rounded-pill text-bg-warning" th:if="${previewTrade.placeholderTakeProfit}">TP placeholder</span>
+                      </div>
+                      <span class="small text-muted" th:if="${!previewTrade.placeholderStopLoss and !previewTrade.placeholderTakeProfit}">No warnings</span>
+                    </td>
+                  </tr>
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          </div>
+
           <div class="alert alert-danger" th:if="${error != null}" th:text="${error}"></div>
 
           <form id="tradeForm"
@@ -45,10 +330,21 @@
                 th:object="${trade}"
                 method="post">
             <div class="trade-form-layout">
-              <section class="trade-form-section">
-                <div class="trade-form-section-header">
-                  <h5 class="mb-1">Import From TradingView Screenshots</h5>
-                  <p class="mb-0">Upload one or more chart screenshots, let AI extract the visible trade details, then review the prefilled form before saving.</p>
+              <section id="tradeScreenshotModePanel"
+                       class="trade-form-section"
+                       th:classappend="${!editMode ? (initialMode == 'screenshot' ? '' : ' d-none') : ''}">
+                <div class="trade-mode-panel-header">
+                  <div class="trade-form-section-header mb-0">
+                    <span class="trade-mode-step" th:if="${!editMode}">Screenshot Import</span>
+                    <h5 class="mb-1" th:text="${!editMode ? 'Step 1. Upload TradingView Screenshots' : 'Import From TradingView Screenshots'}">Import From TradingView Screenshots</h5>
+                    <p class="mb-0">Upload one or more chart screenshots, let AI extract the visible trade details, then review the prefilled form before saving.</p>
+                  </div>
+                  <a class="btn btn-outline-secondary btn-sm"
+                     th:href="@{/trades/new}"
+                     data-trade-mode-reset
+                     th:if="${!editMode}">
+                    Choose Another Method
+                  </a>
                 </div>
                 <div class="row g-3">
                   <div class="col-12">
@@ -222,6 +518,25 @@
                 </div>
               </section>
 
+              <section id="tradeManualModeIntro"
+                       class="trade-form-section"
+                       th:if="${!editMode}"
+                       th:classappend="${initialMode == 'manual' ? '' : ' d-none'}">
+                <div class="trade-mode-panel-header">
+                  <div>
+                    <span class="trade-mode-step">Manual Entry</span>
+                    <h5 class="mb-1">Fill The Trade Form Manually</h5>
+                    <p class="mb-0">Enter the exact setup, execution, and review details yourself. You can save as soon as the required fields are complete.</p>
+                  </div>
+                  <a class="btn btn-outline-secondary btn-sm" th:href="@{/trades/new}" data-trade-mode-reset>
+                    Choose Another Method
+                  </a>
+                </div>
+              </section>
+
+              <div id="tradeReviewFormPanel"
+                   class="trade-form-layout"
+                   th:classappend="${!editMode ? (initialMode == 'manual' ? '' : ' d-none') : ''}">
               <section id="tradeCoreSetupSection" class="trade-form-section">
                 <div class="trade-form-section-header">
                   <h5 class="mb-1">Core Setup</h5>
@@ -544,7 +859,11 @@
               </section>
             </div>
 
-            <div id="tradeFormFooter" class="trade-form-footer">
+            </div>
+
+            <div id="tradeFormFooter"
+                 class="trade-form-footer"
+                 th:classappend="${!editMode ? (initialMode == 'manual' ? '' : ' d-none') : ''}">
               <button class="btn btn-primary" type="submit" th:text="${editMode ? 'Update Trade' : 'Save Trade'}">Save Trade</button>
               <a class="btn btn-outline-secondary" th:href="${editMode ? '/trades/' + trade.id : '/trades'}">Cancel</a>
             </div>
@@ -555,7 +874,7 @@
   </div>
 </div>
 
-<script th:src="@{/js/trade-form.js}" src="/js/trade-form.js"></script>
+<script th:src="@{/js/trade-form.js(v='20260316c')}" src="/js/trade-form.js?v=20260316c"></script>
 <script th:src="@{/js/sidebar-toggle.js}" src="/js/sidebar-toggle.js"></script>
 
 </body>

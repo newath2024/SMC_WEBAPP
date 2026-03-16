@@ -95,6 +95,11 @@ public class TradeController {
         model.addAttribute("tradeChartImportConfigured", tradingViewChartImportService.isConfigured());
     }
 
+    private void fillTradeCreatePageData(Model model, User currentUser, HttpSession session) {
+        fillTradeFormData(model, currentUser);
+        model.addAttribute("mt5ImportPreview", getStoredImportPreview(session, currentUser));
+    }
+
     private void fillTradeListData(
             Model model,
             User currentUser,
@@ -171,7 +176,6 @@ public class TradeController {
         boolean adminView = userService.isAdmin(currentUser);
 
         fillTradeListData(model, currentUser, trades, filteredView, tableOnlyView, adminView, setup, sessionFilter, symbol, from, to);
-        model.addAttribute("mt5ImportPreview", getStoredImportPreview(session, currentUser));
 
         return "trades";
     }
@@ -191,7 +195,7 @@ public class TradeController {
         if (!userService.hasProAccess(currentUser) && tradeService.findAllByUser(currentUser.getId()).size() >= userService.resolveTradeLimit(currentUser)) {
             model.addAttribute("error", "You reached the free plan limit (100 trades). Upgrade to Pro for unlimited trade tracking.");
         }
-        fillTradeFormData(model, currentUser);
+        fillTradeCreatePageData(model, currentUser, session);
         return "tradeForm";
     }
 
@@ -226,7 +230,7 @@ public class TradeController {
             redirectAttributes.addFlashAttribute("importError", ex.getMessage());
         }
 
-        return "redirect:/trades";
+        return "redirect:/trades/new";
     }
 
     @PostMapping("/import/confirm")
@@ -246,11 +250,11 @@ public class TradeController {
         Mt5ImportService.ImportPreview preview = getStoredImportPreview(session, currentUser);
         if (preview == null) {
             redirectAttributes.addFlashAttribute("importError", "No MT5 import preview is available. Please upload the file again.");
-            return "redirect:/trades";
+            return "redirect:/trades/new";
         }
         if (!Objects.equals(preview.previewId(), previewId)) {
             redirectAttributes.addFlashAttribute("importError", "This preview is outdated. Please review the latest MT5 preview before confirming.");
-            return "redirect:/trades";
+            return "redirect:/trades/new";
         }
 
         try {
@@ -265,6 +269,7 @@ public class TradeController {
             redirectAttributes.addFlashAttribute("importSuccess", successMessage);
         } catch (IllegalArgumentException | IllegalStateException ex) {
             redirectAttributes.addFlashAttribute("importError", ex.getMessage());
+            return "redirect:/trades/new";
         }
 
         return "redirect:/trades";
@@ -290,7 +295,7 @@ public class TradeController {
             redirectAttributes.addFlashAttribute("importInfo", "MT5 import preview cleared.");
         }
 
-        return "redirect:/trades";
+        return "redirect:/trades/new";
     }
 
     @PostMapping
@@ -312,7 +317,7 @@ public class TradeController {
         }
         if (!userService.hasProAccess(currentUser) && tradeService.findAllByUser(currentUser.getId()).size() >= userService.resolveTradeLimit(currentUser)) {
             model.addAttribute("editMode", false);
-            fillTradeFormData(model, currentUser);
+            fillTradeCreatePageData(model, currentUser, session);
             model.addAttribute("trade", trade);
             model.addAttribute("error", "You reached the free plan limit (100 trades). Upgrade to Pro for unlimited trade tracking.");
             return "tradeForm";
@@ -325,7 +330,7 @@ public class TradeController {
 
         if (bindingResult.hasErrors()) {
             model.addAttribute("editMode", false);
-            fillTradeFormData(model, currentUser);
+            fillTradeCreatePageData(model, currentUser, session);
             model.addAttribute("trade", trade);
             model.addAttribute("error", buildFormErrorSummary(bindingResult));
             return "tradeForm";
@@ -336,7 +341,7 @@ public class TradeController {
             return "redirect:/trades";
         } catch (RuntimeException ex) {
             model.addAttribute("editMode", false);
-            fillTradeFormData(model, currentUser);
+            fillTradeCreatePageData(model, currentUser, session);
             model.addAttribute("trade", trade);
             model.addAttribute("error", friendlyErrorMessage(ex));
             return "tradeForm";

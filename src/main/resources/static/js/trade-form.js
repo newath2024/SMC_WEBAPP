@@ -7,6 +7,8 @@ let isAnalyzingTradeChart = false;
 let initialStopLossManuallyEdited = false;
 let selectedTradeChartImportFiles = [];
 let latestTradeChartImportAnalysis = null;
+let tradeEntryMode = null;
+let tradeReviewFormVisible = false;
 
 function parseNum(value) {
     if (value === null || value === undefined || value === '') return null;
@@ -185,6 +187,84 @@ window.validateSetupImages = validateSetupImages;
 
 function getTradeForm() {
     return document.getElementById('tradeForm');
+}
+
+function getTradeEntryWizard() {
+    return document.getElementById('tradeEntryWizard');
+}
+
+function isTradeEntryWizardEnabled() {
+    const wizard = getTradeEntryWizard();
+    return !!wizard && wizard.getAttribute('data-wizard-enabled') === 'true';
+}
+
+function getTradeEntryInitialMode() {
+    const wizard = getTradeEntryWizard();
+    if (!wizard) return null;
+    const initialMode = (wizard.getAttribute('data-initial-mode') || '').trim();
+    return initialMode || null;
+}
+
+function getTradeReviewFormPanel() {
+    return document.getElementById('tradeReviewFormPanel');
+}
+
+function getTradeFormFooter() {
+    return document.getElementById('tradeFormFooter');
+}
+
+function normalizeTradeEntryMode(mode) {
+    if (mode === 'screenshot' || mode === 'mt5' || mode === 'manual') {
+        return mode;
+    }
+    return null;
+}
+
+function setTradeReviewFormVisible(visible) {
+    const reviewPanel = getTradeReviewFormPanel();
+    const footer = getTradeFormFooter();
+    tradeReviewFormVisible = !!visible;
+    if (reviewPanel) {
+        reviewPanel.classList.toggle('d-none', !tradeReviewFormVisible);
+    }
+    if (footer) {
+        footer.classList.toggle('d-none', !tradeReviewFormVisible);
+    }
+}
+
+function setTradeEntryMode(mode, options) {
+    if (!isTradeEntryWizardEnabled()) {
+        return;
+    }
+
+    const normalizedMode = normalizeTradeEntryMode(mode);
+    const selector = document.getElementById('tradeEntryModeSelector');
+    const screenshotPanel = document.getElementById('tradeScreenshotModePanel');
+    const mt5Panel = document.getElementById('tradeMt5ModePanel');
+    const manualIntro = document.getElementById('tradeManualModeIntro');
+    const resolvedOptions = options || {};
+
+    tradeEntryMode = normalizedMode;
+
+    if (selector) {
+        selector.classList.toggle('d-none', !!normalizedMode);
+    }
+    if (screenshotPanel) {
+        screenshotPanel.classList.toggle('d-none', normalizedMode !== 'screenshot');
+    }
+    if (mt5Panel) {
+        mt5Panel.classList.toggle('d-none', normalizedMode !== 'mt5');
+    }
+    if (manualIntro) {
+        manualIntro.classList.toggle('d-none', normalizedMode !== 'manual');
+    }
+
+    const reviewVisible = typeof resolvedOptions.reviewVisible === 'boolean'
+        ? resolvedOptions.reviewVisible
+        : (normalizedMode === 'manual'
+            || (normalizedMode === 'screenshot' && !!latestTradeChartImportAnalysis));
+
+    setTradeReviewFormVisible(reviewVisible);
 }
 
 function getTradeChartImportInput() {
@@ -404,6 +484,9 @@ function resetTradeChartImportPreview() {
     setTradeChartImportSummaryVisible(false);
     setTradeChartImportReviewActionsVisible(false);
     setTradeChartImportSetupSuggestionVisible(false);
+    if (tradeEntryMode === 'screenshot') {
+        setTradeReviewFormVisible(false);
+    }
 }
 
 function updateTradeChartImportFilesInfo() {
@@ -915,12 +998,16 @@ async function handleTradeChartImport() {
         latestTradeChartImportAnalysis = analysis;
         renderTradeChartImportSummary(analysis);
         applyTradeChartAnalysis(analysis);
-        setTradeChartImportStatus(`${imageCount} screenshot(s) analyzed together. The combined values were added to the form below. Review them, then click Save Trade.`, 'success');
+        setTradeEntryMode('screenshot', { reviewVisible: true });
+        setTradeChartImportStatus(`${imageCount} screenshot(s) analyzed together. AI opened the review form below with the detected values. Check them, then click Save Trade.`, 'success');
     } catch (error) {
         latestTradeChartImportAnalysis = null;
         setTradeChartImportSummaryVisible(false);
         setTradeChartImportReviewActionsVisible(false);
         setTradeChartImportSetupSuggestionVisible(false);
+        if (tradeEntryMode === 'screenshot') {
+            setTradeReviewFormVisible(false);
+        }
         setTradeChartImportStatus(error.message || 'TradingView screenshot analysis failed.', 'danger');
     } finally {
         setTradeChartImportBusy(false);
@@ -1074,6 +1161,29 @@ function initTradeFormPage() {
     const tradeChartImportButton = getTradeChartImportButton();
     const initialStopLossInput = document.getElementById('initialStopLoss');
     const stopLossInput = document.getElementById('stopLoss');
+    const tradeModeButtons = Array.from(document.querySelectorAll('[data-trade-mode-select]'));
+    const tradeModeResetButtons = Array.from(document.querySelectorAll('[data-trade-mode-reset]'));
+
+    tradeModeButtons.forEach((button) => {
+        button.addEventListener('click', function (event) {
+            if (button.classList.contains('disabled') || button.getAttribute('aria-disabled') === 'true') {
+                event.preventDefault();
+                return;
+            }
+            event.preventDefault();
+            const nextMode = button.getAttribute('data-trade-mode-select');
+            setTradeEntryMode(nextMode, {
+                reviewVisible: nextMode === 'manual' || (nextMode === 'screenshot' && !!latestTradeChartImportAnalysis)
+            });
+        });
+    });
+
+    tradeModeResetButtons.forEach((button) => {
+        button.addEventListener('click', function (event) {
+            event.preventDefault();
+            setTradeEntryMode(null, { reviewVisible: false });
+        });
+    });
     if (setupImagesInput) {
         setupImagesInput.addEventListener('change', validateSetupImages);
     }
@@ -1099,6 +1209,12 @@ function initTradeFormPage() {
 
     if (tradeChartImportInput && tradeChartImportInput.disabled) {
         tradeChartImportInput.setAttribute('data-permanently-disabled', 'true');
+    }
+
+    if (isTradeEntryWizardEnabled()) {
+        setTradeEntryMode(getTradeEntryInitialMode(), {
+            reviewVisible: getTradeEntryInitialMode() === 'manual'
+        });
     }
 
     const form = getTradeForm();
