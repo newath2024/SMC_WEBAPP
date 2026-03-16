@@ -36,3 +36,4 @@ data/
 *.db
 .env.local
 data/trading_journal.db
+data/trading_journal.db
