@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title th:text="${editMode ? 'Edit Trade' : 'New Trade'}">Trade Form</title>
+  <title th:text="${editMode ? 'Edit Trade' : 'Create Trade'}">Trade Form</title>
   <link rel="icon" type="image/svg+xml" th:href="@{/img/tradejournal-logo-mark.svg}" href="/img/tradejournal-logo-mark.svg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -13,7 +13,7 @@
   <link th:href="@{/css/sidebar-toggle.css}" href="/css/sidebar-toggle.css" rel="stylesheet">
   <link th:href="@{/css/analytics-dashboard.css}" href="/css/analytics-dashboard.css" rel="stylesheet">
   <link th:href="@{/css/app-page.css}" href="/css/app-page.css" rel="stylesheet">
-  <link th:href="@{/css/trades-page.css(v='20260316c')}" href="/css/trades-page.css?v=20260316c" rel="stylesheet">
+  <link th:href="@{/css/trades-page.css(v='20260316d')}" href="/css/trades-page.css?v=20260316d" rel="stylesheet">
 </head>
 <body class="dashboard-body app-page-body trade-page-body">
 
@@ -22,11 +22,15 @@
     <aside th:replace="~{fragments/sidebar :: appSidebar('trades', @{/dashboard/export.csv(period='ALL')})}"></aside>
 
     <main class="main-content">
+      <div class="trade-create-shell">
       <section class="trade-hero trade-form-hero">
         <div>
-          <p class="trade-eyebrow mb-2" th:text="${editMode ? 'Trade update' : 'Trade capture'}">Trade capture</p>
-          <h2 class="m-0" th:text="${editMode ? 'Edit Trade' : 'New Trade'}">New Trade</h2>
-          <p class="trade-subtitle mb-0">Document execution cleanly with grouped inputs and keep the journal itself focused on review.</p>
+          <p class="trade-eyebrow mb-2" th:if="${editMode}">Trade update</p>
+          <h2 class="m-0" th:text="${editMode ? 'Edit Trade' : 'Create Trade'}">Create Trade</h2>
+          <p class="trade-subtitle mb-0"
+             th:text="${editMode ? 'Update the saved trade details and review context.' : 'Capture and review a trade for your journal.'}">
+            Capture and review a trade for your journal.
+          </p>
         </div>
         <div class="trade-hero-actions">
           <a class="btn btn-outline-secondary" th:href="${editMode ? '/trades/' + trade.id : '/trades'}">
@@ -47,63 +51,63 @@
                    th:classappend="${initialMode != '' ? ' d-none' : ''}">
             <div class="trade-entry-mode-surface">
               <div class="trade-entry-mode-header">
-                <span class="trade-entry-mode-eyebrow">Get Started</span>
-                <h3 class="trade-entry-mode-title mb-2">Choose how to add this trade</h3>
-                <p class="trade-entry-mode-subtitle mb-0">Pick the workflow that matches your source, then continue only with the fields that matter for that path.</p>
+                <h3 class="trade-entry-mode-title mb-0">Choose how you want to create this trade</h3>
+                <p class="trade-entry-mode-subtitle mb-0">Start with the workflow that matches your source, then continue only with the fields that matter for that path.</p>
               </div>
               <div class="trade-entry-mode-grid">
-                <article class="trade-entry-mode-card trade-entry-mode-card-screenshot">
-                  <div class="trade-entry-mode-card-head">
-                    <div class="trade-entry-mode-icon">
-                      <i class="bi bi-camera-reels"></i>
-                    </div>
-                    <span class="trade-entry-mode-label">AI Import</span>
+                <article class="trade-entry-mode-card trade-entry-mode-card-screenshot"
+                         role="button"
+                         data-trade-mode-card="screenshot"
+                         th:classappend="${!tradeChartImportConfigured ? ' is-disabled' : ''}"
+                         th:attr="aria-disabled=${!tradeChartImportConfigured},tabindex=${!tradeChartImportConfigured ? '-1' : '0'}">
+                  <div class="trade-entry-mode-icon">
+                    <i class="bi bi-camera"></i>
                   </div>
                   <div class="trade-entry-mode-copy">
                     <h5 class="mb-1">Screenshot Import</h5>
-                    <p class="mb-0">Upload HTF, LTF, and result screenshots. AI reads the chart and opens the review form with prefilled values.</p>
+                    <p class="mb-0">Upload TradingView screenshots and let AI extract the trade data automatically.</p>
                   </div>
                   <a class="btn btn-primary trade-entry-mode-button"
                      th:href="@{/trades/new(mode='screenshot')}"
                      data-trade-mode-select="screenshot"
                      th:classappend="${!tradeChartImportConfigured ? ' disabled' : ''}"
                      th:attr="aria-disabled=${!tradeChartImportConfigured}">
-                    Analyze Screenshots
+                    Import Screenshots
                   </a>
                   <div class="form-text text-warning" th:if="${!tradeChartImportConfigured}">
                     Configure <code>OPENAI_API_KEY</code> to enable screenshot import.
                   </div>
                 </article>
 
-                <article class="trade-entry-mode-card trade-entry-mode-card-mt5">
-                  <div class="trade-entry-mode-card-head">
-                    <div class="trade-entry-mode-icon">
-                      <i class="bi bi-file-earmark-spreadsheet"></i>
-                    </div>
-                    <span class="trade-entry-mode-label">Bulk Import</span>
+                <article class="trade-entry-mode-card trade-entry-mode-card-mt5"
+                         role="button"
+                         tabindex="0"
+                         data-trade-mode-card="mt5">
+                  <div class="trade-entry-mode-icon">
+                    <i class="bi bi-bar-chart"></i>
                   </div>
                   <div class="trade-entry-mode-copy">
                     <h5 class="mb-1">MT5 History Import</h5>
-                    <p class="mb-0">Upload an MT5 history export, preview parsed trades, and confirm the import into your journal.</p>
+                    <p class="mb-0">Upload an MT5 history export file and import trades directly into your journal.</p>
                   </div>
                   <a class="btn btn-primary trade-entry-mode-button" th:href="@{/trades/new(mode='mt5')}" data-trade-mode-select="mt5">
-                    Preview MT5 File
+                    Import MT5 History
                   </a>
                 </article>
 
-                <article class="trade-entry-mode-card trade-entry-mode-card-manual">
-                  <div class="trade-entry-mode-card-head">
-                    <div class="trade-entry-mode-icon">
-                      <i class="bi bi-pencil-square"></i>
-                    </div>
-                    <span class="trade-entry-mode-label">Direct Input</span>
+                <article class="trade-entry-mode-card trade-entry-mode-card-manual"
+                         role="button"
+                         tabindex="0"
+                         data-trade-mode-card="manual">
+                  <div class="trade-entry-mode-icon">
+                    <i class="bi bi-pencil"></i>
                   </div>
                   <div class="trade-entry-mode-copy">
                     <h5 class="mb-1">Manual Entry</h5>
-                    <p class="mb-0">Open the trade form directly and enter the setup, execution, and review details yourself.</p>
+                    <p class="mb-0">Manually enter the trade setup, execution details, and result.</p>
                   </div>
                   <a class="btn btn-primary trade-entry-mode-button" th:href="@{/trades/new(mode='manual')}" data-trade-mode-select="manual">
-                    Start Manual Entry
+                    Create Trade
                   </a>
                 </article>
               </div>
@@ -870,11 +874,12 @@
           </form>
         </div>
       </section>
+      </div>
     </main>
   </div>
 </div>
 
-<script th:src="@{/js/trade-form.js(v='20260316c')}" src="/js/trade-form.js?v=20260316c"></script>
+<script th:src="@{/js/trade-form.js(v='20260316d')}" src="/js/trade-form.js?v=20260316d"></script>
 <script th:src="@{/js/sidebar-toggle.js}" src="/js/sidebar-toggle.js"></script>
 
 </body>

@@ -267,6 +267,27 @@ function setTradeEntryMode(mode, options) {
     setTradeReviewFormVisible(reviewVisible);
 }
 
+function canActivateTradeModeTrigger(trigger) {
+    if (!trigger) {
+        return false;
+    }
+
+    return !trigger.classList.contains('disabled')
+        && !trigger.classList.contains('is-disabled')
+        && trigger.getAttribute('aria-disabled') !== 'true';
+}
+
+function activateTradeEntryMode(nextMode, trigger) {
+    if (!canActivateTradeModeTrigger(trigger)) {
+        return false;
+    }
+
+    setTradeEntryMode(nextMode, {
+        reviewVisible: nextMode === 'manual' || (nextMode === 'screenshot' && !!latestTradeChartImportAnalysis)
+    });
+    return true;
+}
+
 function getTradeChartImportInput() {
     return document.getElementById('tradeChartImportImage');
 }
@@ -1163,18 +1184,34 @@ function initTradeFormPage() {
     const stopLossInput = document.getElementById('stopLoss');
     const tradeModeButtons = Array.from(document.querySelectorAll('[data-trade-mode-select]'));
     const tradeModeResetButtons = Array.from(document.querySelectorAll('[data-trade-mode-reset]'));
+    const tradeModeCards = Array.from(document.querySelectorAll('[data-trade-mode-card]'));
 
     tradeModeButtons.forEach((button) => {
         button.addEventListener('click', function (event) {
-            if (button.classList.contains('disabled') || button.getAttribute('aria-disabled') === 'true') {
-                event.preventDefault();
-                return;
-            }
             event.preventDefault();
             const nextMode = button.getAttribute('data-trade-mode-select');
-            setTradeEntryMode(nextMode, {
-                reviewVisible: nextMode === 'manual' || (nextMode === 'screenshot' && !!latestTradeChartImportAnalysis)
-            });
+            activateTradeEntryMode(nextMode, button);
+        });
+    });
+
+    tradeModeCards.forEach((card) => {
+        card.addEventListener('click', function (event) {
+            if (event.target.closest('.trade-entry-mode-button')) {
+                return;
+            }
+
+            const nextMode = card.getAttribute('data-trade-mode-card');
+            activateTradeEntryMode(nextMode, card);
+        });
+
+        card.addEventListener('keydown', function (event) {
+            if (event.key !== 'Enter' && event.key !== ' ') {
+                return;
+            }
+
+            event.preventDefault();
+            const nextMode = card.getAttribute('data-trade-mode-card');
+            activateTradeEntryMode(nextMode, card);
         });
     });
 
