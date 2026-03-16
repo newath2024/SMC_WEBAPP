@@ -616,6 +616,168 @@
   gap: 20px;
 }
 
+.trade-entry-mode-selector {
+  display: grid;
+  gap: 28px;
+  margin: 0 auto 20px;
+  width: 100%;
+  max-width: 900px;
+  padding: 12px 0 4px;
+}
+
+.trade-entry-mode-surface {
+  display: grid;
+  gap: 28px;
+  width: 100%;
+  padding: 22px 22px 20px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at top right, rgba(37, 99, 235, 0.05), transparent 34%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(249, 250, 251, 0.96));
+  box-shadow: 0 22px 44px rgba(15, 23, 42, 0.08);
+}
+
+.trade-entry-mode-header {
+  display: grid;
+  gap: 8px;
+  text-align: left;
+  justify-items: start;
+}
+
+.trade-entry-mode-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.34rem 0.8rem;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.05);
+  color: #334155;
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.trade-entry-mode-title {
+  margin: 0;
+  font-size: clamp(1.9rem, 3vw, 2.5rem);
+  line-height: 1.08;
+  letter-spacing: -0.045em;
+  color: #0f172a;
+}
+
+.trade-entry-mode-subtitle {
+  max-width: 620px;
+  color: var(--trade-muted);
+  font-size: 0.98rem;
+  line-height: 1.65;
+}
+
+.trade-entry-mode-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.trade-entry-mode-card {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 20px;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at top right, rgba(59, 130, 246, 0.06), transparent 36%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(250, 250, 251, 0.96));
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.05);
+  min-height: 100%;
+  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+}
+
+.trade-entry-mode-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 18px 34px rgba(15, 23, 42, 0.11);
+  border-color: rgba(59, 130, 246, 0.24);
+}
+
+.trade-entry-mode-card-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.trade-entry-mode-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.14), rgba(14, 165, 233, 0.18));
+  color: #1d4ed8;
+  font-size: 1.1rem;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+
+.trade-entry-mode-copy {
+  display: grid;
+  gap: 8px;
+  flex: 1 1 auto;
+}
+
+.trade-entry-mode-card h5 {
+  margin: 0;
+  font-size: 1.14rem;
+  line-height: 1.25;
+  letter-spacing: -0.02em;
+}
+
+.trade-entry-mode-card p {
+  color: var(--trade-muted);
+  font-size: 0.94rem;
+  line-height: 1.6;
+}
+
+.trade-entry-mode-label {
+  color: #1d4ed8;
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.trade-entry-mode-button {
+  align-self: flex-start;
+  justify-content: center;
+  padding: 0.74rem 1rem;
+  min-width: 170px;
+  border-radius: 13px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  box-shadow: 0 10px 20px rgba(37, 99, 235, 0.18);
+}
+
+.trade-entry-mode-button.disabled {
+  box-shadow: none;
+}
+
+.trade-entry-mode-card .form-text {
+  margin-top: -6px;
+}
+
+.trade-entry-mode-card-screenshot .trade-entry-mode-icon {
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.16), rgba(99, 102, 241, 0.18));
+}
+
+.trade-entry-mode-card-mt5 .trade-entry-mode-icon {
+  background: linear-gradient(135deg, rgba(14, 165, 233, 0.16), rgba(16, 185, 129, 0.18));
+}
+
+.trade-entry-mode-card-manual .trade-entry-mode-icon {
+  background: linear-gradient(135deg, rgba(249, 115, 22, 0.16), rgba(245, 158, 11, 0.18));
+}
+
 .trade-form-section {
   padding: 20px;
   border: 1px solid var(--trade-border);
@@ -811,6 +973,10 @@
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
+  .trade-entry-mode-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .trade-ai-import-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -872,6 +1038,25 @@
 
   .trade-ai-import-grid {
     grid-template-columns: 1fr;
+  }
+
+  .trade-entry-mode-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .trade-entry-mode-surface {
+    padding: 18px;
+  }
+
+  .trade-mode-panel-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .trade-entry-mode-button {
+    width: 100%;
+    min-width: 0;
+    align-self: stretch;
   }
 
   .trade-ai-import-item-wide {
