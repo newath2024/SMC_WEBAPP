@@ -9,6 +9,7 @@ import com.example.demo.service.Mt5ImportService;
 import com.example.demo.service.TradeImageService;
 import com.example.demo.service.TradeReviewService;
 import com.example.demo.service.SetupService;
+import com.example.demo.service.TradeAiReviewService;
 import com.example.demo.service.TradingViewChartImportService;
 import com.example.demo.service.TradeService;
 import com.example.demo.service.UserService;
@@ -44,6 +45,7 @@ public class TradeController {
     private final TradeReviewService tradeReviewService;
     private final Mt5ImportService mt5ImportService;
     private final TradingViewChartImportService tradingViewChartImportService;
+    private final TradeAiReviewService tradeAiReviewService;
 
     public TradeController(
             TradeService tradeService,
@@ -53,7 +55,8 @@ public class TradeController {
             TradeImageService tradeImageService,
             TradeReviewService tradeReviewService,
             Mt5ImportService mt5ImportService,
-            TradingViewChartImportService tradingViewChartImportService
+            TradingViewChartImportService tradingViewChartImportService,
+            TradeAiReviewService tradeAiReviewService
     ) {
         this.tradeService = tradeService;
         this.userService = userService;
@@ -63,6 +66,7 @@ public class TradeController {
         this.tradeReviewService = tradeReviewService;
         this.mt5ImportService = mt5ImportService;
         this.tradingViewChartImportService = tradingViewChartImportService;
+        this.tradeAiReviewService = tradeAiReviewService;
     }
 
     private Mt5ImportService.ImportPreview getStoredImportPreview(HttpSession session, User currentUser) {
@@ -395,6 +399,41 @@ public class TradeController {
         return "tradeDetail";
     }
 
+    @PostMapping("/{id}/ai-review/generate")
+    public String generateAiReview(
+            @PathVariable String id,
+            RedirectAttributes redirectAttributes,
+            HttpSession session
+    ) {
+        User currentUser = userService.getCurrentUser(session);
+        if (currentUser == null) {
+            return "redirect:/login";
+        }
+
+        Trade trade = userService.isAdmin(currentUser)
+                ? tradeService.findByIdForAdmin(id)
+                : tradeService.findByIdForUser(id, currentUser.getId());
+
+        TradeReview review = tradeReviewService.getOrInitByTrade(trade);
+        boolean hadExistingAiReview = review.hasAiReview();
+
+        try {
+            tradeAiReviewService.generateForTrade(trade, review, tradeImageService.findByTradeId(trade.getId()));
+            redirectAttributes.addFlashAttribute("aiReviewNotice", hadExistingAiReview
+                    ? "AI Review regenerated."
+                    : "AI Review generated.");
+        } catch (RuntimeException ex) {
+            if (hadExistingAiReview) {
+                redirectAttributes.addFlashAttribute("aiReviewNoticeError", friendlyErrorMessage(ex));
+            } else {
+                redirectAttributes.addFlashAttribute("aiReviewState", "error");
+                redirectAttributes.addFlashAttribute("aiReviewError", friendlyErrorMessage(ex));
+            }
+        }
+
+        return "redirect:/trades/" + id;
+    }
+
     @GetMapping("/{id}/edit")
     public String editForm(
             @PathVariable String id,
@@ -573,6 +612,9 @@ public class TradeController {
 
     private void populateTradeDetailModel(Model model, User currentUser, Trade trade, TradeReview overrideReview) {
         TradeReview review = overrideReview != null ? overrideReview : tradeReviewService.getOrInitByTrade(trade);
+        TradeAiReviewService.AiReviewView aiReviewView = tradeAiReviewService.resolveView(review);
+        Integer processScoreValue = tradeReviewService.resolveEffectiveQualityScore(review);
+        String processScoreSourceLabel = tradeReviewService.resolveEffectiveQualitySourceLabel(review);
 
         model.addAttribute("currentUser", currentUser);
         model.addAttribute("trade", trade);
@@ -580,7 +622,42 @@ public class TradeController {
         model.addAttribute("review", review);
         model.addAttribute("qualityGrade", tradeReviewService.resolveScoreGrade(review.getQualityScore()));
         model.addAttribute("qualityLabel", tradeReviewService.resolveScoreLabel(review.getQualityScore()));
+        model.addAttribute("processScoreValue", processScoreValue);
+        model.addAttribute("processScoreGrade", tradeReviewService.resolveScoreGrade(processScoreValue));
+        model.addAttribute("processScoreLabel", tradeReviewService.resolveScoreLabel(processScoreValue));
+        model.addAttribute("processScoreSourceLabel", processScoreSourceLabel);
         model.addAttribute("processOutcomeLabel", tradeReviewService.resolveProcessOutcomeLabel(trade, review));
+        model.addAttribute("aiReviewConfigured", tradeAiReviewService.isConfigured());
+        if (!model.containsAttribute("aiReviewState")) {
+            model.addAttribute("aiReviewState", aiReviewView.state());
+        }
+        if (!model.containsAttribute("aiReviewSummary")) {
+            model.addAttribute("aiReviewSummary", aiReviewView.summary());
+        }
+        if (!model.containsAttribute("aiReviewStrengths")) {
+            model.addAttribute("aiReviewStrengths", aiReviewView.strengths());
+        }
+        if (!model.containsAttribute("aiReviewWeaknesses")) {
+            model.addAttribute("aiReviewWeaknesses", aiReviewView.weaknesses());
+        }
+        if (!model.containsAttribute("aiReviewImprovements")) {
+            model.addAttribute("aiReviewImprovements", aiReviewView.improvements());
+        }
+        if (!model.containsAttribute("aiReviewSuggestedMistakeTags")) {
+            model.addAttribute("aiReviewSuggestedMistakeTags", aiReviewView.suggestedMistakeTags());
+        }
+        if (!model.containsAttribute("aiReviewConfidence")) {
+            model.addAttribute("aiReviewConfidence", aiReviewView.confidence());
+        }
+        if (!model.containsAttribute("aiReviewModel")) {
+            model.addAttribute("aiReviewModel", aiReviewView.model());
+        }
+        if (!model.containsAttribute("aiReviewGeneratedAt")) {
+            model.addAttribute("aiReviewGeneratedAt", aiReviewView.generatedAt());
+        }
+        if (!model.containsAttribute("aiReviewProcessScore")) {
+            model.addAttribute("aiReviewProcessScore", aiReviewView.processScore());
+        }
     }
 
     private String buildFormErrorSummary(BindingResult bindingResult) {

@@ -26,3 +26,5 @@ services:
         value: org.postgresql.Driver
       - key: SPRING_JPA_DATABASE_PLATFORM
         value: org.hibernate.dialect.PostgreSQLDialect
+      - key: OPENAI_TRADE_REVIEW_MODEL
+        value: gpt-4.1-mini

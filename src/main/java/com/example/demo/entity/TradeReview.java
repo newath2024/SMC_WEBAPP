@@ -59,6 +59,33 @@ public class TradeReview {
     @Column(columnDefinition = "TEXT")
     private String improvementNote;
 
+    @Column(name = "ai_summary", columnDefinition = "TEXT")
+    private String aiSummary;
+
+    @Column(name = "ai_strengths_json", columnDefinition = "TEXT")
+    private String aiStrengthsJson;
+
+    @Column(name = "ai_weaknesses_json", columnDefinition = "TEXT")
+    private String aiWeaknessesJson;
+
+    @Column(name = "ai_improvements_json", columnDefinition = "TEXT")
+    private String aiImprovementsJson;
+
+    @Column(name = "ai_suggested_mistake_tags_json", columnDefinition = "TEXT")
+    private String aiSuggestedMistakeTagsJson;
+
+    @Column(name = "ai_confidence", length = 16)
+    private String aiConfidence;
+
+    @Column(name = "ai_model", length = 80)
+    private String aiModel;
+
+    @Column(name = "ai_process_score")
+    private Integer aiProcessScore;
+
+    @Column(name = "ai_generated_at")
+    private LocalDateTime aiGeneratedAt;
+
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -230,6 +257,88 @@ public class TradeReview {
 
     public void setImprovementNote(String improvementNote) {
         this.improvementNote = improvementNote;
+    }
+
+    public String getAiSummary() {
+        return aiSummary;
+    }
+
+    public void setAiSummary(String aiSummary) {
+        this.aiSummary = aiSummary;
+    }
+
+    public String getAiStrengthsJson() {
+        return aiStrengthsJson;
+    }
+
+    public void setAiStrengthsJson(String aiStrengthsJson) {
+        this.aiStrengthsJson = aiStrengthsJson;
+    }
+
+    public String getAiWeaknessesJson() {
+        return aiWeaknessesJson;
+    }
+
+    public void setAiWeaknessesJson(String aiWeaknessesJson) {
+        this.aiWeaknessesJson = aiWeaknessesJson;
+    }
+
+    public String getAiImprovementsJson() {
+        return aiImprovementsJson;
+    }
+
+    public void setAiImprovementsJson(String aiImprovementsJson) {
+        this.aiImprovementsJson = aiImprovementsJson;
+    }
+
+    public String getAiSuggestedMistakeTagsJson() {
+        return aiSuggestedMistakeTagsJson;
+    }
+
+    public void setAiSuggestedMistakeTagsJson(String aiSuggestedMistakeTagsJson) {
+        this.aiSuggestedMistakeTagsJson = aiSuggestedMistakeTagsJson;
+    }
+
+    public String getAiConfidence() {
+        return aiConfidence;
+    }
+
+    public void setAiConfidence(String aiConfidence) {
+        this.aiConfidence = aiConfidence;
+    }
+
+    public String getAiModel() {
+        return aiModel;
+    }
+
+    public void setAiModel(String aiModel) {
+        this.aiModel = aiModel;
+    }
+
+    public Integer getAiProcessScore() {
+        return aiProcessScore;
+    }
+
+    public void setAiProcessScore(Integer aiProcessScore) {
+        this.aiProcessScore = aiProcessScore;
+    }
+
+    public LocalDateTime getAiGeneratedAt() {
+        return aiGeneratedAt;
+    }
+
+    public void setAiGeneratedAt(LocalDateTime aiGeneratedAt) {
+        this.aiGeneratedAt = aiGeneratedAt;
+    }
+
+    @Transient
+    public boolean hasAiReview() {
+        return aiGeneratedAt != null
+                || (aiSummary != null && !aiSummary.isBlank())
+                || (aiStrengthsJson != null && !aiStrengthsJson.isBlank())
+                || (aiWeaknessesJson != null && !aiWeaknessesJson.isBlank())
+                || (aiImprovementsJson != null && !aiImprovementsJson.isBlank())
+                || (aiSuggestedMistakeTagsJson != null && !aiSuggestedMistakeTagsJson.isBlank());
     }
 
     public LocalDateTime getCreatedAt() {
