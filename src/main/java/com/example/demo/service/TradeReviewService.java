@@ -98,12 +98,36 @@ public class TradeReviewService {
         return "Low quality";
     }
 
+    public Integer resolveEffectiveQualityScore(TradeReview review) {
+        if (review == null) {
+            return null;
+        }
+        if (review.getQualityScore() != null) {
+            return review.getQualityScore();
+        }
+        return review.getAiProcessScore();
+    }
+
+    public String resolveEffectiveQualitySourceLabel(TradeReview review) {
+        if (review == null) {
+            return null;
+        }
+        if (review.getQualityScore() != null) {
+            return "Self Review";
+        }
+        if (review.getAiProcessScore() != null) {
+            return "AI Review";
+        }
+        return null;
+    }
+
     public String resolveProcessOutcomeLabel(Trade trade, TradeReview review) {
-        if (review == null || review.getQualityScore() == null || trade == null) {
+        Integer qualityScore = resolveEffectiveQualityScore(review);
+        if (qualityScore == null || trade == null) {
             return "Not enough review data";
         }
 
-        boolean goodProcess = review.getQualityScore() >= 70;
+        boolean goodProcess = qualityScore >= 70;
         boolean goodOutcome = trade.getPnl() > 0;
 
         if (goodProcess && goodOutcome) {

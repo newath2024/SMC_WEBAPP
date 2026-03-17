@@ -145,9 +145,11 @@
 
     .trade-summary-card,
     .trade-side-card,
-    .trade-review-card,
+    .ai-review-card,
+    .self-review-card,
     .trade-gallery-card,
-    .trade-note-card {
+    .trade-note-card,
+    .mistake-tags-card {
       padding: 1.25rem;
     }
 
@@ -159,7 +161,8 @@
     .trade-summary-block,
     .trade-side-stat,
     .trade-gallery-item,
-    .trade-review-section {
+    .trade-review-section,
+    .ai-review-block {
       padding: 0.95rem 1rem;
       border-radius: 1rem;
       background: #f8fafc;
@@ -244,11 +247,178 @@
       margin-bottom: 1rem;
     }
 
+    .trade-section-actions {
+      display: inline-flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 0.6rem;
+      flex-wrap: wrap;
+    }
+
     .trade-section-title {
       font-size: 1rem;
       font-weight: 700;
       color: var(--trade-ink);
       margin: 0;
+    }
+
+    .ai-review-card {
+      background:
+        radial-gradient(circle at top right, rgba(37, 99, 235, 0.08), transparent 15rem),
+        linear-gradient(180deg, #ffffff, #f8fbff 100%);
+    }
+
+    .ai-review-status {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 999px;
+      padding: 0.35rem 0.7rem;
+      font-size: 0.74rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      border: 1px solid transparent;
+    }
+
+    .ai-review-status.is-empty {
+      background: #f1f5f9;
+      color: #475569;
+      border-color: rgba(148, 163, 184, 0.22);
+    }
+
+    .ai-review-status.is-loading {
+      background: #dbeafe;
+      color: #1d4ed8;
+      border-color: rgba(59, 130, 246, 0.24);
+    }
+
+    .ai-review-status.is-ready {
+      background: #dcfce7;
+      color: #166534;
+      border-color: rgba(34, 197, 94, 0.22);
+    }
+
+    .ai-review-status.is-error {
+      background: #fee2e2;
+      color: #b91c1c;
+      border-color: rgba(239, 68, 68, 0.24);
+    }
+
+    .ai-review-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 1rem;
+    }
+
+    .ai-review-block-full {
+      grid-column: 1 / -1;
+    }
+
+    .ai-review-block-title,
+    .trade-review-section-title {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #1d4ed8;
+      font-weight: 700;
+      margin-bottom: 0.65rem;
+    }
+
+    .trade-review-section-title {
+      color: #0f172a;
+      font-size: 0.95rem;
+      letter-spacing: -0.01em;
+      text-transform: none;
+      margin-bottom: 0.25rem;
+    }
+
+    .trade-review-section-copy,
+    .ai-review-meta-label,
+    .ai-review-empty,
+    .ai-review-error {
+      color: var(--trade-muted);
+    }
+
+    .ai-review-list {
+      margin: 0;
+      padding-left: 1rem;
+      display: grid;
+      gap: 0.45rem;
+      color: #334155;
+    }
+
+    .ai-review-suggested-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .ai-review-tag {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      padding: 0.38rem 0.75rem;
+      background: #eff6ff;
+      color: #1e40af;
+      border: 1px solid rgba(59, 130, 246, 0.18);
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+
+    .ai-review-meta {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 0.9rem;
+      padding-top: 1rem;
+      margin-top: 1rem;
+      border-top: 1px solid rgba(148, 163, 184, 0.18);
+    }
+
+    .ai-review-meta-label {
+      display: block;
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 0.3rem;
+    }
+
+    .ai-review-meta-value {
+      color: var(--trade-ink);
+      font-weight: 700;
+    }
+
+    .ai-review-notice {
+      margin-bottom: 1rem;
+    }
+
+    .ai-review-skeleton {
+      display: grid;
+      gap: 0.75rem;
+    }
+
+    .ai-review-skeleton-line {
+      height: 0.9rem;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #eef2f7 0%, #f8fafc 50%, #eef2f7 100%);
+      background-size: 200% 100%;
+      animation: aiReviewPulse 1.4s ease-in-out infinite;
+    }
+
+    .ai-review-skeleton-line.is-short {
+      width: 55%;
+    }
+
+    .ai-review-skeleton-line.is-medium {
+      width: 72%;
+    }
+
+    @keyframes aiReviewPulse {
+      0% {
+        background-position: 200% 0;
+      }
+      100% {
+        background-position: -200% 0;
+      }
     }
 
     .trade-gallery-group + .trade-gallery-group,
@@ -350,6 +520,43 @@
       color: #334155;
     }
 
+    .self-review-card form {
+      display: grid;
+      gap: 1rem;
+    }
+
+    .self-review-card .trade-form-grid > div {
+      display: grid;
+      gap: 0.55rem;
+      align-content: start;
+    }
+
+    .self-review-card .form-label {
+      margin-bottom: 0;
+      font-size: 0.76rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: #475569;
+    }
+
+    .self-review-card textarea.form-control {
+      min-height: 120px;
+      padding: 0.95rem 1rem;
+      border-radius: 1rem;
+      border: 1px solid rgba(148, 163, 184, 0.3);
+      background: #fff;
+      box-shadow: none;
+      line-height: 1.65;
+      color: #334155;
+      resize: vertical;
+    }
+
+    .self-review-card textarea.form-control:focus {
+      border-color: rgba(37, 99, 235, 0.42);
+      box-shadow: 0 0 0 0.2rem rgba(37, 99, 235, 0.12);
+    }
+
     .trade-mistakes {
       display: flex;
       flex-wrap: wrap;
@@ -371,11 +578,14 @@
     .trade-binary-group {
       display: inline-flex;
       align-items: center;
+      justify-content: flex-start;
+      min-height: 2.8rem;
       background: #f1f5f9;
       border-radius: 999px;
       border: 1px solid rgba(148, 163, 184, 0.3);
-      padding: 0.2rem;
-      gap: 0.2rem;
+      padding: 0.22rem;
+      gap: 0.22rem;
+      width: fit-content;
     }
 
     .trade-binary-group input {
@@ -386,18 +596,22 @@
 
     .trade-binary-option {
       border-radius: 999px;
-      padding: 0.35rem 0.75rem;
+      min-width: 4rem;
+      text-align: center;
+      padding: 0.5rem 0.95rem;
       font-size: 0.82rem;
       font-weight: 700;
       color: #475569;
       cursor: pointer;
       user-select: none;
       margin-bottom: 0;
+      transition: background 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
     }
 
     .trade-binary-group input:checked + .trade-binary-option {
       background: #1d4ed8;
       color: #fff;
+      box-shadow: 0 8px 18px rgba(29, 78, 216, 0.16);
     }
 
     .trade-rating {
@@ -436,6 +650,13 @@
       font-size: 0.72rem;
       padding: 0.2rem 0.45rem;
       line-height: 1.2;
+    }
+
+    .trade-review-save {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      justify-content: center;
     }
 
     .trade-positive {
@@ -503,6 +724,31 @@
 
       .trade-stat-grid {
         grid-template-columns: repeat(2, minmax(90px, 1fr));
+      }
+
+      .ai-review-meta {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 767.98px) {
+      .trade-section-head,
+      .trade-section-actions {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .ai-review-grid,
+      .ai-review-meta {
+        grid-template-columns: 1fr;
+      }
+
+      .trade-binary-group {
+        width: 100%;
+      }
+
+      .trade-binary-option {
+        flex: 1 1 0;
       }
     }
   </style>
@@ -711,11 +957,140 @@
             </div>
           </div>
 
-          <div class="trade-panel trade-review-card">
+          <div class="trade-panel ai-review-card"
+               th:with="
+                 aiReviewState=${aiReviewState != null ? aiReviewState : 'empty'},
+                 aiReviewSummary=${aiReviewSummary != null ? aiReviewSummary : null},
+                 aiReviewStrengths=${aiReviewStrengths != null ? aiReviewStrengths : null},
+                 aiReviewWeaknesses=${aiReviewWeaknesses != null ? aiReviewWeaknesses : null},
+                 aiReviewImprovements=${aiReviewImprovements != null ? aiReviewImprovements : null},
+                 aiReviewSuggestedMistakeTags=${aiReviewSuggestedMistakeTags != null ? aiReviewSuggestedMistakeTags : null},
+                 aiReviewConfidence=${aiReviewConfidence != null ? aiReviewConfidence : null},
+                 aiReviewModel=${aiReviewModel != null ? aiReviewModel : null},
+                 aiReviewGeneratedAt=${aiReviewGeneratedAt != null ? aiReviewGeneratedAt : null},
+                 aiReviewError=${aiReviewError != null ? aiReviewError : null},
+                 aiReviewStatusLabel=${aiReviewState == 'loading' ? 'Generating...' : (aiReviewState == 'success' ? 'Ready' : (aiReviewState == 'error' ? 'Failed' : 'Not generated'))}">
             <div class="trade-section-head">
               <div>
-                <h3 class="trade-section-title">Trade Review</h3>
-                <div class="trade-section-copy">Keep the same review inputs, grouped around setup, execution, and psychology.</div>
+                <h3 class="trade-section-title">AI Review</h3>
+                <div class="trade-section-copy">Automated analysis based on trade data, context, notes, and chart images.</div>
+              </div>
+              <form class="trade-section-actions"
+                    th:action="@{/trades/{id}/ai-review/generate(id=${trade.id})}"
+                    method="post"
+                    th:attr="data-ai-review-form=true,data-ai-review-configured=${aiReviewConfigured}">
+                <span id="tradeAiReviewStatusBadge"
+                      class="ai-review-status"
+                      th:classappend="${aiReviewState == 'loading' ? ' is-loading' : (aiReviewState == 'success' ? ' is-ready' : (aiReviewState == 'error' ? ' is-error' : ' is-empty'))}"
+                      th:text="${aiReviewStatusLabel}">Not generated</span>
+                <button id="tradeAiReviewActionButton"
+                        class="btn btn-primary btn-sm"
+                        type="submit"
+                        th:if="${aiReviewState == 'empty' or aiReviewState == 'error'}"
+                        th:disabled="${!aiReviewConfigured}"
+                        th:text="${aiReviewState == 'error' ? 'Try Again' : 'Generate AI Review'}">Generate AI Review</button>
+                <button id="tradeAiReviewActionButton"
+                        class="btn btn-outline-secondary btn-sm"
+                        type="submit"
+                        th:if="${aiReviewState == 'success'}"
+                        th:disabled="${!aiReviewConfigured}">Regenerate</button>
+              </form>
+            </div>
+
+            <div class="alert alert-success py-2 ai-review-notice" th:if="${aiReviewNotice != null}" th:text="${aiReviewNotice}">AI Review generated.</div>
+            <div class="alert alert-danger py-2 ai-review-notice" th:if="${aiReviewNoticeError != null}" th:text="${aiReviewNoticeError}">AI Review generation failed.</div>
+
+            <div id="tradeAiReviewEmptyState" class="trade-empty ai-review-empty" th:if="${aiReviewState == 'empty'}">
+              No AI review yet. Generate an automated review to get summary, strengths, weaknesses, improvements, and suggested mistake tags.
+              <div class="small" th:if="${!aiReviewConfigured}">Configure <code>OPENAI_API_KEY</code> to enable AI Review.</div>
+            </div>
+
+            <div id="tradeAiReviewLoadingState" class="ai-review-skeleton d-none" th:if="${true}">
+              <div class="ai-review-skeleton-line"></div>
+              <div class="ai-review-skeleton-line is-medium"></div>
+              <div class="ai-review-grid">
+                <div class="ai-review-block">
+                  <div class="ai-review-skeleton-line"></div>
+                  <div class="ai-review-skeleton-line is-short"></div>
+                  <div class="ai-review-skeleton-line"></div>
+                </div>
+                <div class="ai-review-block">
+                  <div class="ai-review-skeleton-line"></div>
+                  <div class="ai-review-skeleton-line is-medium"></div>
+                  <div class="ai-review-skeleton-line is-short"></div>
+                </div>
+              </div>
+            </div>
+
+            <div id="tradeAiReviewErrorState" class="trade-empty ai-review-error" th:if="${aiReviewState == 'error'}"
+                 th:text="${aiReviewError != null and !#strings.isEmpty(aiReviewError) ? aiReviewError : 'The AI review could not be generated right now. Try again in a moment.'}">
+              The AI review could not be generated right now. Try again in a moment.
+            </div>
+
+            <div id="tradeAiReviewSuccessState" th:if="${aiReviewState == 'success'}">
+              <div class="ai-review-grid">
+                <div class="ai-review-block ai-review-block-full">
+                  <div class="ai-review-block-title">Summary</div>
+                  <div th:text="${aiReviewSummary != null and !#strings.isEmpty(aiReviewSummary) ? aiReviewSummary : 'Automated summary will appear here once AI review data is connected.'}">
+                    Automated summary will appear here once AI review data is connected.
+                  </div>
+                </div>
+
+                <div class="ai-review-block">
+                  <div class="ai-review-block-title">Strengths</div>
+                  <ul class="ai-review-list" th:if="${aiReviewStrengths != null and !#lists.isEmpty(aiReviewStrengths)}">
+                    <li th:each="item : ${aiReviewStrengths}" th:text="${item}">Clear plan alignment</li>
+                  </ul>
+                  <div class="trade-section-copy" th:if="${aiReviewStrengths == null or #lists.isEmpty(aiReviewStrengths)}">No strengths were returned.</div>
+                </div>
+
+                <div class="ai-review-block">
+                  <div class="ai-review-block-title">Weaknesses</div>
+                  <ul class="ai-review-list" th:if="${aiReviewWeaknesses != null and !#lists.isEmpty(aiReviewWeaknesses)}">
+                    <li th:each="item : ${aiReviewWeaknesses}" th:text="${item}">Early exit management</li>
+                  </ul>
+                  <div class="trade-section-copy" th:if="${aiReviewWeaknesses == null or #lists.isEmpty(aiReviewWeaknesses)}">No weaknesses were returned.</div>
+                </div>
+
+                <div class="ai-review-block">
+                  <div class="ai-review-block-title">Improvements</div>
+                  <ul class="ai-review-list" th:if="${aiReviewImprovements != null and !#lists.isEmpty(aiReviewImprovements)}">
+                    <li th:each="item : ${aiReviewImprovements}" th:text="${item}">Refine patience around confirmation</li>
+                  </ul>
+                  <div class="trade-section-copy" th:if="${aiReviewImprovements == null or #lists.isEmpty(aiReviewImprovements)}">No improvement actions were returned.</div>
+                </div>
+
+                <div class="ai-review-block">
+                  <div class="ai-review-block-title">Suggested Mistake Tags</div>
+                  <div class="ai-review-suggested-tags" th:if="${aiReviewSuggestedMistakeTags != null and !#lists.isEmpty(aiReviewSuggestedMistakeTags)}">
+                    <span class="ai-review-tag" th:each="tag : ${aiReviewSuggestedMistakeTags}" th:text="${tag}">FOMO</span>
+                  </div>
+                  <div class="trade-section-copy" th:if="${aiReviewSuggestedMistakeTags == null or #lists.isEmpty(aiReviewSuggestedMistakeTags)}">No mistake tag suggestions were returned.</div>
+                </div>
+              </div>
+
+              <div class="ai-review-meta">
+                <div>
+                  <span class="ai-review-meta-label">Confidence</span>
+                  <div class="ai-review-meta-value" th:text="${aiReviewConfidence != null ? aiReviewConfidence : '-'}">high</div>
+                </div>
+                <div>
+                  <span class="ai-review-meta-label">Model</span>
+                  <div class="ai-review-meta-value" th:text="${aiReviewModel != null ? aiReviewModel : '-'}">gpt-4.1-mini</div>
+                </div>
+                <div>
+                  <span class="ai-review-meta-label">Generated at</span>
+                  <div class="ai-review-meta-value" th:text="${aiReviewGeneratedAt != null ? #temporals.format(aiReviewGeneratedAt, 'yyyy-MM-dd HH:mm') : '-'}">2026-03-16 14:30</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="trade-panel self-review-card">
+            <div class="trade-section-head">
+              <div>
+                <h3 class="trade-section-title">Self Review</h3>
+                <div class="trade-section-copy">Manual post-trade evaluation across setup, execution, and psychology.</div>
               </div>
               <div class="text-end">
                 <div>
@@ -731,7 +1106,10 @@
 
             <form th:action="@{/trades/{id}/review(id=${trade.id})}" th:object="${review}" method="post">
               <div class="trade-review-section">
-                <h6 class="mb-3">Setup Validation</h6>
+                <div class="mb-3">
+                  <h6 class="trade-review-section-title">Setup Validation</h6>
+                  <div class="trade-review-section-copy">Validate the plan, context, confirmation, and setup selection behind the trade.</div>
+                </div>
                 <div class="trade-form-grid">
                   <div class="trade-field-span-3">
                     <label class="form-label">Followed Plan</label>
@@ -792,7 +1170,10 @@
               </div>
 
               <div class="trade-review-section">
-                <h6 class="mb-3">Execution Quality</h6>
+                <div class="mb-3">
+                  <h6 class="trade-review-section-title">Execution Quality</h6>
+                  <div class="trade-review-section-copy">Assess risk discipline, timing quality, and whether execution matched the intended process.</div>
+                </div>
                 <div class="trade-form-grid">
                   <div class="trade-field-span-3">
                     <label class="form-label">Respected Risk</label>
@@ -844,7 +1225,10 @@
               </div>
 
               <div class="trade-review-section">
-                <h6 class="mb-3">Psychology</h6>
+                <div class="mb-3">
+                  <h6 class="trade-review-section-title">Psychology</h6>
+                  <div class="trade-review-section-copy">Capture emotional factors, impulsive behavior, and the lesson to carry into the next trade.</div>
+                </div>
                 <div class="trade-form-grid">
                   <div class="trade-field-span-3">
                     <label class="form-label">FOMO Happened</label>
@@ -869,7 +1253,10 @@
               </div>
 
               <div class="mt-3">
-                <button class="btn btn-primary" type="submit">Save Review</button>
+                <button class="btn btn-primary trade-review-save" type="submit">
+                  <i class="bi bi-check2-circle"></i>
+                  <span>Save Self Review</span>
+                </button>
               </div>
             </form>
           </div>
@@ -912,12 +1299,12 @@
             </div>
             <div class="d-flex align-items-start justify-content-between gap-3 mb-3">
               <div>
-                <div class="trade-quality-score" th:classappend="${review.qualityScore == null} ? ' fs-4 fw-semibold'" th:text="${review.qualityScore != null ? review.qualityScore + '/100' : 'Not calculated yet'}">Not calculated yet</div>
-                <div class="mt-2" th:if="${review.qualityScore != null}">
-                  <span class="badge text-bg-primary me-1" th:text="${qualityGrade}">N/A</span>
-                  <span class="trade-section-copy" th:text="${qualityLabel}">No review yet</span>
+                <div class="trade-quality-score" th:classappend="${processScoreValue == null} ? ' fs-4 fw-semibold'" th:text="${processScoreValue != null ? processScoreValue + '/100' : 'Not calculated yet'}">Not calculated yet</div>
+                <div class="mt-2" th:if="${processScoreValue != null}">
+                  <span class="badge text-bg-primary me-1" th:text="${processScoreGrade}">N/A</span>
+                  <span class="trade-section-copy" th:text="${processScoreLabel}">No review yet</span>
                 </div>
-                <div class="trade-section-copy mt-2" th:if="${review.qualityScore == null}">Fill trade review to unlock score.</div>
+                <div class="trade-section-copy mt-2" th:if="${processScoreValue == null}">Complete Self Review or generate AI Review to unlock score.</div>
               </div>
               <span class="trade-chip trade-chip-soft" th:text="${trade.direction}">BUY</span>
             </div>
@@ -925,13 +1312,14 @@
               <div class="trade-side-label">Process vs Outcome</div>
               <div class="trade-side-value" th:text="${processOutcomeLabel}">Not enough review data</div>
             </div>
+            <div class="trade-section-copy mt-2" th:if="${processScoreValue != null and processScoreSourceLabel != null}" th:text="${'Source: ' + processScoreSourceLabel}">Source: AI Review</div>
           </div>
 
-          <div class="trade-panel trade-side-card">
+          <div class="trade-panel trade-side-card mistake-tags-card">
             <div class="trade-section-head">
               <div>
-                <h3 class="trade-section-title">Mistakes</h3>
-                <div class="trade-section-copy">Rule breaks and repeat errors surfaced as badges.</div>
+                <h3 class="trade-section-title">Mistake Tags</h3>
+                <div class="trade-section-copy">Rule breaks and repeat errors surfaced as compact rounded tags.</div>
               </div>
             </div>
             <div class="trade-mistakes" th:if="${trade.mistakes != null and !#lists.isEmpty(trade.mistakes)}">
@@ -940,7 +1328,10 @@
                 <span th:text="${m.name}">Mistake</span>
               </span>
             </div>
-            <div class="trade-empty" th:if="${trade.mistakes == null or #lists.isEmpty(trade.mistakes)}">No mistakes tagged.</div>
+            <div class="trade-empty" th:if="${trade.mistakes == null or #lists.isEmpty(trade.mistakes)}">
+              <div>No mistake tags yet.</div>
+              <div>AI suggestions and manual tagging will appear here.</div>
+            </div>
           </div>
         </aside>
       </section>
@@ -960,6 +1351,13 @@ document.addEventListener('DOMContentLoaded', function () {
   const closeBtn = document.getElementById('imageLightboxClose');
   const thumbs = document.querySelectorAll('.setup-image-thumb');
   const ratingClearButtons = document.querySelectorAll('.trade-rating-clear');
+  const aiReviewForm = document.querySelector('[data-ai-review-form]');
+  const aiReviewStatusBadge = document.getElementById('tradeAiReviewStatusBadge');
+  const aiReviewActionButton = document.getElementById('tradeAiReviewActionButton');
+  const aiReviewEmptyState = document.getElementById('tradeAiReviewEmptyState');
+  const aiReviewLoadingState = document.getElementById('tradeAiReviewLoadingState');
+  const aiReviewErrorState = document.getElementById('tradeAiReviewErrorState');
+  const aiReviewSuccessState = document.getElementById('tradeAiReviewSuccessState');
 
   function closeLightbox() {
     lightbox.classList.remove('show');
@@ -996,6 +1394,34 @@ document.addEventListener('DOMContentLoaded', function () {
       });
     });
   });
+
+  if (aiReviewForm) {
+    aiReviewForm.addEventListener('submit', function () {
+      if (aiReviewStatusBadge) {
+        aiReviewStatusBadge.textContent = 'Generating...';
+        aiReviewStatusBadge.classList.remove('is-empty', 'is-ready', 'is-error');
+        aiReviewStatusBadge.classList.add('is-loading');
+      }
+
+      if (aiReviewActionButton) {
+        aiReviewActionButton.disabled = true;
+        aiReviewActionButton.textContent = 'Generating...';
+      }
+
+      if (aiReviewEmptyState) {
+        aiReviewEmptyState.classList.add('d-none');
+      }
+      if (aiReviewErrorState) {
+        aiReviewErrorState.classList.add('d-none');
+      }
+      if (aiReviewSuccessState) {
+        aiReviewSuccessState.classList.add('d-none');
+      }
+      if (aiReviewLoadingState) {
+        aiReviewLoadingState.classList.remove('d-none');
+      }
+    });
+  }
 });
 </script>
 

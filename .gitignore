@@ -33,7 +33,6 @@ build/
 .vscode/
 
 ### Local Data / Secrets ###
-.env.local
 data/
 *.db
 *.db-shm
@@ -42,3 +41,4 @@ data/
 *.sqlite
 *.sqlite-shm
 *.sqlite-wal
+.env.local
