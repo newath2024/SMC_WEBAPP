@@ -27,7 +27,10 @@
         <div>
           <p class="trade-eyebrow mb-2">Trading journal</p>
           <h2 class="m-0">Trades</h2>
-          <p class="trade-subtitle mb-0">Review performance, filter fast, and jump into trade details without leaving the list.</p>
+          <p class="trade-subtitle mb-0"
+             th:text="${aiReviewedView ? 'Review your latest AI-reviewed trades first, with process context and mistake tags visible in one place.' : 'Review performance, filter fast, and jump into trade details without leaving the list.'}">
+            Review performance, filter fast, and jump into trade details without leaving the list.
+          </p>
         </div>
         <div class="trade-hero-actions" th:if="${!adminView}">
           <a class="btn btn-primary trade-add-button" th:href="@{/trades/new}">
@@ -132,8 +135,9 @@
       </section>
 
       <div class="alert alert-info py-2 mb-0"
-           th:if="${(selectedSetup != null and !#strings.isEmpty(selectedSetup)) or (selectedSession != null and !#strings.isEmpty(selectedSession)) or (selectedSymbol != null and !#strings.isEmpty(selectedSymbol)) or selectedFrom != null or selectedTo != null or (param.result != null and !#strings.isEmpty(param.result[0])) or (param.mistake != null and !#strings.isEmpty(param.mistake[0]))}">
+           th:if="${aiReviewedView or (selectedSetup != null and !#strings.isEmpty(selectedSetup)) or (selectedSession != null and !#strings.isEmpty(selectedSession)) or (selectedSymbol != null and !#strings.isEmpty(selectedSymbol)) or selectedFrom != null or selectedTo != null or (param.result != null and !#strings.isEmpty(param.result[0])) or (param.mistake != null and !#strings.isEmpty(param.mistake[0]))}">
         <span class="me-2">Active filters:</span>
+        <span class="badge text-bg-info me-1" th:if="${aiReviewedView}">View: AI-reviewed</span>
         <span class="badge text-bg-primary me-1" th:if="${selectedSetup != null and !#strings.isEmpty(selectedSetup)}" th:text="${'Setup: ' + selectedSetup}"></span>
         <span class="badge text-bg-primary me-1"
               th:if="${selectedSession != null and !#strings.isEmpty(selectedSession)}"
@@ -143,7 +147,7 @@
         <span class="badge text-bg-primary me-1" th:if="${param.mistake != null and !#strings.isEmpty(param.mistake[0])}" th:text="${'Mistake: ' + param.mistake[0]}"></span>
         <span class="badge text-bg-secondary me-1" th:if="${selectedFrom != null}" th:text="${'From: ' + selectedFrom}"></span>
         <span class="badge text-bg-secondary me-2" th:if="${selectedTo != null}" th:text="${'To: ' + selectedTo}"></span>
-        <a th:href="@{/trades}" class="btn btn-sm btn-outline-secondary">Clear</a>
+        <a th:href="${resetTradesUrl}" class="btn btn-sm btn-outline-secondary">Clear</a>
       </div>
 
       <div class="alert alert-secondary py-2 mb-0" th:if="${adminView}">
@@ -155,16 +159,26 @@
           <div class="trade-list-header">
             <div>
               <h5 class="card-title mb-1">Trade Log</h5>
-              <p class="trade-list-copy mb-0">Compact journal view with detail access from any row.</p>
+              <p class="trade-list-copy mb-0"
+                 th:text="${aiReviewedView ? 'AI-reviewed trades stay in table view, sorted by latest review first with process score, classification, and tags visible inline.' : 'Compact journal view with detail access and a quick process score from any row.'}">
+                Compact journal view with detail access and a quick process score from any row.
+              </p>
             </div>
-            <div class="trade-view-toggle" role="group" aria-label="View mode">
-              <button class="trade-view-toggle-btn is-active" type="button">Table</button>
-              <button class="trade-view-toggle-btn" type="button" disabled>Card</button>
-              <button class="trade-view-toggle-btn" type="button" disabled>Calendar</button>
+            <div class="trade-view-controls">
+              <div class="trade-view-toggle" role="group" aria-label="View mode">
+                <button class="trade-view-toggle-btn is-active" type="button">Table</button>
+                <button class="trade-view-toggle-btn" type="button" disabled>Card</button>
+                <button class="trade-view-toggle-btn" type="button" disabled>Calendar</button>
+              </div>
+              <div class="trade-mode-toggle" role="group" aria-label="Trade mode">
+                <a class="trade-view-toggle-btn" th:classappend="${!aiReviewedView} ? ' is-active' : ''" th:href="${allTradesViewUrl}">All</a>
+                <a class="trade-view-toggle-btn" th:classappend="${aiReviewedView} ? ' is-active' : ''" th:href="${aiTradesViewUrl}">AI View</a>
+              </div>
             </div>
           </div>
 
           <form class="trade-filter-bar" method="get" th:action="@{/trades}">
+            <input th:if="${aiReviewedView}" type="hidden" name="view" value="ai-reviewed">
             <div class="trade-filter-row trade-filter-row-primary">
               <div class="trade-filter-field trade-filter-field-wide">
                 <label class="form-label" for="symbolSearch">Search Symbol</label>
@@ -217,7 +231,7 @@
                     <i class="bi bi-calendar3"></i>
                     <span id="dateRangeDisplayText">All dates</span>
                   </button>
-                  <a class="btn btn-sm btn-outline-secondary trade-reset-btn" th:href="@{/trades}">Reset Filters</a>
+                  <a class="btn btn-sm btn-outline-secondary trade-reset-btn" th:href="${resetTradesUrl}">Reset Filters</a>
                 </div>
                 <input id="dateRangeInput" class="trade-range-input" type="text" autocomplete="off">
                 <div class="trade-date-hidden-inputs">
@@ -228,8 +242,8 @@
             </div>
           </form>
 
-          <div class="table-responsive">
-            <table class="table trade-table align-middle mb-0">
+          <div class="table-responsive" th:classappend="${aiReviewedView ? ' trade-table-responsive-scroll' : ''}">
+            <table class="table trade-table align-middle mb-0" th:classappend="${aiReviewedView ? ' trade-ai-reviewed-table' : ''}">
               <thead>
               <tr>
                 <th>
@@ -240,6 +254,7 @@
                 <th>Setup</th>
                 <th>Session</th>
                 <th>Result</th>
+                <th th:text="${aiReviewedView ? 'AI Review' : 'Process'}">Process</th>
                 <th>
                   <button class="trade-sort-btn" type="button" data-sort-key="pnl">PnL <span class="trade-sort-indicator">-</span></button>
                 </th>
@@ -253,6 +268,7 @@
               <tr th:each="t : ${trades}" class="trade-row trade-data-row"
                   th:attr="data-href=@{/trades/{id}(id=${t.id})},
                            data-sort-date=${t.entryTime != null ? #temporals.format(t.entryTime, 'yyyyMMddHHmmss') : (t.tradeDate != null ? #temporals.format(t.tradeDate, 'yyyyMMddHHmmss') : (t.createdAt != null ? #temporals.format(t.createdAt, 'yyyyMMddHHmmss') : '0'))},
+                           data-sort-review=${tradeAiReviewTimestamps[t.id] != null ? #temporals.format(tradeAiReviewTimestamps[t.id], 'yyyyMMddHHmmss') : '0'},
                            data-sort-pnl=${t.pnl},
                            data-sort-r=${t.rMultiple},
                            data-r-known=${t.knownRMultiple},
@@ -261,7 +277,7 @@
                            data-setup=${t.setupName != null ? t.setupName : ''},
                            data-session=${t.session != null ? t.session : ''},
                            data-result=${t.result != null ? t.result : ''},
-                           data-mistakes=${t.mistakes != null ? #strings.listJoin(t.mistakes.![name], '|') : ''},
+                           data-mistakes=${aiReviewedView ? (tradeFilterMistakeValues[t.id] != null ? tradeFilterMistakeValues[t.id] : '') : (t.mistakes != null ? #strings.listJoin(t.mistakes.![name], '|') : '')},
                            data-trade-date=${t.entryTime != null ? #temporals.format(t.entryTime, 'yyyy-MM-dd') : (t.tradeDate != null ? #temporals.format(t.tradeDate, 'yyyy-MM-dd') : (t.createdAt != null ? #temporals.format(t.createdAt, 'yyyy-MM-dd') : ''))}">
                 <td class="trade-date-cell">
                   <div th:text="${t.entryTime != null ? #temporals.format(t.entryTime, 'dd MMM yyyy') : (t.tradeDate != null ? #temporals.format(t.tradeDate, 'dd MMM yyyy') : '-')}">10 Mar 2026</div>
@@ -291,6 +307,28 @@
                         th:with="resultValue=${t.result != null ? t.result.trim().toUpperCase() : ''},partialValue=${t.result != null ? #strings.containsIgnoreCase(t.result, 'partial') : false}"
                         th:classappend="${resultValue == 'WIN' ? ' trade-result-win' : (resultValue == 'LOSS' ? ' trade-result-loss' : ((resultValue == 'BE' or resultValue == 'BREAKEVEN') ? ' trade-result-be' : (partialValue ? ' trade-result-partial' : ' trade-result-open')))}"
                         th:text="${resultValue == '' ? 'OPEN' : (resultValue == 'WIN' ? 'WIN' : (resultValue == 'LOSS' ? 'LOSS' : ((resultValue == 'BE' or resultValue == 'BREAKEVEN') ? 'BE' : (partialValue ? 'PARTIAL' : resultValue))))}">WIN</span>
+                </td>
+                <td th:classappend="${aiReviewedView ? ' trade-ai-cell' : ' trade-process-cell'}"
+                    th:with="processScore=${tradeProcessScores[t.id]}, aiScore=${tradeAiProcessScores[t.id]}, aiTags=${tradeAiMistakeTags[t.id]}, aiClassification=${tradeAiClassifications[t.id]}, aiClassificationClass=${tradeAiClassificationClasses[t.id]}">
+                  <div class="trade-ai-review-summary" th:if="${aiReviewedView}">
+                    <div class="trade-ai-review-topline">
+                      <span class="trade-ai-score"
+                            th:classappend="${aiScore == null ? ' trade-ai-score-empty' : (aiScore >= 80 ? ' trade-ai-score-strong' : (aiScore >= 70 ? ' trade-ai-score-good' : (aiScore >= 40 ? ' trade-ai-score-watch' : ' trade-ai-score-risk')))}"
+                            th:text="${aiScore != null ? aiScore + '/100' : 'N/A'}">82/100</span>
+                      <span class="trade-ai-classification"
+                            th:classappend="${aiClassificationClass}"
+                            th:text="${aiClassification}">Good process / Good outcome</span>
+                    </div>
+                    <div class="trade-ai-tags" th:if="${aiTags != null and !#lists.isEmpty(aiTags)}">
+                      <span class="trade-ai-tag" th:each="tag : ${aiTags}" th:text="${tag}">FOMO</span>
+                    </div>
+                    <div class="trade-ai-tags-empty" th:if="${aiTags == null or #lists.isEmpty(aiTags)}">No AI mistake tags</div>
+                  </div>
+                  <div class="trade-process-compact" th:if="${!aiReviewedView}">
+                    <span class="trade-ai-score"
+                          th:classappend="${processScore == null ? ' trade-ai-score-empty' : (processScore >= 80 ? ' trade-ai-score-strong' : (processScore >= 70 ? ' trade-ai-score-good' : (processScore >= 40 ? ' trade-ai-score-watch' : ' trade-ai-score-risk')))}"
+                          th:text="${processScore != null ? processScore + '/100' : 'N/A'}">82/100</span>
+                  </div>
                 </td>
                 <td>
                   <span class="trade-value"
@@ -322,8 +360,16 @@
                 </td>
               </tr>
               <tr id="tradeEmptyStateRow" th:if="${#lists.isEmpty(trades)}">
-                <td colspan="9" class="trade-empty-state text-center">
-                  <div class="py-4">
+                <td colspan="10" class="trade-empty-state text-center">
+                  <div class="py-4" th:if="${aiReviewedView and !hasAnyAiTradeReviews}">
+                    <div class="fw-semibold mb-2">No AI-reviewed trades yet.</div>
+                    <div class="text-muted">Generate AI Review from any trade detail page to unlock insights.</div>
+                  </div>
+                  <div class="py-4" th:if="${aiReviewedView and hasAnyAiTradeReviews}">
+                    <div class="fw-semibold mb-2">No AI-reviewed trades match this view.</div>
+                    <a class="btn btn-outline-secondary btn-sm" th:href="${resetTradesUrl}">Reset filters</a>
+                  </div>
+                  <div class="py-4" th:if="${!aiReviewedView}">
                     <div class="fw-semibold mb-2">No trades yet</div>
                     <div class="text-muted mb-3">Start tracking your trading performance.</div>
                     <a class="btn btn-primary" th:if="${!adminView}" th:href="@{/trades/new}">Add your first trade</a>
@@ -331,10 +377,13 @@
                 </td>
               </tr>
               <tr id="tradeFilteredEmptyStateRow" class="d-none">
-                <td colspan="9" class="trade-empty-state text-center">
+                <td colspan="10" class="trade-empty-state text-center">
                   <div class="py-4">
-                    <div class="fw-semibold mb-2">No trades match the current filters.</div>
-                    <a class="btn btn-outline-secondary btn-sm" th:href="@{/trades}">Reset filters</a>
+                    <div class="fw-semibold mb-2"
+                         th:text="${aiReviewedView ? 'No AI-reviewed trades match the current filters.' : 'No trades match the current filters.'}">
+                      No trades match the current filters.
+                    </div>
+                    <a class="btn btn-outline-secondary btn-sm" th:href="${resetTradesUrl}">Reset filters</a>
                   </div>
                 </td>
               </tr>
@@ -349,7 +398,11 @@
 
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script th:src="@{/js/sidebar-toggle.js}" src="/js/sidebar-toggle.js"></script>
-<script>
+<script th:inline="javascript">
+  window.tradeListConfig = {
+    aiReviewedView: /*[[${aiReviewedView}]]*/ false
+  };
+
   function normalizeResultValue(rawValue) {
     if (!rawValue) return '';
     const normalized = rawValue.toString().trim().toUpperCase();
@@ -403,6 +456,7 @@
     const avgRMeta = document.getElementById('avgRMeta');
     const expectancyValue = document.getElementById('expectancyValue');
     const expectancyMeta = document.getElementById('expectancyMeta');
+    const aiReviewedView = !!(window.tradeListConfig && window.tradeListConfig.aiReviewedView);
 
     if (!filterForm || !tbody) return;
 
@@ -663,7 +717,7 @@
       }
     }
 
-    let activeSortKey = 'date';
+    let activeSortKey = aiReviewedView ? 'review' : 'date';
     let activeSortOrder = 'desc';
 
     sortButtons.forEach(function (button) {

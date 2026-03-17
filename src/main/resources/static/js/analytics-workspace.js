@@ -165,6 +165,29 @@
         }, "expectancyBySetupEmpty", labels.length > 0);
     }
 
+    function renderProcessScoreDistributionChart() {
+        const labels = data.processScoreLabels || [];
+        const values = data.processScoreCounts || [];
+        renderChart("processScoreDistributionChart", {
+            type: "bar",
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: values,
+                    backgroundColor: [
+                        "rgba(194, 65, 12, 0.82)",
+                        "rgba(245, 158, 11, 0.82)",
+                        "rgba(20, 71, 230, 0.82)",
+                        "rgba(31, 143, 99, 0.82)"
+                    ],
+                    borderRadius: 12,
+                    borderSkipped: false
+                }]
+            },
+            options: commonBarOptions()
+        }, "processScoreDistributionEmpty", values.some(function (value) { return value > 0; }));
+    }
+
     function renderHoldingTimeChart() {
         const labels = data.holdingLabels || [];
         const tradeCounts = data.holdingTradeCounts || [];
@@ -243,6 +266,31 @@
     function renderSessionPerformanceChart() {
         const labels = data.sessionLabels || [];
         const values = data.sessionAvgRValues || [];
+        const processScores = data.sessionAvgProcessScores || [];
+        const totalPnls = data.sessionTotalPnlValues || [];
+        const options = commonBarOptions();
+        options.scales.y.ticks.callback = function (value) {
+            return value + "R";
+        };
+        options.plugins.tooltip = {
+            callbacks: {
+                label: function (context) {
+                    return "Avg R: " + context.parsed.y + "R";
+                },
+                afterLabel: function (context) {
+                    const index = context.dataIndex;
+                    const lines = [];
+                    const processScore = processScores[index];
+                    const totalPnl = totalPnls[index];
+                    lines.push("Avg process score: " + (processScore == null ? "N/A" : processScore));
+                    if (totalPnl != null) {
+                        lines.push("Total PnL: " + (totalPnl >= 0 ? "+$" : "-$") + Math.abs(totalPnl).toFixed(2));
+                    }
+                    return lines;
+                }
+            }
+        };
+
         renderChart("sessionPerformanceChart", {
             type: "bar",
             data: {
@@ -256,7 +304,7 @@
                     borderSkipped: false
                 }]
             },
-            options: commonBarOptions()
+            options: options
         }, "sessionPerformanceEmpty", labels.length > 0);
     }
 
@@ -284,6 +332,7 @@
         initDateRangePicker();
         renderRDistributionChart();
         renderExpectancyChart();
+        renderProcessScoreDistributionChart();
         renderHoldingTimeChart();
         renderSessionPerformanceChart();
         renderDayOfWeekChart();

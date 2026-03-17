@@ -1,19 +1,26 @@
 package com.example.demo.service;
 
 import com.example.demo.entity.Trade;
+import com.example.demo.entity.TradeMistakeTag;
 import com.example.demo.entity.TradeReview;
 import com.example.demo.repository.TradeMistakeTagRepository;
 import com.example.demo.repository.TradeReviewRepository;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.json.JsonMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
+import java.util.Set;
 import java.time.Duration;
 import java.time.DayOfWeek;
 import java.time.LocalDateTime;
@@ -27,6 +34,7 @@ public class AnalyticsService {
     private final TradeService tradeService;
     private final TradeReviewRepository tradeReviewRepository;
     private final TradeMistakeTagRepository tradeMistakeTagRepository;
+    private final ObjectMapper objectMapper;
 
     public AnalyticsService(
             TradeService tradeService,
@@ -36,6 +44,9 @@ public class AnalyticsService {
         this.tradeService = tradeService;
         this.tradeReviewRepository = tradeReviewRepository;
         this.tradeMistakeTagRepository = tradeMistakeTagRepository;
+        this.objectMapper = JsonMapper.builder()
+                .findAndAddModules()
+                .build();
     }
 
     public AnalyticsReport buildReportForUser(String userId) {
@@ -89,7 +100,31 @@ public class AnalyticsService {
             String symbol,
             String setup
     ) {
-        return buildWorkspaceReportForUser(userId, from, to, null, symbol, setup);
+        return buildWorkspaceReportForUser(userId, from, to, null, symbol, setup, null, null, null);
+    }
+
+    @Transactional(readOnly = true)
+    public AnalyticsWorkspaceReport buildWorkspaceReportForUser(
+            String userId,
+            LocalDateTime from,
+            LocalDateTime to,
+            String symbol,
+            String setup,
+            String processScoreRange,
+            String classification,
+            String mistakeTag
+    ) {
+        return buildWorkspaceReportForUser(
+                userId,
+                from,
+                to,
+                null,
+                symbol,
+                setup,
+                processScoreRange,
+                classification,
+                mistakeTag
+        );
     }
 
     @Transactional(readOnly = true)
@@ -101,25 +136,67 @@ public class AnalyticsService {
             String symbol,
             String setup
     ) {
-        List<Trade> allTrades = tradeService.findAllByUser(userId);
-        List<Trade> rangedTrades = filterTradesByRange(allTrades, from, to);
-        List<Trade> filteredTrades = filterTrades(rangedTrades, account, symbol, setup);
+        return buildWorkspaceReportForUser(userId, from, to, account, symbol, setup, null, null, null);
+    }
 
-        Map<String, TradeReview> reviewMap = buildReviewMap(filteredTrades);
+    @Transactional(readOnly = true)
+    public AnalyticsWorkspaceReport buildWorkspaceReportForUser(
+            String userId,
+            LocalDateTime from,
+            LocalDateTime to,
+            String account,
+            String symbol,
+            String setup,
+            String processScoreRange,
+            String classification,
+            String mistakeTag
+    ) {
+        List<Trade> allTrades = tradeService.findAllByUser(userId);
+        Map<String, TradeReview> allReviewMap = buildReviewMap(allTrades);
+        Map<String, TradeTagContext> allTagContexts = buildTradeTagContextMap(allTrades, allReviewMap);
+
+        List<Trade> rangedTrades = filterTradesByRange(allTrades, from, to);
+        List<Trade> baseFilteredTrades = filterTrades(rangedTrades, account, symbol, setup);
+        Map<String, TradeReview> baseReviewMap = retainReviewMap(baseFilteredTrades, allReviewMap);
+        Map<String, TradeTagContext> baseTagContexts = retainTagContextMap(baseFilteredTrades, allTagContexts);
+
+        List<Trade> filteredTrades = filterTradesByAiFilters(
+                baseFilteredTrades,
+                baseReviewMap,
+                baseTagContexts,
+                processScoreRange,
+                classification,
+                mistakeTag
+        );
+        Map<String, TradeReview> filteredReviewMap = retainReviewMap(filteredTrades, baseReviewMap);
+        Map<String, TradeTagContext> filteredTagContexts = retainTagContextMap(filteredTrades, baseTagContexts);
+
+        List<StrategyBreakdownRow> strategyBreakdown = buildStrategyBreakdown(filteredTrades, filteredReviewMap);
+        List<MistakeImpactRow> mistakeImpact = buildMistakeImpact(filteredTrades, filteredReviewMap, filteredTagContexts);
+        List<SessionPerformanceRow> sessionPerformance = buildSessionPerformance(filteredTrades, filteredReviewMap);
+        List<SymbolPerformanceRow> symbolPerformance = buildSymbolPerformance(filteredTrades, filteredReviewMap);
+        List<ProcessOutcomeMatrixRow> processOutcomeMatrix = buildProcessOutcomeMatrix(filteredTrades, filteredReviewMap);
+        StrategyEdgeScoreSummary strategyEdgeScore = buildStrategyEdgeScore(filteredTrades, filteredReviewMap);
 
         return new AnalyticsWorkspaceReport(
                 buildWorkspaceSummary(filteredTrades),
+                buildAiReviewInsights(filteredTrades, filteredReviewMap, filteredTagContexts, processOutcomeMatrix),
+                strategyEdgeScore,
                 buildRDistribution(filteredTrades),
-                buildExpectancyBySetup(filteredTrades),
-                buildMistakeImpact(filteredTrades, reviewMap),
+                buildExpectancyBySetup(strategyBreakdown),
+                mistakeImpact,
+                buildProcessScoreDistribution(filteredTrades, filteredReviewMap),
                 buildHoldingTimeDistribution(filteredTrades),
-                buildSessionPerformance(filteredTrades),
+                sessionPerformance,
                 buildDayOfWeekPerformance(filteredTrades),
-                buildSymbolPerformance(filteredTrades),
-                buildStrategyBreakdown(filteredTrades),
+                symbolPerformance,
+                strategyBreakdown,
+                processOutcomeMatrix,
+                buildWhatToFixNext(mistakeImpact, sessionPerformance, strategyBreakdown, processOutcomeMatrix),
                 extractDistinctAccounts(allTrades),
                 extractDistinctSymbols(allTrades),
-                extractDistinctSetups(allTrades)
+                extractDistinctSetups(allTrades),
+                extractDistinctMistakeTags(allTagContexts)
         );
     }
 
@@ -374,6 +451,17 @@ public class AnalyticsService {
         return Math.round(value * 100.0) / 100.0;
     }
 
+    private double clamp(double value, double min, double max) {
+        return Math.max(min, Math.min(max, value));
+    }
+
+    private double normalizeScore(double value, double min, double max) {
+        if (max <= min) {
+            return 0.0;
+        }
+        return clamp(((value - min) / (max - min)) * 100.0, 0.0, 100.0);
+    }
+
     private List<Trade> filterTradesByRange(List<Trade> trades, LocalDateTime from, LocalDateTime to) {
         if (from == null && to == null) {
             return trades;
@@ -502,8 +590,7 @@ public class AnalyticsService {
         return buckets;
     }
 
-    private List<ExpectancyBySetupRow> buildExpectancyBySetup(List<Trade> trades) {
-        List<StrategyBreakdownRow> rows = buildStrategyBreakdown(trades);
+    private List<ExpectancyBySetupRow> buildExpectancyBySetup(List<StrategyBreakdownRow> rows) {
         return rows.stream()
                 .sorted(Comparator.comparingDouble(StrategyBreakdownRow::getExpectancy).reversed())
                 .map(row -> new ExpectancyBySetupRow(
@@ -515,58 +602,295 @@ public class AnalyticsService {
                 .toList();
     }
 
-    private List<MistakeImpactRow> buildMistakeImpact(List<Trade> trades, Map<String, TradeReview> reviewMap) {
+    private StrategyEdgeScoreSummary buildStrategyEdgeScore(
+            List<Trade> trades,
+            Map<String, TradeReview> reviewMap
+    ) {
+        Double expectancy = resolveExpectancyR(trades);
+        StrategyEdgeReviewStats reviewStats = resolveStrategyEdgeReviewStats(trades, reviewMap);
+        Double rStdDeviation = resolveRStdDeviation(trades);
+        Double consistencyScore = rStdDeviation == null
+                ? null
+                : round2(100.0 - normalizeScore(rStdDeviation, 0.35, 2.0));
+
+        Double expectancyScore = expectancy == null
+                ? null
+                : round2(normalizeScore(expectancy, -0.5, 1.0));
+        Double avgProcessScore = reviewStats.avgProcessScore();
+        Double badProcessRate = reviewStats.badProcessRate();
+        Double badProcessDisciplineScore = badProcessRate == null
+                ? null
+                : round2(100.0 - clamp(badProcessRate, 0.0, 100.0));
+
+        double weightedTotal = 0.0;
+        double availableWeight = 0.0;
+
+        if (expectancyScore != null) {
+            weightedTotal += expectancyScore * 0.30;
+            availableWeight += 0.30;
+        }
+        if (avgProcessScore != null) {
+            weightedTotal += avgProcessScore * 0.30;
+            availableWeight += 0.30;
+        }
+        if (consistencyScore != null) {
+            weightedTotal += consistencyScore * 0.20;
+            availableWeight += 0.20;
+        }
+        if (badProcessDisciplineScore != null) {
+            weightedTotal += badProcessDisciplineScore * 0.20;
+            availableWeight += 0.20;
+        }
+
+        int score = availableWeight == 0.0
+                ? 0
+                : (int) Math.round(clamp(weightedTotal / availableWeight, 0.0, 100.0));
+        String label = resolveStrategyEdgeLabel(score);
+        String labelClass = resolveStrategyEdgeLabelClass(score);
+
+        return new StrategyEdgeScoreSummary(
+                score,
+                label,
+                labelClass,
+                "Edge reflects both performance and execution quality",
+                expectancy == null ? null : round2(expectancy),
+                avgProcessScore,
+                rStdDeviation == null ? null : round2(rStdDeviation),
+                badProcessRate,
+                reviewStats.reviewedTrades(),
+                reviewStats.knownRTrades()
+        );
+    }
+
+    private Double resolveExpectancyR(List<Trade> trades) {
+        int knownRTrades = 0;
+        double totalR = 0.0;
+        for (Trade trade : trades) {
+            if (!trade.hasKnownRMultiple()) {
+                continue;
+            }
+            knownRTrades++;
+            totalR += trade.getRMultiple();
+        }
+        return knownRTrades == 0 ? null : round2(totalR / knownRTrades);
+    }
+
+    private Double resolveRStdDeviation(List<Trade> trades) {
+        List<Double> rValues = new ArrayList<>();
+        for (Trade trade : trades) {
+            if (trade.hasKnownRMultiple()) {
+                rValues.add(trade.getRMultiple());
+            }
+        }
+        if (rValues.size() < 2) {
+            return null;
+        }
+
+        double mean = 0.0;
+        for (double rValue : rValues) {
+            mean += rValue;
+        }
+        mean /= rValues.size();
+
+        double variance = 0.0;
+        for (double rValue : rValues) {
+            double delta = rValue - mean;
+            variance += delta * delta;
+        }
+        variance /= rValues.size();
+
+        return Math.sqrt(variance);
+    }
+
+    private StrategyEdgeReviewStats resolveStrategyEdgeReviewStats(
+            List<Trade> trades,
+            Map<String, TradeReview> reviewMap
+    ) {
+        int reviewedTrades = 0;
+        int badProcessTrades = 0;
+        int knownRTrades = 0;
+        double totalProcessScore = 0.0;
+
+        for (Trade trade : trades) {
+            if (trade.hasKnownRMultiple()) {
+                knownRTrades++;
+            }
+
+            Integer processScore = resolveAiProcessScore(reviewMap.get(trade.getId()));
+            if (processScore == null) {
+                continue;
+            }
+
+            reviewedTrades++;
+            totalProcessScore += processScore;
+            if (processScore < 70) {
+                badProcessTrades++;
+            }
+        }
+
+        Double avgProcessScore = reviewedTrades == 0 ? null : round2(totalProcessScore / reviewedTrades);
+        Double badProcessRate = reviewedTrades == 0 ? null : round2((badProcessTrades * 100.0) / reviewedTrades);
+        return new StrategyEdgeReviewStats(avgProcessScore, badProcessRate, reviewedTrades, knownRTrades);
+    }
+
+    private String resolveStrategyEdgeLabel(int score) {
+        if (score > 80) {
+            return "Strong edge";
+        }
+        if (score >= 60) {
+            return "Developing edge";
+        }
+        return "Weak / inconsistent";
+    }
+
+    private String resolveStrategyEdgeLabelClass(int score) {
+        if (score > 80) {
+            return "edge-strong";
+        }
+        if (score >= 60) {
+            return "edge-developing";
+        }
+        return "edge-weak";
+    }
+
+    private AiReviewInsightsSummary buildAiReviewInsights(
+            List<Trade> trades,
+            Map<String, TradeReview> reviewMap,
+            Map<String, TradeTagContext> tagContexts,
+            List<ProcessOutcomeMatrixRow> processOutcomeMatrix
+    ) {
+        int reviewedTrades = 0;
+        int goodProcessTrades = 0;
+        int totalProcessScore = 0;
+        Map<String, Integer> aiTagCounts = new HashMap<>();
+
+        for (Trade trade : trades) {
+            TradeReview review = reviewMap.get(trade.getId());
+            Integer processScore = resolveAiProcessScore(review);
+            if (processScore == null) {
+                continue;
+            }
+
+            reviewedTrades++;
+            totalProcessScore += processScore;
+            if (processScore >= 70) {
+                goodProcessTrades++;
+            }
+
+            TradeTagContext context = tagContexts.get(trade.getId());
+            if (context == null) {
+                continue;
+            }
+            for (String label : context.getAiTags()) {
+                aiTagCounts.put(label, aiTagCounts.getOrDefault(label, 0) + 1);
+            }
+        }
+
+        String mostFrequentAiMistakeTag = null;
+        int mostFrequentAiMistakeTagCount = 0;
+        for (Map.Entry<String, Integer> entry : aiTagCounts.entrySet()) {
+            if (entry.getValue() > mostFrequentAiMistakeTagCount
+                    || (entry.getValue() == mostFrequentAiMistakeTagCount
+                    && mostFrequentAiMistakeTag != null
+                    && entry.getKey().compareToIgnoreCase(mostFrequentAiMistakeTag) < 0)
+                    || (entry.getValue() == mostFrequentAiMistakeTagCount && mostFrequentAiMistakeTag == null)) {
+                mostFrequentAiMistakeTag = entry.getKey();
+                mostFrequentAiMistakeTagCount = entry.getValue();
+            }
+        }
+
+        Double avgProcessScore = reviewedTrades == 0 ? null : round2(totalProcessScore / (double) reviewedTrades);
+        Double goodProcessRate = reviewedTrades == 0 ? null : round2((goodProcessTrades * 100.0) / reviewedTrades);
+
+        return new AiReviewInsightsSummary(
+                reviewedTrades,
+                avgProcessScore,
+                goodProcessRate,
+                countMatrixTrades(processOutcomeMatrix, ProcessOutcomeClassification.BAD_PROCESS_GOOD_OUTCOME),
+                mostFrequentAiMistakeTag,
+                mostFrequentAiMistakeTagCount
+        );
+    }
+
+    private List<MistakeImpactRow> buildMistakeImpact(
+            List<Trade> trades,
+            Map<String, TradeReview> reviewMap,
+            Map<String, TradeTagContext> tagContexts
+    ) {
         if (trades.isEmpty()) {
             return List.of();
         }
 
-        Map<String, MetricAccumulator> aggregates = new HashMap<>();
-        List<String> tradeIds = trades.stream()
-                .map(Trade::getId)
-                .filter(id -> id != null && !id.isBlank())
-                .toList();
-
-        if (!tradeIds.isEmpty()) {
-            tradeMistakeTagRepository.findByTradeIdIn(tradeIds).forEach(link -> {
-                Trade trade = link.getTrade();
-                if (trade == null || trade.getId() == null) {
-                    return;
-                }
-                String label = link.getMistakeTag() != null ? link.getMistakeTag().getName() : null;
-                addMetricAggregate(aggregates, normalizeLabel(label), trade);
-            });
-        }
+        Map<String, MistakeImpactAccumulator> aggregates = new HashMap<>();
 
         for (Trade trade : trades) {
-            TradeReview review = reviewMap.get(trade.getId());
-            if (review == null) {
+            TradeTagContext context = tagContexts.get(trade.getId());
+            if (context == null || context.isEmpty()) {
                 continue;
             }
-            if (Boolean.TRUE.equals(review.getHadFomo())) {
-                addMetricAggregate(aggregates, "FOMO", trade);
+
+            Integer processScore = resolveAiProcessScore(reviewMap.get(trade.getId()));
+            for (String manualTag : context.getManualTags()) {
+                addMistakeImpact(aggregates, manualTag, trade, processScore, "Manual");
             }
-            if (Boolean.TRUE.equals(review.getEnteredBeforeNews())) {
-                addMetricAggregate(aggregates, "Before News", trade);
-            }
-            Integer timingRating = review.getEntryTimingRating();
-            if (timingRating != null && timingRating <= 2) {
-                addMetricAggregate(aggregates, "Early Entry", trade);
-            }
-            if (Boolean.FALSE.equals(review.getFollowedPlan())) {
-                addMetricAggregate(aggregates, "Plan Violation", trade);
+            for (String aiTag : context.getAiTags()) {
+                addMistakeImpact(aggregates, aiTag, trade, processScore, "AI");
             }
         }
 
         return aggregates.entrySet().stream()
                 .map(entry -> new MistakeImpactRow(
                         entry.getKey(),
-                        entry.getValue().count,
+                        entry.getValue().getTrades(),
+                        round2(entry.getValue().winRate()),
                         round2(entry.getValue().averageR()),
-                        round2(entry.getValue().totalPnl)
+                        round2(entry.getValue().totalPnl),
+                        entry.getValue().averageProcessScore(),
+                        entry.getValue().resolveSourceLabel(),
+                        entry.getValue().resolveSourceClass()
                 ))
                 .sorted(Comparator.comparingDouble((MistakeImpactRow row) -> Math.abs(row.getTotalPnl())).reversed()
                         .thenComparing(MistakeImpactRow::getLabel))
                 .toList();
+    }
+
+    private void addMistakeImpact(
+            Map<String, MistakeImpactAccumulator> aggregates,
+            String label,
+            Trade trade,
+            Integer processScore,
+            String sourceLabel
+    ) {
+        MistakeImpactAccumulator accumulator = aggregates.computeIfAbsent(
+                normalizeLabel(label),
+                key -> new MistakeImpactAccumulator()
+        );
+        accumulator.add(trade, processScore, sourceLabel);
+    }
+
+    private List<ProcessScoreDistributionRow> buildProcessScoreDistribution(
+            List<Trade> trades,
+            Map<String, TradeReview> reviewMap
+    ) {
+        List<ProcessScoreDistributionRow> rows = new ArrayList<>();
+        List<ProcessScoreBucket> buckets = Arrays.asList(
+                new ProcessScoreBucket("0-40", 0, 40),
+                new ProcessScoreBucket("40-60", 40, 60),
+                new ProcessScoreBucket("60-80", 60, 80),
+                new ProcessScoreBucket("80-100", 80, 101)
+        );
+
+        for (ProcessScoreBucket bucket : buckets) {
+            int count = 0;
+            for (Trade trade : trades) {
+                Integer processScore = resolveAiProcessScore(reviewMap.get(trade.getId()));
+                if (processScore != null && bucket.matches(processScore)) {
+                    count++;
+                }
+            }
+            rows.add(new ProcessScoreDistributionRow(bucket.label(), count));
+        }
+        return rows;
     }
 
     private List<HoldingTimeDistributionRow> buildHoldingTimeDistribution(List<Trade> trades) {
@@ -597,14 +921,23 @@ public class AnalyticsService {
         return rows;
     }
 
-    private List<SessionPerformanceRow> buildSessionPerformance(List<Trade> trades) {
-        List<BreakdownRow> rows = buildSessionBreakdown(trades);
-        return rows.stream()
-                .map(row -> new SessionPerformanceRow(
-                        row.getLabel(),
-                        row.getTotalTrades(),
-                        row.getAvgR(),
-                        row.getTotalPnl()
+    private List<SessionPerformanceRow> buildSessionPerformance(List<Trade> trades, Map<String, TradeReview> reviewMap) {
+        Map<String, ReviewMetricAccumulator> aggregates = new LinkedHashMap<>();
+
+        for (Trade trade : trades) {
+            String label = formatSessionLabel(trade.getSession());
+            ReviewMetricAccumulator accumulator = aggregates.computeIfAbsent(label, key -> new ReviewMetricAccumulator());
+            accumulator.add(trade, resolveAiProcessScore(reviewMap.get(trade.getId())));
+        }
+
+        return aggregates.entrySet().stream()
+                .sorted(Comparator.comparingInt(entry -> sessionSortOrder(entry.getKey())))
+                .map(entry -> new SessionPerformanceRow(
+                        entry.getKey(),
+                        entry.getValue().trades,
+                        round2(entry.getValue().averageR()),
+                        round2(entry.getValue().totalPnl),
+                        entry.getValue().averageProcessScore()
                 ))
                 .toList();
     }
@@ -619,6 +952,16 @@ public class AnalyticsService {
             case "NEW_YORK" -> "New York";
             case "OTHER" -> "Other";
             default -> rawLabel.replace('_', ' ');
+        };
+    }
+
+    private int sessionSortOrder(String label) {
+        return switch (label) {
+            case "Asia" -> 0;
+            case "London" -> 1;
+            case "New York" -> 2;
+            case "Other" -> 3;
+            default -> 4;
         };
     }
 
@@ -650,29 +993,48 @@ public class AnalyticsService {
         return rows;
     }
 
-    private List<SymbolPerformanceRow> buildSymbolPerformance(List<Trade> trades) {
-        List<BreakdownRow> rows = buildBreakdown(trades, Trade::getSymbol);
-        return rows.stream()
-                .map(row -> new SymbolPerformanceRow(
-                        row.getLabel(),
-                        row.getTotalTrades(),
-                        row.getWinRate(),
-                        row.getAvgR(),
-                        row.getTotalPnl()
+    private List<SymbolPerformanceRow> buildSymbolPerformance(List<Trade> trades, Map<String, TradeReview> reviewMap) {
+        Map<String, ReviewMetricAccumulator> aggregates = new LinkedHashMap<>();
+
+        for (Trade trade : trades) {
+            String label = normalizeLabel(trade.getSymbol());
+            ReviewMetricAccumulator accumulator = aggregates.computeIfAbsent(label, key -> new ReviewMetricAccumulator());
+            accumulator.add(trade, resolveAiProcessScore(reviewMap.get(trade.getId())));
+        }
+
+        return aggregates.entrySet().stream()
+                .map(entry -> new SymbolPerformanceRow(
+                        entry.getKey(),
+                        entry.getValue().trades,
+                        round2(entry.getValue().winRate()),
+                        round2(entry.getValue().averageR()),
+                        round2(entry.getValue().totalPnl),
+                        entry.getValue().averageProcessScore()
                 ))
+                .sorted(Comparator.comparingInt(SymbolPerformanceRow::getTrades).reversed()
+                        .thenComparing(SymbolPerformanceRow::getLabel))
                 .toList();
     }
 
-    private List<StrategyBreakdownRow> buildStrategyBreakdown(List<Trade> trades) {
-        List<BreakdownRow> rows = buildBreakdown(trades, Trade::getSetupName);
-        return rows.stream()
-                .map(row -> new StrategyBreakdownRow(
-                        row.getLabel(),
-                        row.getTotalTrades(),
-                        row.getWinRate(),
-                        row.getAvgR(),
-                        row.getAvgR(),
-                        row.getTotalPnl()
+    private List<StrategyBreakdownRow> buildStrategyBreakdown(List<Trade> trades, Map<String, TradeReview> reviewMap) {
+        Map<String, ReviewMetricAccumulator> aggregates = new LinkedHashMap<>();
+
+        for (Trade trade : trades) {
+            String label = normalizeLabel(trade.getSetupName());
+            ReviewMetricAccumulator accumulator = aggregates.computeIfAbsent(label, key -> new ReviewMetricAccumulator());
+            accumulator.add(trade, resolveAiProcessScore(reviewMap.get(trade.getId())));
+        }
+
+        return aggregates.entrySet().stream()
+                .map(entry -> new StrategyBreakdownRow(
+                        entry.getKey(),
+                        entry.getValue().trades,
+                        round2(entry.getValue().winRate()),
+                        round2(entry.getValue().averageR()),
+                        round2(entry.getValue().averageR()),
+                        entry.getValue().averageProcessScore(),
+                        entry.getValue().badProcessRate(),
+                        round2(entry.getValue().totalPnl)
                 ))
                 .sorted(Comparator.comparingDouble(StrategyBreakdownRow::getExpectancy).reversed())
                 .toList();
@@ -696,9 +1058,330 @@ public class AnalyticsService {
         return reviewMap;
     }
 
-    private void addMetricAggregate(Map<String, MetricAccumulator> aggregates, String label, Trade trade) {
-        MetricAccumulator accumulator = aggregates.computeIfAbsent(label, key -> new MetricAccumulator());
-        accumulator.add(trade);
+    private Map<String, TradeTagContext> buildTradeTagContextMap(List<Trade> trades, Map<String, TradeReview> reviewMap) {
+        Map<String, TradeTagContext> contexts = new HashMap<>();
+        List<String> tradeIds = new ArrayList<>();
+
+        for (Trade trade : trades) {
+            if (trade.getId() == null || trade.getId().isBlank()) {
+                continue;
+            }
+            contexts.put(trade.getId(), new TradeTagContext());
+            tradeIds.add(trade.getId());
+        }
+
+        if (tradeIds.isEmpty()) {
+            return Map.of();
+        }
+
+        for (TradeMistakeTag link : tradeMistakeTagRepository.findByTradeIdIn(tradeIds)) {
+            if (link.getTrade() == null || link.getTrade().getId() == null) {
+                continue;
+            }
+            String label = trimToNull(link.getMistakeTag() != null ? link.getMistakeTag().getName() : null);
+            if (label == null) {
+                continue;
+            }
+            contexts.computeIfAbsent(link.getTrade().getId(), key -> new TradeTagContext())
+                    .addManualTag(normalizeLabel(label));
+        }
+
+        for (Map.Entry<String, TradeReview> entry : reviewMap.entrySet()) {
+            if (entry.getKey() == null || entry.getKey().isBlank()) {
+                continue;
+            }
+            TradeTagContext context = contexts.computeIfAbsent(entry.getKey(), key -> new TradeTagContext());
+            for (String label : readAiMistakeTags(entry.getValue())) {
+                context.addAiTag(label);
+            }
+        }
+
+        return contexts;
+    }
+
+    private Map<String, TradeReview> retainReviewMap(List<Trade> trades, Map<String, TradeReview> source) {
+        if (trades.isEmpty() || source.isEmpty()) {
+            return Map.of();
+        }
+
+        Map<String, TradeReview> retained = new HashMap<>();
+        for (Trade trade : trades) {
+            if (trade.getId() == null) {
+                continue;
+            }
+            TradeReview review = source.get(trade.getId());
+            if (review != null) {
+                retained.put(trade.getId(), review);
+            }
+        }
+        return retained;
+    }
+
+    private Map<String, TradeTagContext> retainTagContextMap(List<Trade> trades, Map<String, TradeTagContext> source) {
+        if (trades.isEmpty() || source.isEmpty()) {
+            return Map.of();
+        }
+
+        Map<String, TradeTagContext> retained = new HashMap<>();
+        for (Trade trade : trades) {
+            if (trade.getId() == null) {
+                continue;
+            }
+            TradeTagContext context = source.get(trade.getId());
+            if (context != null && !context.isEmpty()) {
+                retained.put(trade.getId(), context);
+            }
+        }
+        return retained;
+    }
+
+    private List<Trade> filterTradesByAiFilters(
+            List<Trade> trades,
+            Map<String, TradeReview> reviewMap,
+            Map<String, TradeTagContext> tagContexts,
+            String processScoreRange,
+            String classification,
+            String mistakeTag
+    ) {
+        String normalizedScoreRange = normalizeFilter(processScoreRange);
+        ProcessOutcomeClassification classificationFilter = ProcessOutcomeClassification.fromValue(classification);
+        String normalizedMistakeTag = normalizeFilter(mistakeTag);
+
+        if (normalizedScoreRange == null && classificationFilter == null && normalizedMistakeTag == null) {
+            return trades;
+        }
+
+        List<Trade> filtered = new ArrayList<>();
+        for (Trade trade : trades) {
+            TradeReview review = reviewMap.get(trade.getId());
+            Integer processScore = resolveAiProcessScore(review);
+            ProcessOutcomeClassification tradeClassification = resolveProcessOutcomeClassification(trade, review);
+            TradeTagContext context = tagContexts.get(trade.getId());
+
+            if (!matchesProcessScoreRange(processScore, normalizedScoreRange)) {
+                continue;
+            }
+            if (classificationFilter != null && tradeClassification != classificationFilter) {
+                continue;
+            }
+            if (normalizedMistakeTag != null && !tradeHasMistakeTag(context, normalizedMistakeTag)) {
+                continue;
+            }
+            filtered.add(trade);
+        }
+        return filtered;
+    }
+
+    private boolean matchesProcessScoreRange(Integer processScore, String processScoreRange) {
+        if (processScoreRange == null) {
+            return true;
+        }
+        if (processScore == null) {
+            return false;
+        }
+        return switch (processScoreRange) {
+            case "0-40" -> processScore >= 0 && processScore < 40;
+            case "40-60" -> processScore >= 40 && processScore < 60;
+            case "60-80" -> processScore >= 60 && processScore < 80;
+            case "80-100" -> processScore >= 80 && processScore <= 100;
+            default -> true;
+        };
+    }
+
+    private Integer resolveAiProcessScore(TradeReview review) {
+        return review == null ? null : review.getQualityScore();
+    }
+
+    private ProcessOutcomeClassification resolveProcessOutcomeClassification(Trade trade, TradeReview review) {
+        Integer processScore = resolveAiProcessScore(review);
+        if (trade == null || processScore == null) {
+            return null;
+        }
+
+        boolean goodProcess = processScore >= 70;
+        boolean goodOutcome = trade.getPnl() > 0;
+
+        if (goodProcess && goodOutcome) {
+            return ProcessOutcomeClassification.GOOD_PROCESS_GOOD_OUTCOME;
+        }
+        if (goodProcess) {
+            return ProcessOutcomeClassification.GOOD_PROCESS_BAD_OUTCOME;
+        }
+        if (goodOutcome) {
+            return ProcessOutcomeClassification.BAD_PROCESS_GOOD_OUTCOME;
+        }
+        return ProcessOutcomeClassification.BAD_PROCESS_BAD_OUTCOME;
+    }
+
+    private List<ProcessOutcomeMatrixRow> buildProcessOutcomeMatrix(List<Trade> trades, Map<String, TradeReview> reviewMap) {
+        Map<ProcessOutcomeClassification, Integer> counts = new LinkedHashMap<>();
+        for (ProcessOutcomeClassification classification : ProcessOutcomeClassification.values()) {
+            counts.put(classification, 0);
+        }
+
+        for (Trade trade : trades) {
+            ProcessOutcomeClassification classification = resolveProcessOutcomeClassification(trade, reviewMap.get(trade.getId()));
+            if (classification == null) {
+                continue;
+            }
+            counts.put(classification, counts.get(classification) + 1);
+        }
+
+        List<ProcessOutcomeMatrixRow> rows = new ArrayList<>();
+        for (ProcessOutcomeClassification classification : ProcessOutcomeClassification.values()) {
+            rows.add(new ProcessOutcomeMatrixRow(
+                    classification.name(),
+                    classification.title(),
+                    classification.subtitle(),
+                    counts.getOrDefault(classification, 0),
+                    classification.accentClass()
+            ));
+        }
+        return rows;
+    }
+
+    private int countMatrixTrades(
+            List<ProcessOutcomeMatrixRow> processOutcomeMatrix,
+            ProcessOutcomeClassification classification
+    ) {
+        return processOutcomeMatrix.stream()
+                .filter(row -> row.getKey().equals(classification.name()))
+                .map(ProcessOutcomeMatrixRow::getCount)
+                .findFirst()
+                .orElse(0);
+    }
+
+    private boolean tradeHasMistakeTag(TradeTagContext context, String mistakeTag) {
+        if (context == null || mistakeTag == null) {
+            return false;
+        }
+        for (String tag : context.getAllTags()) {
+            if (tag.equalsIgnoreCase(mistakeTag)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private Set<String> readAiMistakeTags(TradeReview review) {
+        return Set.of();
+    }
+
+    private List<CoachingInsightRow> buildWhatToFixNext(
+            List<MistakeImpactRow> mistakeImpact,
+            List<SessionPerformanceRow> sessionPerformance,
+            List<StrategyBreakdownRow> strategyBreakdown,
+            List<ProcessOutcomeMatrixRow> processOutcomeMatrix
+    ) {
+        List<CoachingInsightRow> insights = new ArrayList<>();
+        Set<String> seenHeadlines = new HashSet<>();
+
+        MistakeImpactRow topMistake = mistakeImpact.stream()
+                .filter(row -> row.getTrades() >= 2 && row.getTotalPnl() < 0)
+                .max(Comparator.comparingDouble(row -> Math.abs(row.getTotalPnl())))
+                .orElse(null);
+        if (topMistake != null) {
+            addInsight(
+                    insights,
+                    seenHeadlines,
+                    topMistake.getLabel() + " is the biggest repeat drag in losing trades.",
+                    topMistake.getTrades() + " trades, " + formatSignedUsd(topMistake.getTotalPnl())
+                            + " total PnL, avg process score " + formatProcessScore(topMistake.getAvgProcessScore()) + "."
+            );
+        }
+
+        SessionPerformanceRow weakestSession = sessionPerformance.stream()
+                .filter(row -> row.getTrades() >= 2 && row.getAvgProcessScore() != null)
+                .min(Comparator.comparingDouble(SessionPerformanceRow::getAvgProcessScore))
+                .orElse(null);
+        if (weakestSession != null && weakestSession.getAvgProcessScore() < 70) {
+            addInsight(
+                    insights,
+                    seenHeadlines,
+                    "Process quality drops most during the " + weakestSession.getLabel() + " session.",
+                    "Average process score " + formatProcessScore(weakestSession.getAvgProcessScore())
+                            + " across " + weakestSession.getTrades() + " trades in this filter."
+            );
+        }
+
+        StrategyBreakdownRow setupLeak = strategyBreakdown.stream()
+                .filter(row -> row.getTrades() >= 2 && row.getBadProcessRate() != null && row.getAvgProcessScore() != null)
+                .filter(row -> row.getBadProcessRate() >= 35.0)
+                .max(Comparator.comparingDouble(StrategyBreakdownRow::getBadProcessRate)
+                        .thenComparingInt(StrategyBreakdownRow::getTrades))
+                .orElse(null);
+        if (setupLeak != null) {
+            addInsight(
+                    insights,
+                    seenHeadlines,
+                    setupLeak.getLabel() + " still has too many low-quality executions.",
+                    "Expectancy is " + round2(setupLeak.getExpectancy()) + "R, but bad process rate sits at "
+                            + formatPercent(setupLeak.getBadProcessRate()) + "."
+            );
+        }
+
+        int badProcessWinners = countMatrixTrades(processOutcomeMatrix, ProcessOutcomeClassification.BAD_PROCESS_GOOD_OUTCOME);
+        if (badProcessWinners > 0) {
+            addInsight(
+                    insights,
+                    seenHeadlines,
+                    "Bad-process winners are reinforcing weak habits.",
+                    badProcessWinners + " green trades still scored as bad process. Review these before they become your default pattern."
+            );
+        }
+
+        if (insights.isEmpty()) {
+            insights.add(new CoachingInsightRow(
+                    "Not enough AI review coverage to prioritize fixes yet.",
+                    "Generate more AI reviews in this filter range to unlock sharper coaching guidance."
+            ));
+        }
+
+        return insights.stream().limit(3).toList();
+    }
+
+    private void addInsight(
+            List<CoachingInsightRow> insights,
+            Set<String> seenHeadlines,
+            String headline,
+            String detail
+    ) {
+        if (headline == null || headline.isBlank() || !seenHeadlines.add(headline)) {
+            return;
+        }
+        insights.add(new CoachingInsightRow(headline, detail));
+    }
+
+    private String formatSignedUsd(double value) {
+        return value >= 0
+                ? "+$" + round2(value)
+                : "-$" + round2(Math.abs(value));
+    }
+
+    private String formatPercent(Double value) {
+        return value == null ? "N/A" : round2(value) + "%";
+    }
+
+    private String formatProcessScore(Double value) {
+        return value == null ? "N/A" : round2(value) + "/100";
+    }
+
+    private String trimToNull(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private List<String> extractDistinctMistakeTags(Map<String, TradeTagContext> tagContexts) {
+        Set<String> labels = new LinkedHashSet<>();
+        for (TradeTagContext context : tagContexts.values()) {
+            labels.addAll(context.getAllTags());
+        }
+        return labels.stream()
+                .sorted(String.CASE_INSENSITIVE_ORDER)
+                .toList();
     }
 
     private List<String> extractDistinctSymbols(List<Trade> trades) {
@@ -953,8 +1636,216 @@ public class AnalyticsService {
         }
     }
 
+    private static class ReviewMetricAccumulator {
+        private int trades;
+        private int winTrades;
+        private int knownRTrades;
+        private int reviewedTrades;
+        private int badProcessTrades;
+        private double totalPnl;
+        private double totalR;
+        private double totalProcessScore;
+
+        private void add(Trade trade, Integer processScore) {
+            trades++;
+            totalPnl += trade.getPnl();
+            if (trade.getPnl() > 0) {
+                winTrades++;
+            }
+            if (trade.hasKnownRMultiple()) {
+                knownRTrades++;
+                totalR += trade.getRMultiple();
+            }
+            if (processScore != null) {
+                reviewedTrades++;
+                totalProcessScore += processScore;
+                if (processScore < 70) {
+                    badProcessTrades++;
+                }
+            }
+        }
+
+        private double averageR() {
+            return knownRTrades == 0 ? 0.0 : totalR / knownRTrades;
+        }
+
+        private double winRate() {
+            return trades == 0 ? 0.0 : (winTrades * 100.0) / trades;
+        }
+
+        private Double averageProcessScore() {
+            return reviewedTrades == 0 ? null : Math.round((totalProcessScore / reviewedTrades) * 100.0) / 100.0;
+        }
+
+        private Double badProcessRate() {
+            return reviewedTrades == 0 ? null : Math.round(((badProcessTrades * 100.0) / reviewedTrades) * 100.0) / 100.0;
+        }
+    }
+
+    private record StrategyEdgeReviewStats(
+            Double avgProcessScore,
+            Double badProcessRate,
+            int reviewedTrades,
+            int knownRTrades
+    ) {
+    }
+
+    private static class MistakeImpactAccumulator {
+        private final ReviewMetricAccumulator metrics = new ReviewMetricAccumulator();
+        private final Set<String> tradeIds = new HashSet<>();
+        private final Set<String> sourceLabels = new HashSet<>();
+        private double totalPnl;
+
+        private void add(Trade trade, Integer processScore, String sourceLabel) {
+            sourceLabels.add(sourceLabel);
+            if (trade == null || trade.getId() == null || !tradeIds.add(trade.getId())) {
+                return;
+            }
+            totalPnl += trade.getPnl();
+            metrics.add(trade, processScore);
+        }
+
+        private int getTrades() {
+            return metrics.trades;
+        }
+
+        private double winRate() {
+            return metrics.winRate();
+        }
+
+        private double averageR() {
+            return metrics.averageR();
+        }
+
+        private Double averageProcessScore() {
+            return metrics.averageProcessScore();
+        }
+
+        private String resolveSourceLabel() {
+            if (sourceLabels.contains("Manual") && sourceLabels.contains("AI")) {
+                return "Mixed";
+            }
+            if (sourceLabels.contains("AI")) {
+                return "AI";
+            }
+            return "Manual";
+        }
+
+        private String resolveSourceClass() {
+            return switch (resolveSourceLabel()) {
+                case "AI" -> "source-ai";
+                case "Mixed" -> "source-mixed";
+                default -> "source-manual";
+            };
+        }
+    }
+
+    private static class TradeTagContext {
+        private final Set<String> manualTags = new LinkedHashSet<>();
+        private final Set<String> aiTags = new LinkedHashSet<>();
+
+        private void addManualTag(String label) {
+            if (label != null && !label.isBlank()) {
+                manualTags.add(label);
+            }
+        }
+
+        private void addAiTag(String label) {
+            if (label != null && !label.isBlank()) {
+                aiTags.add(label);
+            }
+        }
+
+        private Set<String> getManualTags() {
+            return manualTags;
+        }
+
+        private Set<String> getAiTags() {
+            return aiTags;
+        }
+
+        private Set<String> getAllTags() {
+            Set<String> all = new LinkedHashSet<>(manualTags);
+            all.addAll(aiTags);
+            return all;
+        }
+
+        private boolean isEmpty() {
+            return manualTags.isEmpty() && aiTags.isEmpty();
+        }
+    }
+
+    private enum ProcessOutcomeClassification {
+        GOOD_PROCESS_GOOD_OUTCOME(
+                "Good process / Good outcome",
+                "Repeatable edge with discipline.",
+                "matrix-positive"
+        ),
+        GOOD_PROCESS_BAD_OUTCOME(
+                "Good process / Bad outcome",
+                "Valid execution, unfavorable result.",
+                "matrix-neutral"
+        ),
+        BAD_PROCESS_GOOD_OUTCOME(
+                "Bad process / Good outcome",
+                "Danger zone: reward may reinforce bad habits.",
+                "matrix-warning"
+        ),
+        BAD_PROCESS_BAD_OUTCOME(
+                "Bad process / Bad outcome",
+                "Highest priority for correction.",
+                "matrix-danger"
+        );
+
+        private final String title;
+        private final String subtitle;
+        private final String accentClass;
+
+        ProcessOutcomeClassification(String title, String subtitle, String accentClass) {
+            this.title = title;
+            this.subtitle = subtitle;
+            this.accentClass = accentClass;
+        }
+
+        private String title() {
+            return title;
+        }
+
+        private String subtitle() {
+            return subtitle;
+        }
+
+        private String accentClass() {
+            return accentClass;
+        }
+
+        private static ProcessOutcomeClassification fromValue(String value) {
+            if (value == null || value.isBlank() || "ALL".equalsIgnoreCase(value.trim())) {
+                return null;
+            }
+
+            String normalized = value.trim().toUpperCase(Locale.ROOT)
+                    .replace('/', '_')
+                    .replace(' ', '_')
+                    .replace('-', '_');
+
+            for (ProcessOutcomeClassification candidate : values()) {
+                if (candidate.name().equals(normalized)) {
+                    return candidate;
+                }
+            }
+            return null;
+        }
+    }
+
     private record RRangeBucket(String label, double minInclusive, double maxExclusive) {
         private boolean matches(double value) {
+            return value >= minInclusive && value < maxExclusive;
+        }
+    }
+
+    private record ProcessScoreBucket(String label, int minInclusive, int maxExclusive) {
+        private boolean matches(int value) {
             return value >= minInclusive && value < maxExclusive;
         }
     }
@@ -1100,48 +1991,74 @@ public class AnalyticsService {
 
     public static class AnalyticsWorkspaceReport {
         private final WorkspaceSummary summary;
+        private final AiReviewInsightsSummary aiReviewInsights;
+        private final StrategyEdgeScoreSummary strategyEdgeScore;
         private final List<RDistributionRow> rDistribution;
         private final List<ExpectancyBySetupRow> expectancyBySetup;
         private final List<MistakeImpactRow> mistakeImpact;
+        private final List<ProcessScoreDistributionRow> processScoreDistribution;
         private final List<HoldingTimeDistributionRow> holdingTimeDistribution;
         private final List<SessionPerformanceRow> sessionPerformance;
         private final List<DayOfWeekPerformanceRow> dayOfWeekPerformance;
         private final List<SymbolPerformanceRow> symbolPerformance;
         private final List<StrategyBreakdownRow> strategyBreakdown;
+        private final List<ProcessOutcomeMatrixRow> processOutcomeMatrix;
+        private final List<CoachingInsightRow> whatToFixNext;
         private final List<String> availableAccounts;
         private final List<String> availableSymbols;
         private final List<String> availableSetups;
+        private final List<String> availableMistakeTags;
 
         public AnalyticsWorkspaceReport(
                 WorkspaceSummary summary,
+                AiReviewInsightsSummary aiReviewInsights,
+                StrategyEdgeScoreSummary strategyEdgeScore,
                 List<RDistributionRow> rDistribution,
                 List<ExpectancyBySetupRow> expectancyBySetup,
                 List<MistakeImpactRow> mistakeImpact,
+                List<ProcessScoreDistributionRow> processScoreDistribution,
                 List<HoldingTimeDistributionRow> holdingTimeDistribution,
                 List<SessionPerformanceRow> sessionPerformance,
                 List<DayOfWeekPerformanceRow> dayOfWeekPerformance,
                 List<SymbolPerformanceRow> symbolPerformance,
                 List<StrategyBreakdownRow> strategyBreakdown,
+                List<ProcessOutcomeMatrixRow> processOutcomeMatrix,
+                List<CoachingInsightRow> whatToFixNext,
                 List<String> availableAccounts,
                 List<String> availableSymbols,
-                List<String> availableSetups
+                List<String> availableSetups,
+                List<String> availableMistakeTags
         ) {
             this.summary = summary;
+            this.aiReviewInsights = aiReviewInsights;
+            this.strategyEdgeScore = strategyEdgeScore;
             this.rDistribution = rDistribution;
             this.expectancyBySetup = expectancyBySetup;
             this.mistakeImpact = mistakeImpact;
+            this.processScoreDistribution = processScoreDistribution;
             this.holdingTimeDistribution = holdingTimeDistribution;
             this.sessionPerformance = sessionPerformance;
             this.dayOfWeekPerformance = dayOfWeekPerformance;
             this.symbolPerformance = symbolPerformance;
             this.strategyBreakdown = strategyBreakdown;
+            this.processOutcomeMatrix = processOutcomeMatrix;
+            this.whatToFixNext = whatToFixNext;
             this.availableAccounts = availableAccounts;
             this.availableSymbols = availableSymbols;
             this.availableSetups = availableSetups;
+            this.availableMistakeTags = availableMistakeTags;
         }
 
         public WorkspaceSummary getSummary() {
             return summary;
+        }
+
+        public AiReviewInsightsSummary getAiReviewInsights() {
+            return aiReviewInsights;
+        }
+
+        public StrategyEdgeScoreSummary getStrategyEdgeScore() {
+            return strategyEdgeScore;
         }
 
         public List<RDistributionRow> getRDistribution() {
@@ -1154,6 +2071,10 @@ public class AnalyticsService {
 
         public List<MistakeImpactRow> getMistakeImpact() {
             return mistakeImpact;
+        }
+
+        public List<ProcessScoreDistributionRow> getProcessScoreDistribution() {
+            return processScoreDistribution;
         }
 
         public List<HoldingTimeDistributionRow> getHoldingTimeDistribution() {
@@ -1176,6 +2097,14 @@ public class AnalyticsService {
             return strategyBreakdown;
         }
 
+        public List<ProcessOutcomeMatrixRow> getProcessOutcomeMatrix() {
+            return processOutcomeMatrix;
+        }
+
+        public List<CoachingInsightRow> getWhatToFixNext() {
+            return whatToFixNext;
+        }
+
         public List<String> getAvailableAccounts() {
             return availableAccounts;
         }
@@ -1186,6 +2115,136 @@ public class AnalyticsService {
 
         public List<String> getAvailableSetups() {
             return availableSetups;
+        }
+
+        public List<String> getAvailableMistakeTags() {
+            return availableMistakeTags;
+        }
+    }
+
+    public static class AiReviewInsightsSummary {
+        private final int reviewedTrades;
+        private final Double avgProcessScore;
+        private final Double goodProcessRate;
+        private final int badProcessGoodOutcomeCount;
+        private final String mostFrequentAiMistakeTag;
+        private final int mostFrequentAiMistakeTagCount;
+
+        public AiReviewInsightsSummary(
+                int reviewedTrades,
+                Double avgProcessScore,
+                Double goodProcessRate,
+                int badProcessGoodOutcomeCount,
+                String mostFrequentAiMistakeTag,
+                int mostFrequentAiMistakeTagCount
+        ) {
+            this.reviewedTrades = reviewedTrades;
+            this.avgProcessScore = avgProcessScore;
+            this.goodProcessRate = goodProcessRate;
+            this.badProcessGoodOutcomeCount = badProcessGoodOutcomeCount;
+            this.mostFrequentAiMistakeTag = mostFrequentAiMistakeTag;
+            this.mostFrequentAiMistakeTagCount = mostFrequentAiMistakeTagCount;
+        }
+
+        public int getReviewedTrades() {
+            return reviewedTrades;
+        }
+
+        public Double getAvgProcessScore() {
+            return avgProcessScore;
+        }
+
+        public Double getGoodProcessRate() {
+            return goodProcessRate;
+        }
+
+        public int getBadProcessGoodOutcomeCount() {
+            return badProcessGoodOutcomeCount;
+        }
+
+        public String getMostFrequentAiMistakeTag() {
+            return mostFrequentAiMistakeTag;
+        }
+
+        public int getMostFrequentAiMistakeTagCount() {
+            return mostFrequentAiMistakeTagCount;
+        }
+    }
+
+    public static class StrategyEdgeScoreSummary {
+        private final int score;
+        private final String label;
+        private final String labelClass;
+        private final String explanation;
+        private final Double expectancy;
+        private final Double avgProcessScore;
+        private final Double rStdDeviation;
+        private final Double badProcessRate;
+        private final int reviewedTrades;
+        private final int knownRTrades;
+
+        public StrategyEdgeScoreSummary(
+                int score,
+                String label,
+                String labelClass,
+                String explanation,
+                Double expectancy,
+                Double avgProcessScore,
+                Double rStdDeviation,
+                Double badProcessRate,
+                int reviewedTrades,
+                int knownRTrades
+        ) {
+            this.score = score;
+            this.label = label;
+            this.labelClass = labelClass;
+            this.explanation = explanation;
+            this.expectancy = expectancy;
+            this.avgProcessScore = avgProcessScore;
+            this.rStdDeviation = rStdDeviation;
+            this.badProcessRate = badProcessRate;
+            this.reviewedTrades = reviewedTrades;
+            this.knownRTrades = knownRTrades;
+        }
+
+        public int getScore() {
+            return score;
+        }
+
+        public String getLabel() {
+            return label;
+        }
+
+        public String getLabelClass() {
+            return labelClass;
+        }
+
+        public String getExplanation() {
+            return explanation;
+        }
+
+        public Double getExpectancy() {
+            return expectancy;
+        }
+
+        public Double getAvgProcessScore() {
+            return avgProcessScore;
+        }
+
+        public Double getRStdDeviation() {
+            return rStdDeviation;
+        }
+
+        public Double getBadProcessRate() {
+            return badProcessRate;
+        }
+
+        public int getReviewedTrades() {
+            return reviewedTrades;
+        }
+
+        public int getKnownRTrades() {
+            return knownRTrades;
         }
     }
 
@@ -1240,14 +2299,31 @@ public class AnalyticsService {
     public static class MistakeImpactRow {
         private final String label;
         private final int trades;
+        private final double winRate;
         private final double avgR;
         private final double totalPnl;
+        private final Double avgProcessScore;
+        private final String sourceLabel;
+        private final String sourceClass;
 
-        public MistakeImpactRow(String label, int trades, double avgR, double totalPnl) {
+        public MistakeImpactRow(
+                String label,
+                int trades,
+                double winRate,
+                double avgR,
+                double totalPnl,
+                Double avgProcessScore,
+                String sourceLabel,
+                String sourceClass
+        ) {
             this.label = label;
             this.trades = trades;
+            this.winRate = winRate;
             this.avgR = avgR;
             this.totalPnl = totalPnl;
+            this.avgProcessScore = avgProcessScore;
+            this.sourceLabel = sourceLabel;
+            this.sourceClass = sourceClass;
         }
 
         public String getLabel() {
@@ -1258,12 +2334,46 @@ public class AnalyticsService {
             return trades;
         }
 
+        public double getWinRate() {
+            return winRate;
+        }
+
         public double getAvgR() {
             return avgR;
         }
 
         public double getTotalPnl() {
             return totalPnl;
+        }
+
+        public Double getAvgProcessScore() {
+            return avgProcessScore;
+        }
+
+        public String getSourceLabel() {
+            return sourceLabel;
+        }
+
+        public String getSourceClass() {
+            return sourceClass;
+        }
+    }
+
+    public static class ProcessScoreDistributionRow {
+        private final String label;
+        private final int count;
+
+        public ProcessScoreDistributionRow(String label, int count) {
+            this.label = label;
+            this.count = count;
+        }
+
+        public String getLabel() {
+            return label;
+        }
+
+        public int getCount() {
+            return count;
         }
     }
 
@@ -1296,12 +2406,14 @@ public class AnalyticsService {
         private final int trades;
         private final double avgR;
         private final double totalPnl;
+        private final Double avgProcessScore;
 
-        public SessionPerformanceRow(String label, int trades, double avgR, double totalPnl) {
+        public SessionPerformanceRow(String label, int trades, double avgR, double totalPnl, Double avgProcessScore) {
             this.label = label;
             this.trades = trades;
             this.avgR = avgR;
             this.totalPnl = totalPnl;
+            this.avgProcessScore = avgProcessScore;
         }
 
         public String getLabel() {
@@ -1318,6 +2430,10 @@ public class AnalyticsService {
 
         public double getTotalPnl() {
             return totalPnl;
+        }
+
+        public Double getAvgProcessScore() {
+            return avgProcessScore;
         }
     }
 
@@ -1363,13 +2479,22 @@ public class AnalyticsService {
         private final double winRate;
         private final double avgR;
         private final double totalPnl;
+        private final Double avgProcessScore;
 
-        public SymbolPerformanceRow(String label, int trades, double winRate, double avgR, double totalPnl) {
+        public SymbolPerformanceRow(
+                String label,
+                int trades,
+                double winRate,
+                double avgR,
+                double totalPnl,
+                Double avgProcessScore
+        ) {
             this.label = label;
             this.trades = trades;
             this.winRate = winRate;
             this.avgR = avgR;
             this.totalPnl = totalPnl;
+            this.avgProcessScore = avgProcessScore;
         }
 
         public String getLabel() {
@@ -1391,6 +2516,10 @@ public class AnalyticsService {
         public double getTotalPnl() {
             return totalPnl;
         }
+
+        public Double getAvgProcessScore() {
+            return avgProcessScore;
+        }
     }
 
     public static class StrategyBreakdownRow {
@@ -1399,14 +2528,27 @@ public class AnalyticsService {
         private final double winRate;
         private final double avgR;
         private final double expectancy;
+        private final Double avgProcessScore;
+        private final Double badProcessRate;
         private final double totalPnl;
 
-        public StrategyBreakdownRow(String label, int trades, double winRate, double avgR, double expectancy, double totalPnl) {
+        public StrategyBreakdownRow(
+                String label,
+                int trades,
+                double winRate,
+                double avgR,
+                double expectancy,
+                Double avgProcessScore,
+                Double badProcessRate,
+                double totalPnl
+        ) {
             this.label = label;
             this.trades = trades;
             this.winRate = winRate;
             this.avgR = avgR;
             this.expectancy = expectancy;
+            this.avgProcessScore = avgProcessScore;
+            this.badProcessRate = badProcessRate;
             this.totalPnl = totalPnl;
         }
 
@@ -1430,8 +2572,70 @@ public class AnalyticsService {
             return expectancy;
         }
 
+        public Double getAvgProcessScore() {
+            return avgProcessScore;
+        }
+
+        public Double getBadProcessRate() {
+            return badProcessRate;
+        }
+
         public double getTotalPnl() {
             return totalPnl;
+        }
+    }
+
+    public static class ProcessOutcomeMatrixRow {
+        private final String key;
+        private final String title;
+        private final String subtitle;
+        private final int count;
+        private final String accentClass;
+
+        public ProcessOutcomeMatrixRow(String key, String title, String subtitle, int count, String accentClass) {
+            this.key = key;
+            this.title = title;
+            this.subtitle = subtitle;
+            this.count = count;
+            this.accentClass = accentClass;
+        }
+
+        public String getKey() {
+            return key;
+        }
+
+        public String getTitle() {
+            return title;
+        }
+
+        public String getSubtitle() {
+            return subtitle;
+        }
+
+        public int getCount() {
+            return count;
+        }
+
+        public String getAccentClass() {
+            return accentClass;
+        }
+    }
+
+    public static class CoachingInsightRow {
+        private final String headline;
+        private final String detail;
+
+        public CoachingInsightRow(String headline, String detail) {
+            this.headline = headline;
+            this.detail = detail;
+        }
+
+        public String getHeadline() {
+            return headline;
+        }
+
+        public String getDetail() {
+            return detail;
         }
     }
 
