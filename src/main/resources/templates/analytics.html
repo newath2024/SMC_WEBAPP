@@ -71,12 +71,46 @@
             </select>
           </div>
 
+          <div class="filter-field">
+            <label class="filter-label" for="processScoreRange">Process Score Range</label>
+            <select id="processScoreRange" class="form-select filter-control" name="processScoreRange">
+              <option value="ALL" th:selected="${selectedProcessScoreRange == 'ALL'}">All scores</option>
+              <option value="0-40" th:selected="${selectedProcessScoreRange == '0-40'}">0-40</option>
+              <option value="40-60" th:selected="${selectedProcessScoreRange == '40-60'}">40-60</option>
+              <option value="60-80" th:selected="${selectedProcessScoreRange == '60-80'}">60-80</option>
+              <option value="80-100" th:selected="${selectedProcessScoreRange == '80-100'}">80-100</option>
+            </select>
+          </div>
+
+          <div class="filter-field">
+            <label class="filter-label" for="classification">Classification</label>
+            <select id="classification" class="form-select filter-control" name="classification">
+              <option value="ALL" th:selected="${selectedClassification == 'ALL'}">All classifications</option>
+              <option value="GOOD_PROCESS_GOOD_OUTCOME" th:selected="${selectedClassification == 'GOOD_PROCESS_GOOD_OUTCOME'}">Good process / Good outcome</option>
+              <option value="GOOD_PROCESS_BAD_OUTCOME" th:selected="${selectedClassification == 'GOOD_PROCESS_BAD_OUTCOME'}">Good process / Bad outcome</option>
+              <option value="BAD_PROCESS_GOOD_OUTCOME" th:selected="${selectedClassification == 'BAD_PROCESS_GOOD_OUTCOME'}">Bad process / Good outcome</option>
+              <option value="BAD_PROCESS_BAD_OUTCOME" th:selected="${selectedClassification == 'BAD_PROCESS_BAD_OUTCOME'}">Bad process / Bad outcome</option>
+            </select>
+          </div>
+
+          <div class="filter-field">
+            <label class="filter-label" for="mistakeTag">Mistake Tag</label>
+            <select id="mistakeTag" class="form-select filter-control" name="mistakeTag">
+              <option value="ALL" th:selected="${selectedMistakeTag == 'ALL'}">All mistake tags</option>
+              <option th:each="mistakeOption : ${analyticsReport.availableMistakeTags}"
+                      th:value="${mistakeOption}"
+                      th:selected="${selectedMistakeTag == mistakeOption}"
+                      th:text="${mistakeOption}">Early Entry</option>
+            </select>
+          </div>
+
           <div class="filter-actions">
             <button class="btn analytics-btn-primary" type="submit">
               <i class="bi bi-funnel"></i>
               <span>Apply filters</span>
             </button>
-            <a class="btn analytics-btn-secondary" th:href="@{/analytics(period='ALL', symbol='ALL', setup='ALL')}">Reset</a>
+            <a class="btn analytics-btn-secondary"
+               th:href="@{/analytics(period='ALL', symbol='ALL', setup='ALL', processScoreRange='ALL', classification='ALL', mistakeTag='ALL')}">Reset</a>
           </div>
         </form>
       </section>
@@ -136,6 +170,47 @@
         </article>
       </section>
 
+      <section class="analytics-section" th:if="${hasProAccess}" th:with="aiSummary=${analyticsReport.aiReviewInsights}">
+        <div class="section-heading">
+          <div>
+            <h2 class="section-title">AI Review Insights</h2>
+            <p class="section-copy">Layer AI process scoring and mistake recognition on top of your existing performance analytics.</p>
+          </div>
+        </div>
+
+        <div class="workspace-summary-grid">
+          <article class="analytics-card summary-card">
+            <span class="summary-label">Avg Process Score</span>
+            <strong class="summary-value"
+                    th:text="${aiSummary.avgProcessScore != null ? #numbers.formatDecimal(aiSummary.avgProcessScore, 1, 1) : 'N/A'}">0.0</strong>
+            <span class="summary-meta"
+                  th:text="${aiSummary.reviewedTrades > 0 ? aiSummary.reviewedTrades + ' AI-reviewed trades' : 'No AI-reviewed trades in current filter'}">0 AI-reviewed trades</span>
+          </article>
+
+          <article class="analytics-card summary-card">
+            <span class="summary-label">Good Process Rate</span>
+            <strong class="summary-value"
+                    th:text="${aiSummary.goodProcessRate != null ? #numbers.formatDecimal(aiSummary.goodProcessRate, 1, 0) + '%' : 'N/A'}">0%</strong>
+            <span class="summary-meta">Trades with AI process score 70 or higher</span>
+          </article>
+
+          <article class="analytics-card summary-card">
+            <span class="summary-label">Bad Process, Good Outcome</span>
+            <strong class="summary-value value-negative"
+                    th:text="${aiSummary.badProcessGoodOutcomeCount}">0</strong>
+            <span class="summary-meta">Wins that may reinforce weak habits</span>
+          </article>
+
+          <article class="analytics-card summary-card">
+            <span class="summary-label">Most Frequent AI Mistake Tag</span>
+            <strong class="summary-value"
+                    th:text="${aiSummary.mostFrequentAiMistakeTag != null ? aiSummary.mostFrequentAiMistakeTag : 'N/A'}">N/A</strong>
+            <span class="summary-meta"
+                  th:text="${aiSummary.mostFrequentAiMistakeTag != null ? aiSummary.mostFrequentAiMistakeTagCount + ' AI reviews flagged this tag' : 'No AI mistake tags in current filter'}">No AI mistake tags in current filter</span>
+          </article>
+        </div>
+      </section>
+
       <section class="premium-grid" th:if="${!hasProAccess}">
         <article class="locked-card">
           <div class="locked-title">Setup Performance <i class="bi bi-lock-fill"></i></div>
@@ -151,13 +226,56 @@
         </article>
       </section>
 
-      <section class="analytics-section" th:if="${hasProAccess}">
+      <section class="analytics-section" id="strategy-edge" th:if="${hasProAccess}">
         <div class="section-heading">
           <div>
             <h2 class="section-title">Strategy Edge</h2>
             <p class="section-copy">Check whether your outcome distribution and setup expectancy show a real, repeatable edge.</p>
           </div>
         </div>
+
+        <article class="analytics-card edge-score-card" th:with="edgeScore=${analyticsReport.strategyEdgeScore}">
+          <div class="edge-score-layout">
+            <div class="edge-score-display">
+              <span class="summary-label">Strategy Edge Score</span>
+              <div class="edge-score-value-wrap">
+                <strong class="edge-score-value" th:text="${edgeScore.score + '/100'}">0/100</strong>
+                <span class="edge-score-label"
+                      th:classappend="${' ' + edgeScore.labelClass}"
+                      th:text="${edgeScore.label}">Developing edge</span>
+              </div>
+              <p class="edge-score-explanation mb-0"
+                 th:text="${edgeScore.explanation}">Edge reflects both performance and execution quality</p>
+              <p class="edge-score-meta mb-0"
+                 th:text="${'Built from ' + edgeScore.knownRTrades + ' trades with known R and ' + edgeScore.reviewedTrades + ' AI-reviewed trades.'}">
+                Built from 0 trades with known R and 0 AI-reviewed trades.
+              </p>
+            </div>
+
+            <div class="edge-score-metrics">
+              <div class="edge-score-metric">
+                <span class="edge-score-metric-label">Expectancy</span>
+                <strong class="edge-score-metric-value"
+                        th:text="${edgeScore.expectancy != null ? #numbers.formatDecimal(edgeScore.expectancy, 1, 2) + 'R' : 'N/A'}">0.00R</strong>
+              </div>
+              <div class="edge-score-metric">
+                <span class="edge-score-metric-label">Avg Process Score</span>
+                <strong class="edge-score-metric-value"
+                        th:text="${edgeScore.avgProcessScore != null ? #numbers.formatDecimal(edgeScore.avgProcessScore, 1, 1) + '/100' : 'N/A'}">0.0/100</strong>
+              </div>
+              <div class="edge-score-metric">
+                <span class="edge-score-metric-label">R Std Dev</span>
+                <strong class="edge-score-metric-value"
+                        th:text="${edgeScore.rStdDeviation != null ? #numbers.formatDecimal(edgeScore.rStdDeviation, 1, 2) + 'R' : 'N/A'}">0.00R</strong>
+              </div>
+              <div class="edge-score-metric">
+                <span class="edge-score-metric-label">Bad Process Rate</span>
+                <strong class="edge-score-metric-value"
+                        th:text="${edgeScore.badProcessRate != null ? #numbers.formatDecimal(edgeScore.badProcessRate, 1, 0) + '%' : 'N/A'}">0%</strong>
+              </div>
+            </div>
+          </div>
+        </article>
 
         <div class="analytics-grid analytics-grid-2">
           <article class="analytics-card chart-card">
@@ -200,8 +318,39 @@
           <article class="analytics-card">
             <div class="card-head">
               <div>
+                <h3 class="card-title">Process vs Outcome Matrix</h3>
+                <p class="card-copy">Separate valid execution from lucky wins so the next improvement target is obvious.</p>
+              </div>
+            </div>
+            <div class="process-matrix-grid">
+              <article class="matrix-card" th:each="row : ${analyticsReport.processOutcomeMatrix}" th:classappend="${' ' + row.accentClass}">
+                <span class="matrix-label" th:text="${row.title}">Good process / Good outcome</span>
+                <strong class="matrix-count" th:text="${row.count}">0</strong>
+                <p class="matrix-copy mb-0" th:text="${row.subtitle}">Repeatable edge with discipline.</p>
+              </article>
+            </div>
+          </article>
+
+          <article class="analytics-card chart-card">
+            <div class="card-head">
+              <div>
+                <h3 class="card-title">Process Score Distribution</h3>
+                <p class="card-copy">See how often execution quality clusters into low, mid, or high score ranges.</p>
+              </div>
+            </div>
+            <div class="chart-shell compact">
+              <canvas id="processScoreDistributionChart"></canvas>
+              <div class="chart-empty" id="processScoreDistributionEmpty">No AI process scores available for this filter.</div>
+            </div>
+          </article>
+        </div>
+
+        <div class="analytics-grid analytics-grid-2">
+          <article class="analytics-card">
+            <div class="card-head">
+              <div>
                 <h3 class="card-title">Mistake Impact</h3>
-                <p class="card-copy">See which mistakes create the largest drag on average R and realized PnL.</p>
+                <p class="card-copy">See which manual or AI-detected mistakes create the largest drag on win rate, R, and realized PnL.</p>
               </div>
             </div>
             <div class="table-responsive">
@@ -210,21 +359,32 @@
                 <tr>
                   <th>Mistake</th>
                   <th>Trades</th>
+                  <th>Winrate</th>
                   <th>Avg R</th>
                   <th>Total PnL</th>
+                  <th>Avg Process Score</th>
                 </tr>
                 </thead>
                 <tbody>
                 <tr th:each="row : ${analyticsReport.mistakeImpact}">
-                  <td th:text="${row.label}">FOMO</td>
+                  <td>
+                    <div class="mistake-label-stack">
+                      <span th:text="${row.label}">FOMO</span>
+                      <span class="mistake-source-badge"
+                            th:classappend="${' ' + row.sourceClass}"
+                            th:text="${row.sourceLabel}">Manual</span>
+                    </div>
+                  </td>
                   <td th:text="${row.trades}">0</td>
+                  <td th:text="${#numbers.formatDecimal(row.winRate, 1, 0) + '%'}">0%</td>
                   <td th:classappend="${row.avgR >= 0} ? ' value-positive' : ' value-negative'"
                       th:text="${#numbers.formatDecimal(row.avgR, 1, 2) + 'R'}">0.00R</td>
                   <td th:classappend="${row.totalPnl >= 0} ? ' value-positive' : ' value-negative'"
                       th:text="${row.totalPnl >= 0 ? '+$' + #numbers.formatDecimal(row.totalPnl, 1, 2) : '-$' + #numbers.formatDecimal(T(java.lang.Math).abs(row.totalPnl), 1, 2)}">+$0.00</td>
+                  <td th:text="${row.avgProcessScore != null ? #numbers.formatDecimal(row.avgProcessScore, 1, 1) : 'N/A'}">N/A</td>
                 </tr>
                 <tr th:if="${#lists.isEmpty(analyticsReport.mistakeImpact)}">
-                  <td colspan="4" class="empty-cell">No mistake tags or review flags for this filter.</td>
+                  <td colspan="6" class="empty-cell">No manual or AI mistake tags for this filter.</td>
                 </tr>
                 </tbody>
               </table>
@@ -250,6 +410,21 @@
             </div>
           </article>
         </div>
+
+        <article class="analytics-card">
+          <div class="card-head">
+            <div>
+              <h3 class="card-title">What to Fix Next</h3>
+              <p class="card-copy">Compact coaching priorities pulled from the filtered AI review analytics.</p>
+            </div>
+          </div>
+          <div class="coaching-grid">
+            <article class="coaching-card" th:each="insight : ${analyticsReport.whatToFixNext}">
+              <strong class="coaching-headline" th:text="${insight.headline}">Early entry is your biggest repeat leak.</strong>
+              <p class="coaching-detail mb-0" th:text="${insight.detail}">6 trades, -$320 total PnL, avg process score 54/100.</p>
+            </article>
+          </div>
+        </article>
       </section>
 
       <section class="analytics-section" th:if="${hasProAccess}">
@@ -265,7 +440,7 @@
             <div class="card-head">
               <div>
                 <h3 class="card-title">Session Performance</h3>
-                <p class="card-copy">Average R by session to locate your strongest execution window.</p>
+                <p class="card-copy">Average R by session to locate your strongest execution window. Tooltips include avg process score.</p>
               </div>
             </div>
             <div class="chart-shell compact">
@@ -291,7 +466,7 @@
             <div class="card-head">
               <div>
                 <h3 class="card-title">Symbol Performance</h3>
-                <p class="card-copy">Compare trade count, win rate, and average R across instruments.</p>
+                <p class="card-copy">Compare trade count, win rate, average R, and process score across instruments.</p>
               </div>
             </div>
             <div class="table-responsive">
@@ -302,6 +477,7 @@
                   <th>Trades</th>
                   <th>Winrate</th>
                   <th>Avg R</th>
+                  <th>Avg Process Score</th>
                 </tr>
                 </thead>
                 <tbody>
@@ -311,9 +487,10 @@
                   <td th:text="${#numbers.formatDecimal(row.winRate, 1, 0) + '%'}">0%</td>
                   <td th:classappend="${row.avgR >= 0} ? ' value-positive' : ' value-negative'"
                       th:text="${#numbers.formatDecimal(row.avgR, 1, 2) + 'R'}">0.00R</td>
+                  <td th:text="${row.avgProcessScore != null ? #numbers.formatDecimal(row.avgProcessScore, 1, 1) : 'N/A'}">N/A</td>
                 </tr>
                 <tr th:if="${#lists.isEmpty(analyticsReport.symbolPerformance)}">
-                  <td colspan="4" class="empty-cell">No symbol rows for the current filter.</td>
+                  <td colspan="5" class="empty-cell">No symbol rows for the current filter.</td>
                 </tr>
                 </tbody>
               </table>
@@ -346,6 +523,8 @@
                 <th>Winrate</th>
                 <th>Avg R</th>
                 <th>Expectancy</th>
+                <th>Avg Process Score</th>
+                <th>Bad Process Rate</th>
                 <th>Total PnL</th>
               </tr>
               </thead>
@@ -358,11 +537,13 @@
                     th:text="${#numbers.formatDecimal(row.avgR, 1, 2) + 'R'}">0.00R</td>
                 <td th:classappend="${row.expectancy >= 0} ? ' value-positive' : ' value-negative'"
                     th:text="${#numbers.formatDecimal(row.expectancy, 1, 2) + 'R'}">0.00R</td>
+                <td th:text="${row.avgProcessScore != null ? #numbers.formatDecimal(row.avgProcessScore, 1, 1) : 'N/A'}">N/A</td>
+                <td th:text="${row.badProcessRate != null ? #numbers.formatDecimal(row.badProcessRate, 1, 0) + '%' : 'N/A'}">N/A</td>
                 <td th:classappend="${row.totalPnl >= 0} ? ' value-positive' : ' value-negative'"
                     th:text="${row.totalPnl >= 0 ? '+$' + #numbers.formatDecimal(row.totalPnl, 1, 2) : '-$' + #numbers.formatDecimal(T(java.lang.Math).abs(row.totalPnl), 1, 2)}">+$0.00</td>
               </tr>
               <tr th:if="${#lists.isEmpty(analyticsReport.strategyBreakdown)}">
-                <td colspan="6" class="empty-cell">No setup breakdown available for the selected filters.</td>
+                <td colspan="8" class="empty-cell">No setup breakdown available for the selected filters.</td>
               </tr>
               </tbody>
             </table>
@@ -381,11 +562,15 @@
     rDistributionCounts: /*[[${analyticsReport.rDistribution.![count]}]]*/ [],
     expectancyLabels: /*[[${analyticsReport.expectancyBySetup.![label]}]]*/ [],
     expectancyValues: /*[[${analyticsReport.expectancyBySetup.![expectancy]}]]*/ [],
+    processScoreLabels: /*[[${analyticsReport.processScoreDistribution.![label]}]]*/ [],
+    processScoreCounts: /*[[${analyticsReport.processScoreDistribution.![count]}]]*/ [],
     holdingLabels: /*[[${analyticsReport.holdingTimeDistribution.![label]}]]*/ [],
     holdingTradeCounts: /*[[${analyticsReport.holdingTimeDistribution.![trades]}]]*/ [],
     holdingAvgRValues: /*[[${analyticsReport.holdingTimeDistribution.![avgR]}]]*/ [],
     sessionLabels: /*[[${analyticsReport.sessionPerformance.![label]}]]*/ [],
     sessionAvgRValues: /*[[${analyticsReport.sessionPerformance.![avgR]}]]*/ [],
+    sessionAvgProcessScores: /*[[${analyticsReport.sessionPerformance.![avgProcessScore]}]]*/ [],
+    sessionTotalPnlValues: /*[[${analyticsReport.sessionPerformance.![totalPnl]}]]*/ [],
     weekdayLabels: /*[[${analyticsReport.dayOfWeekPerformance.![label]}]]*/ [],
     weekdayAvgRValues: /*[[${analyticsReport.dayOfWeekPerformance.![avgR]}]]*/ []
   };

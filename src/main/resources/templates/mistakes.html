@@ -78,11 +78,13 @@
       <section id="mistakeInsights" class="mistake-insights card border-0 shadow-sm">
         <div class="mistake-insights-head">
           <h2 class="mistake-section-title mb-0">Mistake Insights</h2>
+          <p class="mistake-section-subtitle mb-0">Includes AI-detected behavior patterns</p>
         </div>
 
         <div class="mistake-insights-grid">
           <article class="mistake-panel">
             <h3>Most Frequent Mistakes</h3>
+            <p class="mistake-panel-subtitle">Last 30 trades</p>
             <ol class="mistake-top-list" th:if="${!#lists.isEmpty(topMistakes)}">
               <li th:each="item, iter : ${topMistakes}" th:if="${item.usageCount > 0}">
                 <div class="mistake-rank-card">
@@ -90,18 +92,24 @@
                     <span class="mistake-rank-badge" th:text="${iter.count}">1</span>
                     <span class="mistake-name" th:text="${item.name}">Early Entry</span>
                   </div>
-                  <span class="mistake-count"
-                        th:text="${item.usageCount == 1 ? '1 trade' : item.usageCount + ' trades'}">0 trades</span>
+                  <div class="mistake-rank-meta">
+                    <span class="mistake-count"
+                          th:text="${item.usageCount == 1 ? '1 trade' : item.usageCount + ' trades'}">0 trades</span>
+                    <span class="mistake-trend-badge"
+                          th:classappend="${item.trendClass}"
+                          th:text="${item.trendDirection}">Increasing</span>
+                  </div>
                 </div>
               </li>
             </ol>
             <p class="mistake-muted mb-0" th:if="${#lists.isEmpty(topMistakes) or topMistakes[0].usageCount == 0}">
-              No usage data yet. Tag mistakes on trades to unlock insights.
+              No usage data yet. Tag mistakes on trades or use AI reviews to unlock insights.
             </p>
           </article>
 
           <article class="mistake-panel">
             <h3>Mistake Distribution</h3>
+            <p class="mistake-panel-subtitle">Includes AI-detected behavior patterns</p>
             <div class="mistake-distribution">
               <div class="mistake-distribution-row" th:each="item : ${distributionMistakes}">
                 <div class="mistake-distribution-label" th:text="${item.code}">EARLY_ENTRY</div>
@@ -115,10 +123,15 @@
                      th:text="${(item.usageCount == 1 ? '1 trade' : item.usageCount + ' trades') + ' (' + item.usagePercent + '%)'}">0</div>
               </div>
               <p class="mistake-muted mb-0" th:if="${#lists.isEmpty(distributionMistakes)}">
-                Distribution appears after mistakes are tagged on trades.
+                Distribution appears after mistakes are tagged on trades or detected by AI review.
               </p>
             </div>
           </article>
+        </div>
+
+        <div class="mistake-quick-insight" th:if="${mistakeQuickInsight != null and !#strings.isEmpty(mistakeQuickInsight)}">
+          <span class="mistake-quick-insight-label">Quick insight</span>
+          <p class="mistake-quick-insight-copy mb-0" th:text="${mistakeQuickInsight}">Early entry frequency increased in the last 10 trades</p>
         </div>
       </section>
 

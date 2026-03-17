@@ -2,6 +2,7 @@ package com.example.demo.controller;
 
 import com.example.demo.entity.Trade;
 import com.example.demo.entity.User;
+import com.example.demo.repository.TradeReviewRepository;
 import com.example.demo.repository.UserRepository;
 import com.example.demo.service.AnalyticsService;
 import com.example.demo.service.UserService;
@@ -29,11 +30,18 @@ public class AnalyticsController {
     private final AnalyticsService analyticsService;
     private final UserService userService;
     private final UserRepository userRepository;
+    private final TradeReviewRepository tradeReviewRepository;
 
-    public AnalyticsController(AnalyticsService analyticsService, UserService userService, UserRepository userRepository) {
+    public AnalyticsController(
+            AnalyticsService analyticsService,
+            UserService userService,
+            UserRepository userRepository,
+            TradeReviewRepository tradeReviewRepository
+    ) {
         this.analyticsService = analyticsService;
         this.userService = userService;
         this.userRepository = userRepository;
+        this.tradeReviewRepository = tradeReviewRepository;
     }
 
     @GetMapping("/dashboard")
@@ -71,6 +79,9 @@ public class AnalyticsController {
                 range.fromDateTime(),
                 range.toDateTime()
         );
+        boolean hasAiTradeReviews = tradeReviewRepository
+                .findTopByTradeUserIdAndQualityScoreIsNotNullOrderByUpdatedAtDesc(targetUser.getId())
+                .isPresent();
 
         model.addAttribute("currentUser", currentUser);
         model.addAttribute("adminView", adminView);
@@ -89,6 +100,8 @@ public class AnalyticsController {
         model.addAttribute("tradeUsage", hasProAccess ? report.getOverview().getTotalTrades() : Math.min(report.getOverview().getTotalTrades(), tradeLimit));
         model.addAttribute("tradeUsageLimit", hasProAccess ? 0 : tradeLimit);
         model.addAttribute("tradeLimitReached", !hasProAccess && report.getOverview().getTotalTrades() >= tradeLimit);
+        model.addAttribute("aiReviewedTradesUrl", "/trades?view=ai-reviewed");
+        model.addAttribute("hasAiTradeReviews", hasAiTradeReviews);
 
         return "dashboard";
     }
@@ -141,6 +154,9 @@ public class AnalyticsController {
             @RequestParam(value = "to", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
             @RequestParam(value = "symbol", required = false) String symbol,
             @RequestParam(value = "setup", required = false) String setup,
+            @RequestParam(value = "processScoreRange", required = false) String processScoreRange,
+            @RequestParam(value = "classification", required = false) String classification,
+            @RequestParam(value = "mistakeTag", required = false) String mistakeTag,
             Model model,
             HttpSession session
     ) {
@@ -158,7 +174,10 @@ public class AnalyticsController {
                 range.fromDateTime(),
                 range.toDateTime(),
                 symbol,
-                setup
+                setup,
+                processScoreRange,
+                classification,
+                mistakeTag
         );
         int workspaceTradeCount = analyticsService.findTradesForUser(
                 currentUser.getId(),
@@ -175,6 +194,9 @@ public class AnalyticsController {
         model.addAttribute("to", range.toDate());
         model.addAttribute("selectedSymbol", normalizeOptionalFilter(symbol));
         model.addAttribute("selectedSetup", normalizeOptionalFilter(setup));
+        model.addAttribute("selectedProcessScoreRange", normalizeOptionalFilter(processScoreRange));
+        model.addAttribute("selectedClassification", normalizeOptionalFilter(classification));
+        model.addAttribute("selectedMistakeTag", normalizeOptionalFilter(mistakeTag));
         model.addAttribute("analyticsReport", report);
         return "analytics";
     }

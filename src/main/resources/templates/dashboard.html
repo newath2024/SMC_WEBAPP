@@ -491,17 +491,22 @@
             </span>
           </a>
 
-          <div class="conversion-hook-card is-soon">
+          <a class="conversion-hook-card is-live"
+             th:href="@{/analytics(period=${period}, from=${from}, to=${to})}">
             <div class="conversion-hook-top">
               <span class="conversion-hook-name">Risk consistency score</span>
-              <span class="conversion-hook-badge is-soon">Coming soon</span>
+              <span class="conversion-hook-badge is-live">Live</span>
             </div>
-            <p class="conversion-hook-copy">A dedicated consistency score is not wired yet. The current KPI row already shows profit factor, expectancy, and drawdown.</p>
+            <p class="conversion-hook-copy">Risk consistency is now folded into Strategy Edge Score, combining expectancy, process quality, R consistency, and bad process rate.</p>
             <div class="conversion-hook-meta">
-              <span>Available now:</span>
-              <a href="#riskMetrics">Risk metrics</a>
+              <span>Tracked in:</span>
+              <span>Analytics &gt; Strategy Edge</span>
             </div>
-          </div>
+            <span class="conversion-hook-action">
+              Open Strategy Edge
+              <i class="bi bi-arrow-up-right"></i>
+            </span>
+          </a>
 
           <a class="conversion-hook-card is-live"
              th:href="@{/reports(period=${period}, from=${from}, to=${to})}">
@@ -529,17 +534,21 @@
             </span>
           </a>
 
-          <div class="conversion-hook-card is-soon">
+          <a class="conversion-hook-card is-live"
+             th:href="${aiReviewedTradesUrl}">
             <div class="conversion-hook-top">
               <span class="conversion-hook-name">AI trade review</span>
-              <span class="conversion-hook-badge is-soon">Coming soon</span>
+              <span class="conversion-hook-badge is-live">Live</span>
             </div>
-            <p class="conversion-hook-copy">AI-generated review summaries are not wired yet. The manual review form is already available inside each trade detail.</p>
-            <div class="conversion-hook-meta">
-              <span>Available now:</span>
-              <a th:href="@{/trades(view='table')}">Trade review flow</a>
+            <p class="conversion-hook-copy">AI-generated trade reviews analyze your execution, mistakes, and decision quality.</p>
+            <div class="conversion-hook-meta" th:if="${!hasAiTradeReviews}">
+              <span>Generate your first AI review from any trade detail page.</span>
             </div>
-          </div>
+            <span class="conversion-hook-action">
+              Open AI-reviewed trades
+              <i class="bi bi-arrow-up-right"></i>
+            </span>
+          </a>
 
           <div class="conversion-hook-card is-soon">
             <div class="conversion-hook-top">
