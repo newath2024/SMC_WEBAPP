@@ -32,7 +32,10 @@ build/
 ### VS Code ###
 .vscode/
 
+### Local app data ###
 data/
 *.db
+*.db-shm
+*.db-wal
+*.db-journal
 .env.local
-data/trading_journal.db
