@@ -3,6 +3,7 @@ package com.example.demo.controller;
 import com.example.demo.entity.MistakeTag;
 import com.example.demo.repository.TradeMistakeTagRepository;
 import com.example.demo.entity.User;
+import com.example.demo.service.MistakeAnalyticsService;
 import com.example.demo.service.MistakeTagService;
 import com.example.demo.service.UserService;
 import jakarta.servlet.http.HttpSession;
@@ -19,15 +20,18 @@ import java.util.Locale;
 public class MistakeTagController {
 
     private final MistakeTagService mistakeTagService;
+    private final MistakeAnalyticsService mistakeAnalyticsService;
     private final TradeMistakeTagRepository tradeMistakeTagRepository;
     private final UserService userService;
 
     public MistakeTagController(
             MistakeTagService mistakeTagService,
+            MistakeAnalyticsService mistakeAnalyticsService,
             TradeMistakeTagRepository tradeMistakeTagRepository,
             UserService userService
     ) {
         this.mistakeTagService = mistakeTagService;
+        this.mistakeAnalyticsService = mistakeAnalyticsService;
         this.tradeMistakeTagRepository = tradeMistakeTagRepository;
         this.userService = userService;
     }
@@ -54,34 +58,11 @@ public class MistakeTagController {
                         usageByTagId.getOrDefault(tag.getId(), 0L)
                 ))
                 .toList();
+        MistakeAnalyticsService.MistakeTrendReport trendReport = mistakeAnalyticsService.buildTrendReportForUser(currentUser.getId());
 
         long totalCount = tableRows.size();
         long activeCount = tableRows.stream().filter(MistakeRowView::active).count();
         long disabledCount = totalCount - activeCount;
-
-        var rankedMistakes = tableRows.stream()
-                .sorted(java.util.Comparator.comparingLong(MistakeRowView::usageCount).reversed()
-                        .thenComparing(MistakeRowView::name, String.CASE_INSENSITIVE_ORDER))
-                .toList();
-        long totalUsageCount = rankedMistakes.stream().mapToLong(MistakeRowView::usageCount).sum();
-        long topUsageCount = rankedMistakes.isEmpty() ? 0L : rankedMistakes.get(0).usageCount();
-
-        String mostFrequentMistakeName = rankedMistakes.isEmpty() || rankedMistakes.get(0).usageCount() == 0
-                ? "N/A"
-                : rankedMistakes.get(0).name();
-        long mostFrequentMistakeUsage = rankedMistakes.isEmpty() ? 0L : rankedMistakes.get(0).usageCount();
-        long mostFrequentUsagePercent = toPercent(mostFrequentMistakeUsage, totalUsageCount);
-
-        List<DistributionRowView> distributionMistakes = rankedMistakes.stream()
-                .filter(item -> item.usageCount() > 0)
-                .limit(5)
-                .map(item -> new DistributionRowView(
-                        item.code(),
-                        item.usageCount(),
-                        toPercent(item.usageCount(), totalUsageCount),
-                        toPercent(item.usageCount(), topUsageCount)
-                ))
-                .toList();
 
         long sessionMaxUsage = tradeMistakeTagRepository.summarizeBySessionForUser(currentUser.getId())
                 .stream()
@@ -129,14 +110,22 @@ public class MistakeTagController {
                 .toList();
 
         model.addAttribute("mistakes", tableRows);
-        model.addAttribute("topMistakes", rankedMistakes.stream().limit(5).toList());
-        model.addAttribute("distributionMistakes", distributionMistakes);
+        model.addAttribute("topMistakes", trendReport.topMistakes());
+        model.addAttribute("distributionMistakes", trendReport.distributionPoints().stream()
+                .map(item -> new DistributionRowView(
+                        item.label(),
+                        item.usageCount(),
+                        item.usagePercent(),
+                        item.widthPercent()
+                ))
+                .toList());
         model.addAttribute("totalMistakeCount", totalCount);
         model.addAttribute("activeMistakeCount", activeCount);
         model.addAttribute("disabledMistakeCount", disabledCount);
-        model.addAttribute("mostFrequentMistakeName", mostFrequentMistakeName);
-        model.addAttribute("mostFrequentMistakeUsage", mostFrequentMistakeUsage);
-        model.addAttribute("mostFrequentUsagePercent", mostFrequentUsagePercent);
+        model.addAttribute("mostFrequentMistakeName", trendReport.mostFrequentMistakeName());
+        model.addAttribute("mostFrequentMistakeUsage", trendReport.mostFrequentMistakeUsage());
+        model.addAttribute("mostFrequentUsagePercent", trendReport.mostFrequentUsagePercent());
+        model.addAttribute("mistakeQuickInsight", trendReport.quickInsight());
         model.addAttribute("sessionUsage", sessionUsage);
         model.addAttribute("symbolUsage", symbolUsage);
         model.addAttribute("recentMistakes", recentMistakes);

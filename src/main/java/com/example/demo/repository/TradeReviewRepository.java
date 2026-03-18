@@ -18,6 +18,9 @@ public interface TradeReviewRepository extends JpaRepository<TradeReview, String
     @EntityGraph(attributePaths = {"trade"})
     List<TradeReview> findByTradeIdIn(List<String> tradeIds);
 
+    @EntityGraph(attributePaths = {"trade"})
+    Optional<TradeReview> findTopByTradeUserIdAndQualityScoreIsNotNullOrderByUpdatedAtDesc(String userId);
+
     void deleteByTradeId(String tradeId);
 
     void deleteByTradeIdIn(List<String> tradeIds);
