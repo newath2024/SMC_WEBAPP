@@ -12,11 +12,18 @@ import com.example.demo.repository.TradeReviewRepository;
 import com.example.demo.repository.TradeRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 public class TradeService {
@@ -79,6 +86,34 @@ public class TradeService {
             loadMistakes(trade);
         }
         return trades;
+    }
+
+    public List<Trade> findFilteredByUser(String userId, TradeFilterCriteria criteria) {
+        List<Trade> trades = findAllByUser(userId);
+        return filterTrades(trades, criteria);
+    }
+
+    public List<String> findOwnedTradeIds(String userId, List<String> tradeIds) {
+        if (!StringUtils.hasText(userId)) {
+            return List.of();
+        }
+
+        List<String> normalizedTradeIds = normalizeTradeIds(tradeIds);
+        if (normalizedTradeIds.isEmpty()) {
+            return List.of();
+        }
+
+        return repo.findByUserIdAndIdInOrderByEntryTimeDesc(userId.trim(), normalizedTradeIds).stream()
+                .map(Trade::getId)
+                .filter(StringUtils::hasText)
+                .toList();
+    }
+
+    public List<String> findFilteredTradeIdsForUser(String userId, TradeFilterCriteria criteria) {
+        return findFilteredByUser(userId, criteria).stream()
+                .map(Trade::getId)
+                .filter(StringUtils::hasText)
+                .toList();
     }
 
     public Trade findByIdForUser(String tradeId, String userId) {
@@ -171,6 +206,29 @@ public class TradeService {
         if (ownerUserId != null && !ownerUserId.isBlank()) {
             refreshRMultiplesForUser(ownerUserId);
         }
+    }
+
+    @Transactional
+    public int deleteForUserIds(List<String> tradeIds, String userId) {
+        if (!StringUtils.hasText(userId)) {
+            return 0;
+        }
+
+        List<String> ownedTradeIds = findOwnedTradeIds(userId, tradeIds);
+        if (ownedTradeIds.isEmpty()) {
+            return 0;
+        }
+
+        tradeReviewRepository.deleteByTradeIdIn(ownedTradeIds);
+        tradeMistakeTagRepository.deleteByTradeIdIn(ownedTradeIds);
+        repo.deleteAllByIdInBatch(ownedTradeIds);
+        refreshRMultiplesForUser(userId);
+        return ownedTradeIds.size();
+    }
+
+    @Transactional
+    public int deleteFilteredForUser(String userId, TradeFilterCriteria criteria) {
+        return deleteForUserIds(findFilteredTradeIdsForUser(userId, criteria), userId);
     }
 
     private void applyEditableFields(Trade existing, Trade formTrade) {
@@ -484,6 +542,174 @@ public class TradeService {
         }
 
         trade.setMistakes(mistakes);
+    }
+
+    private List<Trade> filterTrades(List<Trade> trades, TradeFilterCriteria criteria) {
+        if (trades == null || trades.isEmpty()) {
+            return List.of();
+        }
+
+        TradeFilterCriteria safeCriteria = criteria != null
+                ? criteria
+                : new TradeFilterCriteria(null, null, null, null, null, null, null, null);
+
+        LocalDateTime fromValue = safeCriteria.from() != null ? safeCriteria.from().atStartOfDay() : null;
+        LocalDateTime toValue = safeCriteria.to() != null ? safeCriteria.to().atTime(LocalTime.MAX) : null;
+        if (fromValue != null && toValue != null && fromValue.isAfter(toValue)) {
+            LocalDateTime temp = fromValue;
+            fromValue = toValue;
+            toValue = temp;
+        }
+        final LocalDateTime from = fromValue;
+        final LocalDateTime to = toValue;
+
+        List<Trade> filteredTrades = trades.stream()
+                .filter(trade -> matchesContainsFilter(trade.getSymbol(), safeCriteria.symbol()))
+                .filter(trade -> matchesExactFilter(trade.getSetupName(), safeCriteria.setup()))
+                .filter(trade -> matchesExactFilter(trade.getSession(), safeCriteria.session()))
+                .filter(trade -> matchesResultFilter(trade, safeCriteria.result()))
+                .filter(trade -> matchesMistakeFilter(trade, safeCriteria.mistake()))
+                .filter(trade -> matchesDateFilter(resolveTradeTimestamp(trade), from, to))
+                .toList();
+
+        if (!safeCriteria.aiReviewedOnly()) {
+            return filteredTrades;
+        }
+        return retainAiReviewedTrades(filteredTrades);
+    }
+
+    private List<Trade> retainAiReviewedTrades(List<Trade> trades) {
+        if (trades == null || trades.isEmpty()) {
+            return List.of();
+        }
+
+        List<String> tradeIds = trades.stream()
+                .map(Trade::getId)
+                .filter(StringUtils::hasText)
+                .toList();
+        if (tradeIds.isEmpty()) {
+            return List.of();
+        }
+
+        Set<String> reviewedTradeIds = tradeReviewRepository.findByTradeIdIn(tradeIds).stream()
+                .filter(Objects::nonNull)
+                .filter(review -> review.getTrade() != null && StringUtils.hasText(review.getTrade().getId()))
+                .filter(review -> review.getQualityScore() != null)
+                .map(review -> review.getTrade().getId())
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+        if (reviewedTradeIds.isEmpty()) {
+            return List.of();
+        }
+
+        return trades.stream()
+                .filter(trade -> reviewedTradeIds.contains(trade.getId()))
+                .toList();
+    }
+
+    private List<String> normalizeTradeIds(List<String> tradeIds) {
+        if (tradeIds == null || tradeIds.isEmpty()) {
+            return List.of();
+        }
+
+        return tradeIds.stream()
+                .filter(StringUtils::hasText)
+                .map(String::trim)
+                .distinct()
+                .toList();
+    }
+
+    private boolean matchesContainsFilter(String value, String filter) {
+        if (!StringUtils.hasText(filter)) {
+            return true;
+        }
+        if (!StringUtils.hasText(value)) {
+            return false;
+        }
+        return value.trim().toUpperCase().contains(filter.trim().toUpperCase());
+    }
+
+    private boolean matchesExactFilter(String value, String filter) {
+        if (!StringUtils.hasText(filter) || "N/A".equalsIgnoreCase(filter.trim())) {
+            return true;
+        }
+        if (!StringUtils.hasText(value)) {
+            return false;
+        }
+        return value.trim().equalsIgnoreCase(filter.trim());
+    }
+
+    private boolean matchesResultFilter(Trade trade, String filter) {
+        if (!StringUtils.hasText(filter)) {
+            return true;
+        }
+        return normalizeResultValue(trade != null ? trade.getResult() : null)
+                .equals(normalizeResultValue(filter));
+    }
+
+    private boolean matchesMistakeFilter(Trade trade, String filter) {
+        if (!StringUtils.hasText(filter)) {
+            return true;
+        }
+        if (trade == null || trade.getMistakes() == null || trade.getMistakes().isEmpty()) {
+            return false;
+        }
+
+        String normalizedFilter = filter.trim();
+        return trade.getMistakes().stream()
+                .filter(Objects::nonNull)
+                .map(MistakeTag::getName)
+                .filter(StringUtils::hasText)
+                .map(String::trim)
+                .anyMatch(name -> name.equalsIgnoreCase(normalizedFilter));
+    }
+
+    private boolean matchesDateFilter(LocalDateTime timestamp, LocalDateTime from, LocalDateTime to) {
+        if (from == null && to == null) {
+            return true;
+        }
+        if (timestamp == null) {
+            return false;
+        }
+        if (from != null && timestamp.isBefore(from)) {
+            return false;
+        }
+        if (to != null && timestamp.isAfter(to)) {
+            return false;
+        }
+        return true;
+    }
+
+    private LocalDateTime resolveTradeTimestamp(Trade trade) {
+        if (trade == null) {
+            return null;
+        }
+        if (trade.getEntryTime() != null) {
+            return trade.getEntryTime();
+        }
+        if (trade.getTradeDate() != null) {
+            return trade.getTradeDate();
+        }
+        return trade.getCreatedAt();
+    }
+
+    private String normalizeResultValue(String value) {
+        if (!StringUtils.hasText(value)) {
+            return "";
+        }
+        String normalized = value.trim().toUpperCase();
+        if (normalized.contains("PARTIAL")) {
+            return "PARTIAL";
+        }
+        if ("BE".equals(normalized) || "BREAKEVEN".equals(normalized)) {
+            return "BE";
+        }
+        if ("WIN".equals(normalized)) {
+            return "WIN";
+        }
+        if ("LOSS".equals(normalized)) {
+            return "LOSS";
+        }
+        return normalized;
     }
 
     private double round2(double value) {
