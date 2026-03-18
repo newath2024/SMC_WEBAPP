@@ -297,6 +297,52 @@
         </div>
       </section>
 
+      <section class="dashboard-card weekly-coach-card weekly-coach-compact-card" id="weeklyCoach" th:if="${hasProAccess and weeklyCoach != null}">
+        <div class="section-head weekly-coach-compact-head">
+          <div>
+            <div class="section-title">Weekly Coach</div>
+            <p class="section-copy">A fast 7-day coaching scan focused on process quality and repeat leaks.</p>
+          </div>
+          <div class="weekly-coach-compact-metrics">
+            <div class="coach-chip">
+              <span class="coach-chip-label">Process Score</span>
+              <strong class="coach-chip-value" th:text="${weeklyCoach.avgProcessScore != null ? weeklyCoach.avgProcessScore + '/100' : 'N/A'}">N/A</strong>
+            </div>
+            <div class="coach-chip">
+              <span class="coach-chip-label">Trades</span>
+              <strong class="coach-chip-value" th:text="${weeklyCoach.totalTrades}">0</strong>
+            </div>
+            <div class="coach-chip">
+              <span class="coach-chip-label">Window</span>
+              <strong class="coach-chip-value" th:text="${weeklyCoach.dateRangeLabel}">Mar 12 - Mar 18</strong>
+            </div>
+          </div>
+        </div>
+
+        <p class="weekly-coach-compact-summary mb-0" th:text="${weeklyCoach.dashboardSummary}">
+          Execution was decent but inconsistent. Early entry remains the main issue.
+        </p>
+
+        <div class="weekly-coach-top-issue" th:if="${weeklyCoach.primaryIssue != null}">
+          <span class="weekly-coach-top-issue-label">Top issue</span>
+          <strong class="weekly-coach-top-issue-value" th:text="${weeklyCoach.primaryIssue.title}">Incomplete self-review</strong>
+        </div>
+
+        <div class="weekly-coach-focus">
+          <div class="section-title small">Focus next week</div>
+          <ul class="coach-bullet-list coach-bullet-list-compact">
+            <li th:each="improvement : ${weeklyCoach.dashboardImprovements}" th:text="${improvement}">Wait for confirmation before entry.</li>
+          </ul>
+        </div>
+
+        <div class="weekly-coach-cta-row">
+          <div class="weekly-coach-meta" th:text="${weeklyCoach.manualReviewedTrades + '/' + weeklyCoach.totalTrades + ' trades fully reviewed this week'}">0/0 trades fully reviewed this week</div>
+          <a class="header-btn" th:href="${weeklyCoachReportUrl}">
+            <span>View full report</span>
+          </a>
+        </div>
+      </section>
+
       <section class="premium-grid" th:if="${!hasProAccess}">
         <article class="locked-card">
           <div class="locked-title">Session Heatmap <i class="bi bi-lock-fill"></i></div>
@@ -550,17 +596,36 @@
             </span>
           </a>
 
-          <div class="conversion-hook-card is-soon">
+          <a class="conversion-hook-card is-live"
+             th:if="${hasProAccess and weeklyCoach != null}"
+             th:href="${weeklyCoachReportUrl}">
             <div class="conversion-hook-top">
               <span class="conversion-hook-name">Weekly report</span>
-              <span class="conversion-hook-badge is-soon">Coming soon</span>
+              <span class="conversion-hook-badge is-live">Live</span>
             </div>
-            <p class="conversion-hook-copy">Scheduled weekly summaries are not implemented yet. You can still open Reports anytime for the current performance snapshot.</p>
+            <p class="conversion-hook-copy">Open the full weekly coach report for the detailed breakdown, ranked issues, and next-week rules.</p>
             <div class="conversion-hook-meta">
-              <span>Available now:</span>
-              <a th:href="@{/reports(period=${period}, from=${from}, to=${to})}">Reports page</a>
+              <span th:text="${weeklyCoach.totalTrades + ' trades in the current 7-day coach window'}">0 trades in the current 7-day coach window</span>
             </div>
-          </div>
+            <span class="conversion-hook-action">
+              View full report
+              <i class="bi bi-arrow-up-right"></i>
+            </span>
+          </a>
+
+          <a class="conversion-hook-card is-live"
+             th:if="${!hasProAccess}"
+             href="#billing">
+            <div class="conversion-hook-top">
+              <span class="conversion-hook-name">Weekly report</span>
+              <span class="conversion-hook-badge is-live">Pro</span>
+            </div>
+            <p class="conversion-hook-copy">Weekly coach is now live for Pro and turns your last 7 days into strict coaching feedback.</p>
+            <span class="conversion-hook-action">
+              Upgrade to unlock
+              <i class="bi bi-arrow-up-right"></i>
+            </span>
+          </a>
         </div>
       </section>
     </main>
@@ -593,5 +658,3 @@
   <script th:src="@{/js/sidebar-toggle.js}" src="/js/sidebar-toggle.js"></script>
 </body>
 </html>
-
-

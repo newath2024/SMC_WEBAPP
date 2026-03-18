@@ -6,6 +6,7 @@ import com.example.demo.repository.TradeReviewRepository;
 import com.example.demo.repository.UserRepository;
 import com.example.demo.service.AnalyticsService;
 import com.example.demo.service.UserService;
+import com.example.demo.service.WeeklyTradingCoachService;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -31,17 +32,20 @@ public class AnalyticsController {
     private final UserService userService;
     private final UserRepository userRepository;
     private final TradeReviewRepository tradeReviewRepository;
+    private final WeeklyTradingCoachService weeklyTradingCoachService;
 
     public AnalyticsController(
             AnalyticsService analyticsService,
             UserService userService,
             UserRepository userRepository,
-            TradeReviewRepository tradeReviewRepository
+            TradeReviewRepository tradeReviewRepository,
+            WeeklyTradingCoachService weeklyTradingCoachService
     ) {
         this.analyticsService = analyticsService;
         this.userService = userService;
         this.userRepository = userRepository;
         this.tradeReviewRepository = tradeReviewRepository;
+        this.weeklyTradingCoachService = weeklyTradingCoachService;
     }
 
     @GetMapping("/dashboard")
@@ -82,6 +86,9 @@ public class AnalyticsController {
         boolean hasAiTradeReviews = tradeReviewRepository
                 .findTopByTradeUserIdAndQualityScoreIsNotNullOrderByUpdatedAtDesc(targetUser.getId())
                 .isPresent();
+        WeeklyTradingCoachService.WeeklyCoachReport weeklyCoach = hasProAccess
+                ? weeklyTradingCoachService.buildReportForUser(targetUser.getId())
+                : null;
 
         model.addAttribute("currentUser", currentUser);
         model.addAttribute("adminView", adminView);
@@ -102,6 +109,8 @@ public class AnalyticsController {
         model.addAttribute("tradeLimitReached", !hasProAccess && report.getOverview().getTotalTrades() >= tradeLimit);
         model.addAttribute("aiReviewedTradesUrl", "/trades?view=ai-reviewed");
         model.addAttribute("hasAiTradeReviews", hasAiTradeReviews);
+        model.addAttribute("weeklyCoach", weeklyCoach);
+        model.addAttribute("weeklyCoachReportUrl", "/reports/weekly" + (selectedUserId != null && !selectedUserId.isBlank() ? "?userId=" + targetUser.getId() : ""));
 
         return "dashboard";
     }
@@ -261,6 +270,30 @@ public class AnalyticsController {
         model.addAttribute("riskMetrics", report.getRiskMetrics());
         model.addAttribute("workspaceReport", workspaceReport);
         return "reports";
+    }
+
+    @GetMapping("/reports/weekly")
+    public String weeklyReportPage(
+            @RequestParam(value = "userId", required = false) String selectedUserId,
+            Model model,
+            HttpSession session
+    ) {
+        User currentUser = userService.getCurrentUser(session);
+        if (currentUser == null) {
+            return "redirect:/login";
+        }
+        if (!userService.hasProAccess(currentUser)) {
+            return "redirect:/dashboard";
+        }
+
+        User targetUser = resolveTargetUser(currentUser, selectedUserId);
+        WeeklyTradingCoachService.WeeklyCoachReport weeklyCoach = weeklyTradingCoachService.buildReportForUser(targetUser.getId());
+
+        model.addAttribute("currentUser", currentUser);
+        model.addAttribute("weeklyCoach", weeklyCoach);
+        model.addAttribute("weeklyCoachTargetUser", targetUser);
+        model.addAttribute("selectedUserId", targetUser.getId());
+        return "weeklyReport";
     }
 
     @GetMapping(value = "/reports/export.csv", produces = "text/csv")
