@@ -888,6 +888,210 @@ body.dashboard-body {
   max-width: 640px;
 }
 
+.weekly-coach-card {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.weekly-coach-compact-card {
+  gap: 16px;
+}
+
+.weekly-coach-compact-head {
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.weekly-coach-compact-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  min-width: min(100%, 420px);
+}
+
+.weekly-coach-head {
+  align-items: flex-start;
+  gap: 20px;
+}
+
+.weekly-coach-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  min-width: min(100%, 520px);
+}
+
+.coach-chip {
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 16px;
+  padding: 12px 14px;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.coach-chip-label {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.coach-chip-value {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--text);
+}
+
+.weekly-coach-summary {
+  font-size: 15px;
+  line-height: 1.7;
+  color: var(--text);
+}
+
+.weekly-coach-compact-summary {
+  font-size: 15px;
+  line-height: 1.65;
+  color: var(--text);
+  max-width: 780px;
+}
+
+.weekly-coach-confidence {
+  border-left: 3px solid #1d4ed8;
+  padding: 10px 14px;
+  border-radius: 0 14px 14px 0;
+  background: rgba(219, 234, 254, 0.5);
+  color: #1e3a8a;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.weekly-coach-top-issue {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  width: fit-content;
+  border-radius: 999px;
+  border: 1px solid rgba(239, 68, 68, 0.16);
+  background: rgba(254, 242, 242, 0.9);
+  color: #991b1b;
+  padding: 10px 14px;
+}
+
+.weekly-coach-top-issue-label {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #b91c1c;
+}
+
+.weekly-coach-top-issue-value {
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.weekly-coach-focus {
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 16px 18px;
+  background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+}
+
+.coach-bullet-list-compact {
+  margin-top: 12px;
+}
+
+.coach-bullet-list-compact li {
+  line-height: 1.6;
+}
+
+.weekly-coach-cta-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding-top: 4px;
+}
+
+.weekly-coach-meta {
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.weekly-coach-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.weekly-coach-panel {
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 18px;
+  background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+}
+
+.coach-bullet-list,
+.coach-ranked-list {
+  margin: 14px 0 0;
+  padding-left: 18px;
+  color: var(--text);
+}
+
+.coach-bullet-list li,
+.coach-ranked-list li {
+  line-height: 1.65;
+}
+
+.coach-bullet-list li + li,
+.coach-ranked-list li + li {
+  margin-top: 10px;
+}
+
+.coach-ranked-list {
+  padding-left: 0;
+  list-style: none;
+}
+
+.coach-ranked-row {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.coach-rank {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #0f172a;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.coach-ranked-title {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.coach-ranked-detail {
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
 .settings-list {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1003,6 +1207,12 @@ body.dashboard-body {
   .settings-list {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .weekly-coach-compact-metrics,
+  .weekly-coach-metrics,
+  .weekly-coach-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 991.98px) {
@@ -1032,6 +1242,16 @@ body.dashboard-body {
     align-items: stretch;
   }
 
+  .weekly-coach-compact-head,
+  .weekly-coach-head {
+    flex-direction: column;
+  }
+
+  .weekly-coach-cta-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
   .kpi-grid,
   .pricing-grid {
     grid-template-columns: 1fr;
@@ -1046,7 +1266,10 @@ body.dashboard-body {
   .result-breakdown,
   .settings-list,
   .stat-pair-row,
-  .premium-grid {
+  .premium-grid,
+  .weekly-coach-compact-metrics,
+  .weekly-coach-metrics,
+  .weekly-coach-grid {
     grid-template-columns: 1fr;
   }
 
