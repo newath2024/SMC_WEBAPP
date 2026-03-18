@@ -11,14 +11,18 @@ import com.example.demo.service.TradeImageService;
 import com.example.demo.service.TradeReviewService;
 import com.example.demo.service.SetupService;
 import com.example.demo.service.TradeAiReviewService;
+import com.example.demo.service.TradeFilterCriteria;
 import com.example.demo.service.TradingViewChartImportService;
 import com.example.demo.service.TradeService;
 import com.example.demo.service.UserService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import org.springframework.dao.CannotAcquireLockException;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -29,7 +33,6 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -196,26 +199,28 @@ public class TradeController {
             return "redirect:/login";
         }
 
-        LocalDateTime fromDateTime = from != null ? from.atStartOfDay() : null;
-        LocalDateTime toDateTime = to != null ? to.atTime(LocalTime.MAX) : null;
-        if (fromDateTime != null && toDateTime != null && fromDateTime.isAfter(toDateTime)) {
-            LocalDateTime temp = fromDateTime;
-            fromDateTime = toDateTime;
-            toDateTime = temp;
-        }
+        TradeFilterCriteria criteria = normalizeTradeFilterCriteria(new TradeFilterCriteria(
+                view,
+                setup,
+                sessionFilter,
+                symbol,
+                resultFilter,
+                mistakeFilter,
+                from,
+                to
+        ));
 
-        List<Trade> trades = tradeService.findAllByUser(currentUser.getId());
-        trades = applyListFilters(trades, setup, sessionFilter, symbol, fromDateTime, toDateTime);
-        boolean aiReviewedView = "ai-reviewed".equalsIgnoreCase(view);
+        List<Trade> trades = tradeService.findFilteredByUser(currentUser.getId(), criteria);
+        boolean aiReviewedView = criteria.aiReviewedOnly();
         boolean tableOnlyView = aiReviewedView || "table".equalsIgnoreCase(view);
-        boolean filteredView = tableOnlyView || hasActiveFilter(setup, sessionFilter, symbol, from, to);
+        boolean filteredView = tableOnlyView || criteria.hasActiveFilters();
         boolean adminView = userService.isAdmin(currentUser);
         boolean hasAnyAiTradeReviews = tradeReviewRepository
                 .findTopByTradeUserIdAndQualityScoreIsNotNullOrderByUpdatedAtDesc(currentUser.getId())
                 .isPresent();
         AiReviewedTradeListData aiReviewedTradeListData = buildAiReviewedTradeListData(trades);
-        String allTradesViewUrl = buildTradeListUrl(null, setup, sessionFilter, symbol, resultFilter, mistakeFilter, from, to);
-        String aiTradesViewUrl = buildTradeListUrl("ai-reviewed", setup, sessionFilter, symbol, resultFilter, mistakeFilter, from, to);
+        String allTradesViewUrl = buildTradeListUrl(null, criteria.setup(), criteria.session(), criteria.symbol(), criteria.result(), criteria.mistake(), criteria.from(), criteria.to());
+        String aiTradesViewUrl = buildTradeListUrl("ai-reviewed", criteria.setup(), criteria.session(), criteria.symbol(), criteria.result(), criteria.mistake(), criteria.from(), criteria.to());
 
         if (aiReviewedView) {
             trades = aiReviewedTradeListData.trades();
@@ -229,11 +234,11 @@ public class TradeController {
                 tableOnlyView,
                 aiReviewedView,
                 adminView,
-                setup,
-                sessionFilter,
-                symbol,
-                from,
-                to,
+                criteria.setup(),
+                criteria.session(),
+                criteria.symbol(),
+                criteria.from(),
+                criteria.to(),
                 hasAnyAiTradeReviews,
                 aiReviewedView ? "/trades?view=ai-reviewed" : "/trades",
                 aiReviewedTradeListData,
@@ -567,21 +572,187 @@ public class TradeController {
     }
 
     @PostMapping("/{id}/delete")
-    public String delete(@PathVariable String id, HttpSession session) {
+    public Object delete(
+            @PathVariable String id,
+            HttpServletRequest request,
+            RedirectAttributes redirectAttributes,
+            HttpSession session
+    ) {
         User currentUser = userService.getCurrentUser(session);
         if (currentUser == null) {
-            return "redirect:/login";
+            return buildDeleteUnauthenticatedResponse(request);
         }
 
-        if (userService.isAdmin(currentUser)) {
-            tradeImageService.deleteByTradeId(id);
-            tradeService.deleteForAdmin(id);
-        } else {
-            tradeImageService.deleteByTradeId(id);
-            tradeService.deleteForUser(id, currentUser.getId());
+        try {
+            if (userService.isAdmin(currentUser)) {
+                tradeImageService.deleteByTradeId(id);
+                tradeService.deleteForAdmin(id);
+            } else {
+                tradeImageService.deleteByTradeId(id);
+                tradeService.deleteForUser(id, currentUser.getId());
+            }
+        } catch (RuntimeException ex) {
+            return buildDeleteErrorResponse(
+                    request,
+                    "redirect:/trades",
+                    friendlyErrorMessage(ex),
+                    redirectAttributes,
+                    HttpStatus.BAD_REQUEST
+            );
         }
 
-        return "redirect:/trades";
+        return buildDeleteSuccessResponse(
+                request,
+                "redirect:/trades",
+                List.of(id),
+                "Deleted 1 trade.",
+                redirectAttributes
+        );
+    }
+
+    @PostMapping("/delete-selected")
+    public Object deleteSelected(
+            @RequestParam(value = "tradeIds", required = false) List<String> tradeIds,
+            @RequestParam(value = "view", required = false) String view,
+            @RequestParam(value = "setup", required = false) String setup,
+            @RequestParam(value = "session", required = false) String sessionFilter,
+            @RequestParam(value = "symbol", required = false) String symbol,
+            @RequestParam(value = "result", required = false) String resultFilter,
+            @RequestParam(value = "mistake", required = false) String mistakeFilter,
+            @RequestParam(value = "from", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam(value = "to", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
+            HttpServletRequest request,
+            RedirectAttributes redirectAttributes,
+            HttpSession session
+    ) {
+        User currentUser = userService.getCurrentUser(session);
+        if (currentUser == null) {
+            return buildDeleteUnauthenticatedResponse(request);
+        }
+
+        TradeFilterCriteria criteria = normalizeTradeFilterCriteria(new TradeFilterCriteria(
+                view,
+                setup,
+                sessionFilter,
+                symbol,
+                resultFilter,
+                mistakeFilter,
+                from,
+                to
+        ));
+        String redirectUrl = redirectToTradeList(criteria);
+        List<String> ownedTradeIds = tradeService.findOwnedTradeIds(currentUser.getId(), tradeIds);
+        if (ownedTradeIds.isEmpty()) {
+            return buildDeleteErrorResponse(
+                    request,
+                    redirectUrl,
+                    "Select at least one trade to delete.",
+                    redirectAttributes,
+                    HttpStatus.BAD_REQUEST
+            );
+        }
+
+        try {
+            tradeImageService.deleteByTradeIds(ownedTradeIds);
+            int deletedCount = tradeService.deleteForUserIds(ownedTradeIds, currentUser.getId());
+            if (deletedCount <= 0) {
+                return buildDeleteErrorResponse(
+                        request,
+                        redirectUrl,
+                        "No selected trades could be deleted.",
+                        redirectAttributes,
+                        HttpStatus.BAD_REQUEST
+                );
+            }
+
+            return buildDeleteSuccessResponse(
+                    request,
+                    redirectUrl,
+                    ownedTradeIds,
+                    deletedCount == 1 ? "Deleted 1 selected trade." : "Deleted " + deletedCount + " selected trades.",
+                    redirectAttributes
+            );
+        } catch (RuntimeException ex) {
+            return buildDeleteErrorResponse(
+                    request,
+                    redirectUrl,
+                    friendlyErrorMessage(ex),
+                    redirectAttributes,
+                    HttpStatus.BAD_REQUEST
+            );
+        }
+    }
+
+    @PostMapping("/delete-filtered")
+    public Object deleteFiltered(
+            @RequestParam(value = "view", required = false) String view,
+            @RequestParam(value = "setup", required = false) String setup,
+            @RequestParam(value = "session", required = false) String sessionFilter,
+            @RequestParam(value = "symbol", required = false) String symbol,
+            @RequestParam(value = "result", required = false) String resultFilter,
+            @RequestParam(value = "mistake", required = false) String mistakeFilter,
+            @RequestParam(value = "from", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam(value = "to", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
+            HttpServletRequest request,
+            RedirectAttributes redirectAttributes,
+            HttpSession session
+    ) {
+        User currentUser = userService.getCurrentUser(session);
+        if (currentUser == null) {
+            return buildDeleteUnauthenticatedResponse(request);
+        }
+
+        TradeFilterCriteria criteria = normalizeTradeFilterCriteria(new TradeFilterCriteria(
+                view,
+                setup,
+                sessionFilter,
+                symbol,
+                resultFilter,
+                mistakeFilter,
+                from,
+                to
+        ));
+        String redirectUrl = redirectToTradeList(criteria);
+        List<String> filteredTradeIds = tradeService.findFilteredTradeIdsForUser(currentUser.getId(), criteria);
+        if (filteredTradeIds.isEmpty()) {
+            return buildDeleteErrorResponse(
+                    request,
+                    redirectUrl,
+                    "No trades match the current filters.",
+                    redirectAttributes,
+                    HttpStatus.BAD_REQUEST
+            );
+        }
+
+        try {
+            tradeImageService.deleteByTradeIds(filteredTradeIds);
+            int deletedCount = tradeService.deleteForUserIds(filteredTradeIds, currentUser.getId());
+            if (deletedCount <= 0) {
+                return buildDeleteErrorResponse(
+                        request,
+                        redirectUrl,
+                        "No filtered trades could be deleted.",
+                        redirectAttributes,
+                        HttpStatus.BAD_REQUEST
+                );
+            }
+
+            return buildDeleteSuccessResponse(
+                    request,
+                    redirectUrl,
+                    filteredTradeIds,
+                    deletedCount == 1 ? "Deleted 1 filtered trade." : "Deleted " + deletedCount + " filtered trades.",
+                    redirectAttributes
+            );
+        } catch (RuntimeException ex) {
+            return buildDeleteErrorResponse(
+                    request,
+                    redirectUrl,
+                    friendlyErrorMessage(ex),
+                    redirectAttributes,
+                    HttpStatus.BAD_REQUEST
+            );
+        }
     }
 
     private String friendlyErrorMessage(RuntimeException ex) {
@@ -608,56 +779,6 @@ public class TradeController {
             current = current.getCause();
         }
         return false;
-    }
-
-    private List<Trade> applyListFilters(
-            List<Trade> trades,
-            String setup,
-            String sessionFilter,
-            String symbol,
-            LocalDateTime from,
-            LocalDateTime to
-    ) {
-        return trades.stream()
-                .filter(trade -> matchesTextFilter(trade.getSetupName(), setup))
-                .filter(trade -> matchesTextFilter(trade.getSession(), sessionFilter))
-                .filter(trade -> matchesTextFilter(trade.getSymbol(), symbol))
-                .filter(trade -> matchesDateFilter(resolveTradeTimestamp(trade), from, to))
-                .toList();
-    }
-
-    private boolean matchesTextFilter(String value, String filter) {
-        if (filter == null || filter.isBlank() || "N/A".equalsIgnoreCase(filter)) {
-            return true;
-        }
-        if (value == null) {
-            return false;
-        }
-        return value.trim().equalsIgnoreCase(filter.trim());
-    }
-
-    private boolean matchesDateFilter(LocalDateTime timestamp, LocalDateTime from, LocalDateTime to) {
-        if (from == null && to == null) {
-            return true;
-        }
-        if (timestamp == null) {
-            return false;
-        }
-        if (from != null && timestamp.isBefore(from)) {
-            return false;
-        }
-        if (to != null && timestamp.isAfter(to)) {
-            return false;
-        }
-        return true;
-    }
-
-    private boolean hasActiveFilter(String setup, String sessionFilter, String symbol, LocalDate from, LocalDate to) {
-        return (setup != null && !setup.isBlank())
-                || (sessionFilter != null && !sessionFilter.isBlank())
-                || (symbol != null && !symbol.isBlank())
-                || from != null
-                || to != null;
     }
 
     private String buildTradeListUrl(
@@ -696,6 +817,100 @@ public class TradeController {
             builder.queryParam("to", to);
         }
         return builder.toUriString();
+    }
+
+    private String redirectToTradeList(TradeFilterCriteria criteria) {
+        TradeFilterCriteria safeCriteria = normalizeTradeFilterCriteria(criteria);
+        return "redirect:" + buildTradeListUrl(
+                safeCriteria.aiReviewedOnly() ? "ai-reviewed" : null,
+                safeCriteria.setup(),
+                safeCriteria.session(),
+                safeCriteria.symbol(),
+                safeCriteria.result(),
+                safeCriteria.mistake(),
+                safeCriteria.from(),
+                safeCriteria.to()
+        );
+    }
+
+    private TradeFilterCriteria normalizeTradeFilterCriteria(TradeFilterCriteria criteria) {
+        if (criteria == null) {
+            return new TradeFilterCriteria(null, null, null, null, null, null, null, null);
+        }
+        LocalDate from = criteria.from();
+        LocalDate to = criteria.to();
+        if (from != null && to != null && from.isAfter(to)) {
+            LocalDate temp = from;
+            from = to;
+            to = temp;
+        }
+        return new TradeFilterCriteria(
+                criteria.view(),
+                criteria.setup(),
+                criteria.session(),
+                criteria.symbol(),
+                criteria.result(),
+                criteria.mistake(),
+                from,
+                to
+        );
+    }
+
+    private Object buildDeleteSuccessResponse(
+            HttpServletRequest request,
+            String redirectUrl,
+            List<String> deletedTradeIds,
+            String successMessage,
+            RedirectAttributes redirectAttributes
+    ) {
+        if (expectsJsonResponse(request)) {
+            return ResponseEntity.ok(new DeleteTradesResponse(
+                    true,
+                    deletedTradeIds != null ? deletedTradeIds.size() : 0,
+                    deletedTradeIds != null ? List.copyOf(deletedTradeIds) : List.of(),
+                    successMessage
+            ));
+        }
+        redirectAttributes.addFlashAttribute("tradeDeleteSuccess", successMessage);
+        return redirectUrl;
+    }
+
+    private Object buildDeleteErrorResponse(
+            HttpServletRequest request,
+            String redirectUrl,
+            String errorMessage,
+            RedirectAttributes redirectAttributes,
+            HttpStatus status
+    ) {
+        if (expectsJsonResponse(request)) {
+            return ResponseEntity.status(status).body(new DeleteTradesResponse(false, 0, List.of(), errorMessage));
+        }
+        redirectAttributes.addFlashAttribute("tradeDeleteError", errorMessage);
+        return redirectUrl;
+    }
+
+    private Object buildDeleteUnauthenticatedResponse(HttpServletRequest request) {
+        if (expectsJsonResponse(request)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new DeleteTradesResponse(
+                    false,
+                    0,
+                    List.of(),
+                    "Your session expired. Refresh the page and sign in again."
+            ));
+        }
+        return "redirect:/login";
+    }
+
+    private boolean expectsJsonResponse(HttpServletRequest request) {
+        if (request == null) {
+            return false;
+        }
+        String accept = request.getHeader("Accept");
+        if (accept != null && accept.contains(MediaType.APPLICATION_JSON_VALUE)) {
+            return true;
+        }
+        String requestedWith = request.getHeader("X-Requested-With");
+        return requestedWith != null && "XMLHttpRequest".equalsIgnoreCase(requestedWith.trim());
     }
 
     private LocalDateTime resolveTradeTimestamp(Trade trade) {
@@ -945,5 +1160,13 @@ public class TradeController {
             trade.setSetup(setup);
         }
         setup.setId(setupId.trim());
+    }
+
+    private record DeleteTradesResponse(
+            boolean success,
+            int deletedCount,
+            List<String> deletedTradeIds,
+            String message
+    ) {
     }
 }

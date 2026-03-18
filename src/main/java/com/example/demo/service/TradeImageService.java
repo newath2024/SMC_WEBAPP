@@ -5,12 +5,14 @@ import com.example.demo.entity.TradeImage;
 import com.example.demo.repository.TradeImageRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.UUID;
 
@@ -74,6 +76,35 @@ public class TradeImageService {
 
         for (TradeImage image : images) {
             deletePhysicalFile(image.getImageUrl());
+        }
+    }
+
+    public void deleteByTradeIds(List<String> tradeIds) {
+        if (tradeIds == null || tradeIds.isEmpty()) {
+            return;
+        }
+
+        List<String> normalizedTradeIds = tradeIds.stream()
+                .filter(StringUtils::hasText)
+                .map(String::trim)
+                .distinct()
+                .toList();
+        if (normalizedTradeIds.isEmpty()) {
+            return;
+        }
+
+        List<TradeImage> images = tradeImageRepository.findByTradeIdIn(normalizedTradeIds);
+        tradeImageRepository.deleteByTradeIdIn(normalizedTradeIds);
+
+        LinkedHashSet<String> imageUrls = new LinkedHashSet<>();
+        for (TradeImage image : images) {
+            if (image != null && StringUtils.hasText(image.getImageUrl())) {
+                imageUrls.add(image.getImageUrl().trim());
+            }
+        }
+
+        for (String imageUrl : imageUrls) {
+            deletePhysicalFile(imageUrl);
         }
     }
 

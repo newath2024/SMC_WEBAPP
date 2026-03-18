@@ -90,6 +90,16 @@
         Add Trade is disabled for management role.
       </div>
 
+      <div class="alert alert-success py-2 mb-0" th:if="${tradeDeleteSuccess != null}" th:text="${tradeDeleteSuccess}">
+        Trades deleted successfully.
+      </div>
+
+      <div class="alert alert-danger py-2 mb-0" th:if="${tradeDeleteError != null}" th:text="${tradeDeleteError}">
+        Unable to delete trades.
+      </div>
+
+      <div id="tradeDeleteFeedback" class="alert py-2 mb-0 d-none" role="status" aria-live="polite"></div>
+
       <section class="card shadow-sm trade-table-card">
         <div class="card-body">
           <div class="trade-list-header">
@@ -178,10 +188,36 @@
             </div>
           </form>
 
+          <div id="tradeTableActions" class="trade-table-actions d-none">
+            <div id="tradeSelectionBar" class="trade-selection-bar d-none">
+              <div class="trade-selection-copy">
+                <span class="trade-selection-kicker">Selection</span>
+                <strong id="selectedTradeCountLabel" class="trade-selection-count">0 trades selected</strong>
+              </div>
+              <div class="trade-selection-actions">
+                <button id="deleteSelectedButton" class="btn btn-danger btn-sm" type="button" disabled>Delete Selected (0)</button>
+                <button id="clearTradeSelectionButton" class="btn btn-outline-secondary btn-sm" type="button">Clear Selection</button>
+              </div>
+            </div>
+
+            <div id="tradeFilterDeleteBar" class="trade-filter-delete-bar d-none">
+              <div class="trade-filter-delete-copy">
+                <span class="trade-selection-kicker">Current filter</span>
+                <strong id="filteredTradeCountLabel" class="trade-selection-count">0 trades in current filter</strong>
+              </div>
+              <button id="deleteFilteredTradesButton" class="btn btn-outline-danger btn-sm" type="button" disabled>
+                Delete All Filtered (0 trades)
+              </button>
+            </div>
+          </div>
+
           <div class="table-responsive" th:classappend="${aiReviewedView ? ' trade-table-responsive-scroll' : ''}">
             <table class="table trade-table align-middle mb-0" th:classappend="${aiReviewedView ? ' trade-ai-reviewed-table' : ''}">
               <thead>
               <tr>
+                <th class="trade-select-col">
+                  <input id="selectAllTrades" class="form-check-input" type="checkbox" aria-label="Select all visible trades">
+                </th>
                 <th>
                   <button class="trade-sort-btn" type="button" data-sort-key="date">Date <span class="trade-sort-indicator">-</span></button>
                 </th>
@@ -203,6 +239,7 @@
               <tbody id="tradeTableBody">
               <tr th:each="t : ${trades}" class="trade-row trade-data-row"
                   th:attr="data-href=@{/trades/{id}(id=${t.id})},
+                           data-trade-id=${t.id},
                            data-sort-date=${t.entryTime != null ? #temporals.format(t.entryTime, 'yyyyMMddHHmmss') : (t.tradeDate != null ? #temporals.format(t.tradeDate, 'yyyyMMddHHmmss') : (t.createdAt != null ? #temporals.format(t.createdAt, 'yyyyMMddHHmmss') : '0'))},
                            data-sort-review=${tradeAiReviewTimestamps[t.id] != null ? #temporals.format(tradeAiReviewTimestamps[t.id], 'yyyyMMddHHmmss') : '0'},
                            data-sort-pnl=${t.pnl},
@@ -215,6 +252,10 @@
                            data-result=${t.result != null ? t.result : ''},
                            data-mistakes=${aiReviewedView ? (tradeFilterMistakeValues[t.id] != null ? tradeFilterMistakeValues[t.id] : '') : (t.mistakes != null ? #strings.listJoin(t.mistakes.![name], '|') : '')},
                            data-trade-date=${t.entryTime != null ? #temporals.format(t.entryTime, 'yyyy-MM-dd') : (t.tradeDate != null ? #temporals.format(t.tradeDate, 'yyyy-MM-dd') : (t.createdAt != null ? #temporals.format(t.createdAt, 'yyyy-MM-dd') : ''))}">
+                <td class="trade-select-cell">
+                  <input class="form-check-input trade-row-checkbox" type="checkbox" th:value="${t.id}"
+                         th:attr="aria-label=${'Select trade ' + (t.symbol != null ? t.symbol : t.id)}">
+                </td>
                 <td class="trade-date-cell">
                   <div th:text="${t.entryTime != null ? #temporals.format(t.entryTime, 'dd MMM yyyy') : (t.tradeDate != null ? #temporals.format(t.tradeDate, 'dd MMM yyyy') : '-')}">10 Mar 2026</div>
                 </td>
@@ -287,7 +328,7 @@
                     <div class="trade-action-dropdown">
                       <a th:href="@{/trades/{id}(id=${t.id})}">View</a>
                       <a th:href="@{/trades/{id}/edit(id=${t.id})}">Edit</a>
-                      <form th:action="@{/trades/{id}/delete(id=${t.id})}" method="post"
+                      <form class="trade-delete-form" th:action="@{/trades/{id}/delete(id=${t.id})}" method="post"
                             onsubmit="return confirm('Delete this trade?');">
                         <button class="trade-action-delete" type="submit">Delete</button>
                       </form>
@@ -295,8 +336,8 @@
                   </details>
                 </td>
               </tr>
-              <tr id="tradeEmptyStateRow" th:if="${#lists.isEmpty(trades)}">
-                <td colspan="10" class="trade-empty-state text-center">
+              <tr id="tradeEmptyStateRow" th:classappend="${#lists.isEmpty(trades)} ? '' : ' d-none'">
+                <td colspan="11" class="trade-empty-state text-center">
                   <div class="py-4" th:if="${aiReviewedView and !hasAnyAiTradeReviews}">
                     <div class="fw-semibold mb-2">No AI-reviewed trades yet.</div>
                     <div class="text-muted">Generate AI Review from any trade detail page to unlock insights.</div>
@@ -313,7 +354,7 @@
                 </td>
               </tr>
               <tr id="tradeFilteredEmptyStateRow" class="d-none">
-                <td colspan="10" class="trade-empty-state text-center">
+                <td colspan="11" class="trade-empty-state text-center">
                   <div class="py-4">
                     <div class="fw-semibold mb-2"
                          th:text="${aiReviewedView ? 'No AI-reviewed trades match the current filters.' : 'No trades match the current filters.'}">
@@ -332,8 +373,30 @@
   </div>
 </div>
 
+<div class="modal fade" id="tradeBulkDeleteModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 id="tradeBulkDeleteModalLabel" class="modal-title">Delete Trades</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p id="tradeBulkDeleteMessage" class="mb-0">This action cannot be undone.</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+        <form id="tradeBulkDeleteForm" method="post">
+          <div id="tradeBulkDeleteInputs"></div>
+          <button type="submit" class="btn btn-danger" id="tradeBulkDeleteConfirmButton">Delete Trades</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script th:src="@{/js/sidebar-toggle.js}" src="/js/sidebar-toggle.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script th:inline="javascript">
   window.tradeListConfig = {
     aiReviewedView: /*[[${aiReviewedView}]]*/ false
@@ -369,7 +432,7 @@
   document.addEventListener('DOMContentLoaded', function () {
     const filterForm = document.querySelector('.trade-filter-bar');
     const tbody = document.getElementById('tradeTableBody');
-    const dataRows = Array.from(document.querySelectorAll('.trade-data-row'));
+    let dataRows = Array.from(document.querySelectorAll('.trade-data-row'));
     const emptyRow = document.getElementById('tradeEmptyStateRow');
     const filteredEmptyRow = document.getElementById('tradeFilteredEmptyStateRow');
     const sortButtons = Array.from(document.querySelectorAll('.trade-sort-btn'));
@@ -392,6 +455,23 @@
     const avgRMeta = document.getElementById('avgRMeta');
     const expectancyValue = document.getElementById('expectancyValue');
     const expectancyMeta = document.getElementById('expectancyMeta');
+    const tradeDeleteFeedback = document.getElementById('tradeDeleteFeedback');
+    const tableActions = document.getElementById('tradeTableActions');
+    const selectAllTrades = document.getElementById('selectAllTrades');
+    let rowCheckboxes = Array.from(document.querySelectorAll('.trade-row-checkbox'));
+    const selectionBar = document.getElementById('tradeSelectionBar');
+    const selectedTradeCountLabel = document.getElementById('selectedTradeCountLabel');
+    const deleteSelectedButton = document.getElementById('deleteSelectedButton');
+    const clearTradeSelectionButton = document.getElementById('clearTradeSelectionButton');
+    const filterDeleteBar = document.getElementById('tradeFilterDeleteBar');
+    const filteredTradeCountLabel = document.getElementById('filteredTradeCountLabel');
+    const deleteFilteredTradesButton = document.getElementById('deleteFilteredTradesButton');
+    const bulkDeleteModalElement = document.getElementById('tradeBulkDeleteModal');
+    const bulkDeleteModalLabel = document.getElementById('tradeBulkDeleteModalLabel');
+    const bulkDeleteMessage = document.getElementById('tradeBulkDeleteMessage');
+    const bulkDeleteForm = document.getElementById('tradeBulkDeleteForm');
+    const bulkDeleteInputs = document.getElementById('tradeBulkDeleteInputs');
+    const bulkDeleteConfirmButton = document.getElementById('tradeBulkDeleteConfirmButton');
     const aiReviewedView = !!(window.tradeListConfig && window.tradeListConfig.aiReviewedView);
 
     if (!filterForm || !tbody) return;
@@ -404,6 +484,11 @@
       mistakeFilter.value = searchParams.get('mistake');
     }
     let dateRangePicker = null;
+    let tradeDeleteFeedbackTimer = null;
+    const bulkDeleteModal = window.bootstrap && bulkDeleteModalElement
+      ? new window.bootstrap.Modal(bulkDeleteModalElement)
+      : null;
+    const asyncDeleteSupported = typeof window.fetch === 'function' && typeof window.FormData === 'function';
 
     function toDateInputValue(date) {
       const year = date.getFullYear();
@@ -534,6 +619,243 @@
       });
     }
 
+    function refreshTradeCollections() {
+      dataRows = Array.from(document.querySelectorAll('.trade-data-row'));
+      rowCheckboxes = Array.from(document.querySelectorAll('.trade-row-checkbox'));
+    }
+
+    function showTradeDeleteFeedback(message, tone) {
+      if (!tradeDeleteFeedback) return;
+      if (tradeDeleteFeedbackTimer) {
+        window.clearTimeout(tradeDeleteFeedbackTimer);
+        tradeDeleteFeedbackTimer = null;
+      }
+
+      tradeDeleteFeedback.classList.remove('d-none', 'alert-success', 'alert-danger', 'alert-info');
+      tradeDeleteFeedback.classList.add(tone === 'danger' ? 'alert-danger' : 'alert-success');
+      tradeDeleteFeedback.textContent = message || 'Trade action completed.';
+
+      tradeDeleteFeedbackTimer = window.setTimeout(function () {
+        tradeDeleteFeedback.classList.add('d-none');
+      }, 4500);
+    }
+
+    function setPendingState(button, isPending, pendingLabel) {
+      if (!button) return;
+      if (isPending) {
+        button.dataset.originalText = button.textContent;
+      }
+      button.disabled = !!isPending;
+      button.textContent = isPending ? pendingLabel : button.dataset.originalText;
+    }
+
+    function removeTradesFromDom(tradeIds) {
+      if (!Array.isArray(tradeIds) || !tradeIds.length) return;
+      const idsToDelete = new Set(tradeIds.filter(Boolean));
+      if (!idsToDelete.size) return;
+
+      dataRows.forEach(function (row) {
+        if (idsToDelete.has(row.dataset.tradeId)) {
+          row.remove();
+        }
+      });
+      refreshTradeCollections();
+    }
+
+    async function submitDeleteRequest(form, submitButton, pendingLabel) {
+      if (!form) {
+        throw new Error('Delete form is missing.');
+      }
+
+      setPendingState(submitButton, true, pendingLabel || 'Deleting...');
+      try {
+        const response = await fetch(form.action, {
+          method: (form.method || 'post').toUpperCase(),
+          body: new FormData(form),
+          headers: {
+            'Accept': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+          },
+          credentials: 'same-origin'
+        });
+
+        const contentType = response.headers.get('content-type') || '';
+        const payload = contentType.includes('application/json')
+          ? await response.json()
+          : null;
+        const message = payload && payload.message
+          ? payload.message
+          : (response.ok ? 'Trade delete succeeded.' : 'Unable to delete trade.');
+
+        if (!response.ok || !payload || payload.success !== true) {
+          throw new Error(message);
+        }
+
+        return payload;
+      } finally {
+        setPendingState(submitButton, false);
+      }
+    }
+
+    function getVisibleRows() {
+      return dataRows.filter(function (row) {
+        return !row.classList.contains('d-none');
+      });
+    }
+
+    function getVisibleCheckboxes() {
+      return getVisibleRows().map(function (row) {
+        return row.querySelector('.trade-row-checkbox');
+      }).filter(Boolean);
+    }
+
+    function pluralizeTrades(count) {
+      return count === 1 ? 'trade' : 'trades';
+    }
+
+    function hasActiveFilters() {
+      const symbolValue = symbolSearch && symbolSearch.value ? symbolSearch.value.trim() : '';
+      const setupValue = setupFilter && setupFilter.value ? setupFilter.value.trim() : '';
+      const sessionValue = sessionFilter && sessionFilter.value ? sessionFilter.value.trim() : '';
+      const resultValue = resultFilter && resultFilter.value ? resultFilter.value.trim() : '';
+      const mistakeValue = mistakeFilter && mistakeFilter.value ? mistakeFilter.value.trim() : '';
+      const fromValue = fromDate && fromDate.value ? fromDate.value.trim() : '';
+      const toValue = toDate && toDate.value ? toDate.value.trim() : '';
+      return !!(aiReviewedView || symbolValue || setupValue || sessionValue || resultValue || mistakeValue || fromValue || toValue);
+    }
+
+    function updateActionBarVisibility() {
+      const showSelected = !!(selectionBar && !selectionBar.classList.contains('d-none'));
+      const showFiltered = !!(filterDeleteBar && !filterDeleteBar.classList.contains('d-none'));
+      if (tableActions) {
+        tableActions.classList.toggle('d-none', !showSelected && !showFiltered);
+      }
+    }
+
+    function setSelectionCount(count) {
+      if (selectedTradeCountLabel) {
+        selectedTradeCountLabel.textContent = count + ' ' + pluralizeTrades(count) + ' selected';
+      }
+      if (selectionBar) {
+        selectionBar.classList.toggle('d-none', count === 0);
+      }
+      if (deleteSelectedButton) {
+        deleteSelectedButton.disabled = count === 0;
+        deleteSelectedButton.textContent = 'Delete Selected (' + count + ')';
+      }
+      if (clearTradeSelectionButton) {
+        clearTradeSelectionButton.classList.toggle('d-none', count === 0);
+      }
+      updateActionBarVisibility();
+    }
+
+    function updateFilteredDeleteState(visibleCount) {
+      if (filteredTradeCountLabel) {
+        filteredTradeCountLabel.textContent = visibleCount + ' ' + pluralizeTrades(visibleCount) + ' in current filter';
+      }
+      const showFilteredAction = hasActiveFilters() && visibleCount > 0;
+      if (filterDeleteBar) {
+        filterDeleteBar.classList.toggle('d-none', !showFilteredAction);
+      }
+      if (deleteFilteredTradesButton) {
+        deleteFilteredTradesButton.disabled = !showFilteredAction;
+        deleteFilteredTradesButton.textContent = 'Delete All Filtered (' + visibleCount + ' ' + pluralizeTrades(visibleCount) + ')';
+      }
+      updateActionBarVisibility();
+    }
+
+    function updateSelectedRowStyles() {
+      dataRows.forEach(function (row) {
+        const checkbox = row.querySelector('.trade-row-checkbox');
+        row.classList.toggle('is-selected', !!(checkbox && checkbox.checked));
+      });
+    }
+
+    function updateSelectionUi() {
+      const visibleCheckboxes = getVisibleCheckboxes();
+      const selectedCount = visibleCheckboxes.filter(function (checkbox) {
+        return checkbox.checked;
+      }).length;
+
+      setSelectionCount(selectedCount);
+      updateSelectedRowStyles();
+
+      if (!selectAllTrades) return;
+      selectAllTrades.disabled = visibleCheckboxes.length === 0;
+      selectAllTrades.checked = visibleCheckboxes.length > 0 && selectedCount === visibleCheckboxes.length;
+      selectAllTrades.indeterminate = selectedCount > 0 && selectedCount < visibleCheckboxes.length;
+    }
+
+    function clearHiddenSelections() {
+      dataRows.forEach(function (row) {
+        if (!row.classList.contains('d-none')) return;
+        const checkbox = row.querySelector('.trade-row-checkbox');
+        if (checkbox) {
+          checkbox.checked = false;
+        }
+      });
+    }
+
+    function appendHiddenInput(name, value) {
+      if (!bulkDeleteInputs || value === undefined || value === null || value === '') return;
+      const input = document.createElement('input');
+      input.type = 'hidden';
+      input.name = name;
+      input.value = value;
+      bulkDeleteInputs.appendChild(input);
+    }
+
+    function populateTradeFilterInputs() {
+      if (!bulkDeleteInputs) return;
+      bulkDeleteInputs.innerHTML = '';
+
+      appendHiddenInput('view', aiReviewedView ? 'ai-reviewed' : '');
+      appendHiddenInput('setup', setupFilter ? setupFilter.value : '');
+      appendHiddenInput('session', sessionFilter ? sessionFilter.value : '');
+      appendHiddenInput('symbol', symbolSearch ? symbolSearch.value.trim() : '');
+      appendHiddenInput('result', resultFilter ? resultFilter.value : '');
+      appendHiddenInput('mistake', mistakeFilter ? mistakeFilter.value : '');
+      appendHiddenInput('from', fromDate ? fromDate.value : '');
+      appendHiddenInput('to', toDate ? toDate.value : '');
+    }
+
+    function showDeleteModal(config) {
+      if (!bulkDeleteForm || !bulkDeleteMessage || !bulkDeleteConfirmButton || !bulkDeleteModalLabel) return;
+
+      bulkDeleteForm.action = config.action;
+      populateTradeFilterInputs();
+      (config.tradeIds || []).forEach(function (tradeId) {
+        appendHiddenInput('tradeIds', tradeId);
+      });
+      bulkDeleteModalLabel.textContent = config.title;
+      bulkDeleteMessage.textContent = config.message;
+      bulkDeleteConfirmButton.textContent = config.confirmLabel;
+
+      if (bulkDeleteModal) {
+        bulkDeleteModal.show();
+        return;
+      }
+
+      if (window.confirm(config.message)) {
+        bulkDeleteForm.submit();
+      }
+    }
+
+    function handleDeleteSuccess(payload) {
+      const deletedTradeIds = Array.isArray(payload && payload.deletedTradeIds)
+        ? payload.deletedTradeIds.filter(Boolean)
+        : [];
+      removeTradesFromDom(deletedTradeIds);
+      if (bulkDeleteModal) {
+        bulkDeleteModal.hide();
+      }
+      if (bulkDeleteInputs) {
+        bulkDeleteInputs.innerHTML = '';
+      }
+      showTradeDeleteFeedback(payload && payload.message ? payload.message : 'Trades deleted.', 'success');
+      applyFilters();
+    }
+
     function applyFilters() {
       const symbolValue = (symbolSearch && symbolSearch.value ? symbolSearch.value : '').trim().toUpperCase();
       const setupValue = (setupFilter && setupFilter.value ? setupFilter.value : '').trim().toUpperCase();
@@ -651,6 +973,10 @@
       if (expectancyMeta) {
         expectancyMeta.textContent = visibleKnownRWins + 'W / ' + visibleKnownRLosses + 'L with known R';
       }
+
+      clearHiddenSelections();
+      updateFilteredDeleteState(visibleCount);
+      updateSelectionUi();
     }
 
     let activeSortKey = aiReviewedView ? 'review' : 'date';
@@ -694,6 +1020,96 @@
       });
     }
 
+    rowCheckboxes.forEach(function (checkbox) {
+      checkbox.addEventListener('change', updateSelectionUi);
+    });
+
+    if (selectAllTrades) {
+      selectAllTrades.addEventListener('change', function () {
+        getVisibleCheckboxes().forEach(function (checkbox) {
+          checkbox.checked = !!selectAllTrades.checked;
+        });
+        updateSelectionUi();
+      });
+    }
+
+    if (clearTradeSelectionButton) {
+      clearTradeSelectionButton.addEventListener('click', function () {
+        rowCheckboxes.forEach(function (checkbox) {
+          checkbox.checked = false;
+        });
+        updateSelectionUi();
+      });
+    }
+
+    if (deleteSelectedButton) {
+      deleteSelectedButton.addEventListener('click', function () {
+        const selectedTradeIds = getVisibleCheckboxes().filter(function (checkbox) {
+          return checkbox.checked;
+        }).map(function (checkbox) {
+          return checkbox.value;
+        }).filter(Boolean);
+        if (!selectedTradeIds.length) return;
+
+        showDeleteModal({
+          action: '/trades/delete-selected',
+          title: 'Delete Selected Trades',
+          message: 'Are you sure you want to delete ' + selectedTradeIds.length + ' selected ' + pluralizeTrades(selectedTradeIds.length) + '? This action cannot be undone.',
+          confirmLabel: 'Delete Selected',
+          tradeIds: selectedTradeIds
+        });
+      });
+    }
+
+    if (deleteFilteredTradesButton) {
+      deleteFilteredTradesButton.addEventListener('click', function () {
+        const visibleCount = getVisibleRows().length;
+        if (!visibleCount) return;
+
+        showDeleteModal({
+          action: '/trades/delete-filtered',
+          title: 'Delete Filtered Trades',
+          message: 'This will delete all trades matching the current filters (' + visibleCount + ' ' + pluralizeTrades(visibleCount) + '). This action cannot be undone.',
+          confirmLabel: 'Delete Filtered Trades',
+          tradeIds: []
+        });
+      });
+    }
+
+    if (bulkDeleteModalElement) {
+      bulkDeleteModalElement.addEventListener('hidden.bs.modal', function () {
+        if (bulkDeleteInputs) {
+          bulkDeleteInputs.innerHTML = '';
+        }
+      });
+    }
+
+    if (bulkDeleteForm) {
+      bulkDeleteForm.addEventListener('submit', function (event) {
+        if (!asyncDeleteSupported) return;
+        event.preventDefault();
+
+        submitDeleteRequest(bulkDeleteForm, bulkDeleteConfirmButton, 'Deleting...')
+          .then(handleDeleteSuccess)
+          .catch(function (error) {
+            showTradeDeleteFeedback(error.message || 'Unable to delete trades.', 'danger');
+          });
+      });
+    }
+
+    document.addEventListener('submit', function (event) {
+      const deleteForm = event.target.closest('.trade-delete-form');
+      if (!deleteForm || !asyncDeleteSupported) return;
+
+      event.preventDefault();
+      const submitButton = deleteForm.querySelector('button[type="submit"]');
+      submitDeleteRequest(deleteForm, submitButton, 'Deleting...')
+        .then(handleDeleteSuccess)
+        .catch(function (error) {
+          showTradeDeleteFeedback(error.message || 'Unable to delete trade.', 'danger');
+        });
+    });
+
     initDateRangePicker();
     sortRows(activeSortKey, activeSortOrder);
     updateSortButtons(activeSortKey, activeSortOrder);
@@ -717,5 +1133,3 @@
 
 </body>
 </html>
-
-
