@@ -70,6 +70,7 @@ public class TradeImageService {
         }
     }
 
+    @Transactional
     public void deleteByTradeId(String tradeId) {
         List<TradeImage> images = tradeImageRepository.findByTradeIdOrderByCreatedAtAsc(tradeId);
         tradeImageRepository.deleteByTradeId(tradeId);
@@ -79,6 +80,7 @@ public class TradeImageService {
         }
     }
 
+    @Transactional
     public void deleteByTradeIds(List<String> tradeIds) {
         if (tradeIds == null || tradeIds.isEmpty()) {
             return;
