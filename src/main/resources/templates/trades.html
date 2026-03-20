@@ -667,12 +667,14 @@
         throw new Error('Delete form is missing.');
       }
 
+      const requestBody = new URLSearchParams(new FormData(form));
       setPendingState(submitButton, true, pendingLabel || 'Deleting...');
       try {
         const response = await fetch(form.action, {
           method: (form.method || 'post').toUpperCase(),
-          body: new FormData(form),
+          body: requestBody.toString(),
           headers: {
+            'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
             'Accept': 'application/json',
             'X-Requested-With': 'XMLHttpRequest'
           },
