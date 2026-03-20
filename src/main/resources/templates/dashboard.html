@@ -117,7 +117,7 @@
           <div class="metric-delta"
                th:if="${comparison != null}"
                th:classappend="${comparison.totalPnlDelta >= 0} ? ' is-positive' : ' is-negative'"
-               th:text="${comparison.totalPnlDelta >= 0 ? '▲ +' : '▼ -'} + '$' + #numbers.formatDecimal(T(java.lang.Math).abs(comparison.totalPnlDelta), 1, 2) + ' vs last period'">▲ +$0.00 vs last period</div>
+               th:text="${(comparison.totalPnlDelta >= 0 ? 'Up +$' : 'Down -$') + #numbers.formatDecimal(T(java.lang.Math).abs(comparison.totalPnlDelta), 1, 2) + ' vs last period'}">Up +$0.00 vs last period</div>
           <div class="metric-delta" th:if="${comparison == null}">All selected trades</div>
         </article>
 
@@ -127,7 +127,7 @@
           <div class="metric-delta"
                th:if="${comparison != null}"
                th:classappend="${comparison.winRateDelta >= 0} ? ' is-positive' : ' is-negative'"
-               th:text="${comparison.winRateDelta >= 0 ? '▲ +' : '▼ -'} + #numbers.formatDecimal(T(java.lang.Math).abs(comparison.winRateDelta), 1, 1) + '% vs last period'">▲ +0.0% vs last period</div>
+               th:text="${(comparison.winRateDelta >= 0 ? 'Up +' : 'Down -') + #numbers.formatDecimal(T(java.lang.Math).abs(comparison.winRateDelta), 1, 1) + '% vs last period'}">Up +0.0% vs last period</div>
           <div class="metric-delta" th:if="${comparison == null}" th:text="${overview.winTrades + ' wins out of ' + overview.totalTrades + ' trades'}">0 wins out of 0 trades</div>
         </article>
 
@@ -137,7 +137,7 @@
           <div class="metric-delta"
                th:if="${comparison != null and comparison.profitFactorDelta != null}"
                th:classappend="${comparison.profitFactorDelta >= 0} ? ' is-positive' : ' is-negative'"
-               th:text="${comparison.profitFactorDelta >= 0 ? '+' : '-'} + #numbers.formatDecimal(T(java.lang.Math).abs(comparison.profitFactorDelta), 1, 2) + ' vs last period'">+0.00 vs last period</div>
+               th:text="${(comparison.profitFactorDelta >= 0 ? '+' : '-') + #numbers.formatDecimal(T(java.lang.Math).abs(comparison.profitFactorDelta), 1, 2) + ' vs last period'}">+0.00 vs last period</div>
           <div class="metric-delta"
                th:if="${comparison == null or comparison.profitFactorDelta == null}"
                th:text="${'Expectancy ' + #numbers.formatDecimal(riskMetrics.expectancy, 1, 2)}">Expectancy 0.00</div>
