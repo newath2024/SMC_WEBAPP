@@ -11,6 +11,7 @@ import com.example.demo.repository.TradeMistakeTagRepository;
 import com.example.demo.repository.TradeRepository;
 import com.example.demo.repository.UserRepository;
 import com.example.demo.service.TradeImageService;
+import com.example.demo.service.TradeService;
 import com.example.demo.service.UserService;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.data.domain.Sort;
@@ -48,6 +49,7 @@ public class AdminController {
     private final TradeMistakeTagRepository tradeMistakeTagRepository;
     private final UserService userService;
     private final TradeImageService tradeImageService;
+    private final TradeService tradeService;
 
     public AdminController(
             UserRepository userRepository,
@@ -56,7 +58,8 @@ public class AdminController {
             MistakeTagRepository mistakeTagRepository,
             TradeMistakeTagRepository tradeMistakeTagRepository,
             UserService userService,
-            TradeImageService tradeImageService
+            TradeImageService tradeImageService,
+            TradeService tradeService
     ) {
         this.userRepository = userRepository;
         this.tradeRepository = tradeRepository;
@@ -65,6 +68,7 @@ public class AdminController {
         this.tradeMistakeTagRepository = tradeMistakeTagRepository;
         this.userService = userService;
         this.tradeImageService = tradeImageService;
+        this.tradeService = tradeService;
     }
 
     @GetMapping
@@ -545,10 +549,14 @@ public class AdminController {
         }
 
         List<Trade> userTrades = tradeRepository.findByUserIdOrderByEntryTimeDesc(target.getId());
-        for (Trade trade : userTrades) {
-            tradeImageService.deleteByTradeId(trade.getId());
+        List<String> tradeIds = userTrades.stream()
+                .map(Trade::getId)
+                .filter(Objects::nonNull)
+                .toList();
+        if (!tradeIds.isEmpty()) {
+            tradeImageService.deleteByTradeIds(tradeIds);
+            tradeService.deleteForAdminIds(tradeIds);
         }
-        tradeRepository.deleteAll(userTrades);
 
         userRepository.delete(target);
 
@@ -596,7 +604,7 @@ public class AdminController {
                 .orElseThrow(() -> new IllegalArgumentException("Trade not found: " + id));
 
         tradeImageService.deleteByTradeId(trade.getId());
-        tradeRepository.delete(trade);
+        tradeService.deleteForAdmin(trade.getId());
 
         return "redirect:/admin";
     }
