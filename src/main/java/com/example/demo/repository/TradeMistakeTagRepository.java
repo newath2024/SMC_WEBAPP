@@ -3,6 +3,7 @@ package com.example.demo.repository;
 import com.example.demo.entity.TradeMistakeTag;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -39,9 +40,13 @@ public interface TradeMistakeTagRepository extends JpaRepository<TradeMistakeTag
     @EntityGraph(attributePaths = {"trade", "mistakeTag"})
     List<TradeMistakeTag> findByTradeIdIn(List<String> tradeIds);
 
-    void deleteByTradeId(String tradeId);
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("delete from TradeMistakeTag link where link.trade.id = :tradeId")
+    void deleteByTradeId(@Param("tradeId") String tradeId);
 
-    void deleteByTradeIdIn(List<String> tradeIds);
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("delete from TradeMistakeTag link where link.trade.id in :tradeIds")
+    void deleteByTradeIdIn(@Param("tradeIds") List<String> tradeIds);
 
     void deleteByMistakeTagId(String mistakeTagId);
 

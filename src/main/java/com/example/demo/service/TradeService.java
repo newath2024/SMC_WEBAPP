@@ -227,6 +227,43 @@ public class TradeService {
     }
 
     @Transactional
+    public int deleteForAdminIds(List<String> tradeIds) {
+        List<String> normalizedTradeIds = normalizeTradeIds(tradeIds);
+        if (normalizedTradeIds.isEmpty()) {
+            return 0;
+        }
+
+        List<Trade> trades = repo.findAllById(normalizedTradeIds);
+        if (trades.isEmpty()) {
+            return 0;
+        }
+
+        List<String> existingTradeIds = trades.stream()
+                .map(Trade::getId)
+                .filter(StringUtils::hasText)
+                .toList();
+        if (existingTradeIds.isEmpty()) {
+            return 0;
+        }
+
+        Set<String> ownerUserIds = trades.stream()
+                .map(Trade::getUser)
+                .filter(Objects::nonNull)
+                .map(User::getId)
+                .filter(StringUtils::hasText)
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+
+        tradeReviewRepository.deleteByTradeIdIn(existingTradeIds);
+        tradeMistakeTagRepository.deleteByTradeIdIn(existingTradeIds);
+        repo.deleteAllByIdInBatch(existingTradeIds);
+
+        for (String ownerUserId : ownerUserIds) {
+            refreshRMultiplesForUser(ownerUserId);
+        }
+        return existingTradeIds.size();
+    }
+
+    @Transactional
     public int deleteFilteredForUser(String userId, TradeFilterCriteria criteria) {
         return deleteForUserIds(findFilteredTradeIdsForUser(userId, criteria), userId);
     }
@@ -738,4 +775,3 @@ public class TradeService {
     private record RMultipleComputation(Double value, String source) {
     }
 }
-

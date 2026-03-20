@@ -2,6 +2,9 @@ package com.example.demo.repository;
 
 import com.example.demo.entity.TradeImage;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 import java.util.Optional;
@@ -16,7 +19,11 @@ public interface TradeImageRepository extends JpaRepository<TradeImage, String> 
 
     long countByTradeUserId(String userId);
 
-    void deleteByTradeId(String tradeId);
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("delete from TradeImage image where image.trade.id = :tradeId")
+    void deleteByTradeId(@Param("tradeId") String tradeId);
 
-    void deleteByTradeIdIn(List<String> tradeIds);
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("delete from TradeImage image where image.trade.id in :tradeIds")
+    void deleteByTradeIdIn(@Param("tradeIds") List<String> tradeIds);
 }
