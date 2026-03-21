@@ -175,14 +175,17 @@
       </div>
 
       <div class="sidebar-footer">
-        <div class="sidebar-user user-pill" th:if="${currentUser != null}">
+        <a class="sidebar-user user-pill"
+           th:if="${currentUser != null}"
+           th:href="${currentUser.role != null and #strings.equalsIgnoreCase(currentUser.role, 'ADMIN')} ? @{/admin/settings} : @{/settings}"
+           aria-label="Account settings">
           <div class="sidebar-avatar" th:text="${#strings.substring(currentUser.username, 0, 1).toUpperCase()}">U</div>
           <div class="sidebar-user-copy">
             <div class="sidebar-user-name" th:text="${currentUser.username}">username</div>
             <div class="sidebar-user-role"
                  th:text="${currentUser.planType != null ? currentUser.planType.name() : (currentUser.role != null ? currentUser.role : 'Trader')}">Trader</div>
           </div>
-        </div>
+        </a>
         <form method="post" action="/logout">
           <button class="sidebar-logout-btn" type="submit">
             <i class="bi bi-box-arrow-right"></i>
