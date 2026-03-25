@@ -1,7 +1,8 @@
-package com.tradejournal.service;
+package com.tradejournal.setup.service;
 
-import com.tradejournal.entity.Setup;
-import com.tradejournal.entity.User;
+import com.tradejournal.ai.integration.TradingViewChartImportService;
+import com.tradejournal.setup.domain.Setup;
+import com.tradejournal.auth.domain.User;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 

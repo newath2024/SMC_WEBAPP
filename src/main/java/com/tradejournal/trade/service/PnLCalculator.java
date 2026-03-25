@@ -1,6 +1,7 @@
-package com.tradejournal.service;
+package com.tradejournal.trade.service;
 
-import com.tradejournal.entity.Trade;
+import com.tradejournal.trade.domain.SymbolSpec;
+import com.tradejournal.trade.domain.Trade;
 import org.springframework.stereotype.Component;
 
 import java.util.HashMap;

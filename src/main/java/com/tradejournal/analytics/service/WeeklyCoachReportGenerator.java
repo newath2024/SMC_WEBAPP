@@ -1,10 +1,11 @@
-package com.tradejournal.service;
+package com.tradejournal.analytics.service;
 
-import com.tradejournal.entity.Trade;
-import com.tradejournal.entity.TradeMistakeTag;
-import com.tradejournal.entity.TradeReview;
-import com.tradejournal.repository.TradeMistakeTagRepository;
-import com.tradejournal.repository.TradeReviewRepository;
+import com.tradejournal.trade.domain.Trade;
+import com.tradejournal.trade.domain.TradeMistakeTag;
+import com.tradejournal.trade.domain.TradeReview;
+import com.tradejournal.trade.repository.TradeMistakeTagRepository;
+import com.tradejournal.trade.repository.TradeReviewRepository;
+import com.tradejournal.trade.service.TradeService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;

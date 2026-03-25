@@ -1,10 +1,10 @@
-package com.tradejournal.service;
+package com.tradejournal.ai.service;
 
-import com.tradejournal.entity.MistakeTag;
-import com.tradejournal.entity.Trade;
-import com.tradejournal.entity.TradeImage;
-import com.tradejournal.entity.TradeReview;
-import com.tradejournal.repository.TradeReviewRepository;
+import com.tradejournal.mistake.domain.MistakeTag;
+import com.tradejournal.trade.domain.Trade;
+import com.tradejournal.trade.domain.TradeImage;
+import com.tradejournal.trade.domain.TradeReview;
+import com.tradejournal.trade.repository.TradeReviewRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;

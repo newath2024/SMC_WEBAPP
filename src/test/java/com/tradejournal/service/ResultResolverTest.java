@@ -1,5 +1,7 @@
 package com.tradejournal.service;
 
+import com.tradejournal.ai.integration.TradingViewChartImportService;
+import com.tradejournal.trade.service.ResultResolver;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;

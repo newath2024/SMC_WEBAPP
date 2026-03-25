@@ -1,12 +1,12 @@
-package com.tradejournal.controller;
+package com.tradejournal.analytics.controller;
 
-import com.tradejournal.entity.Trade;
-import com.tradejournal.entity.User;
-import com.tradejournal.repository.TradeReviewRepository;
-import com.tradejournal.repository.UserRepository;
-import com.tradejournal.service.AnalyticsService;
-import com.tradejournal.service.UserService;
-import com.tradejournal.service.WeeklyCoachReportGenerator;
+import com.tradejournal.trade.domain.Trade;
+import com.tradejournal.auth.domain.User;
+import com.tradejournal.trade.repository.TradeReviewRepository;
+import com.tradejournal.auth.repository.UserRepository;
+import com.tradejournal.analytics.service.AnalyticsService;
+import com.tradejournal.auth.service.UserService;
+import com.tradejournal.analytics.service.WeeklyCoachReportGenerator;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;

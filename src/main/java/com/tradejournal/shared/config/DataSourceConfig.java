@@ -1,4 +1,4 @@
-package com.tradejournal.config;
+package com.tradejournal.shared.config;
 
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;

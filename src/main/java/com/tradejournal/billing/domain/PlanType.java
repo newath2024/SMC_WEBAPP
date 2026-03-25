@@ -1,4 +1,4 @@
-package com.tradejournal.entity;
+package com.tradejournal.billing.domain;
 
 public enum PlanType {
     STANDARD,

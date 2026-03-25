@@ -1,5 +1,6 @@
-package com.tradejournal.entity;
+package com.tradejournal.trade.domain;
 
+import com.tradejournal.mistake.domain.MistakeTag;
 import jakarta.persistence.*;
 
 import java.time.LocalDateTime;

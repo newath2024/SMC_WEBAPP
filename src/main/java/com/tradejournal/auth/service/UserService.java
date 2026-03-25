@@ -1,12 +1,12 @@
-package com.tradejournal.service;
+package com.tradejournal.auth.service;
 
-import com.tradejournal.entity.PlanType;
-import com.tradejournal.entity.User;
-import com.tradejournal.repository.UserRepository;
+import com.tradejournal.billing.domain.PlanType;
+import com.tradejournal.auth.domain.User;
+import com.tradejournal.auth.repository.UserRepository;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.stereotype.Service;
 
-import static com.tradejournal.controller.AuthController.SESSION_USER_ID;
+import static com.tradejournal.auth.controller.AuthController.SESSION_USER_ID;
 
 @Service
 public class UserService {

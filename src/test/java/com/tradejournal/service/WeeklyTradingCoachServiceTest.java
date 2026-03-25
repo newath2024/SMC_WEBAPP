@@ -1,10 +1,12 @@
 package com.tradejournal.service;
 
-import com.tradejournal.entity.Setup;
-import com.tradejournal.entity.Trade;
-import com.tradejournal.entity.TradeReview;
-import com.tradejournal.repository.TradeMistakeTagRepository;
-import com.tradejournal.repository.TradeReviewRepository;
+import com.tradejournal.analytics.service.WeeklyCoachReportGenerator;
+import com.tradejournal.setup.domain.Setup;
+import com.tradejournal.trade.domain.Trade;
+import com.tradejournal.trade.domain.TradeReview;
+import com.tradejournal.trade.repository.TradeMistakeTagRepository;
+import com.tradejournal.trade.repository.TradeReviewRepository;
+import com.tradejournal.trade.service.TradeService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;

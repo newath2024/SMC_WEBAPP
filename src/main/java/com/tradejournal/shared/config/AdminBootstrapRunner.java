@@ -1,8 +1,8 @@
-package com.tradejournal.config;
+package com.tradejournal.shared.config;
 
-import com.tradejournal.entity.PlanType;
-import com.tradejournal.entity.User;
-import com.tradejournal.repository.UserRepository;
+import com.tradejournal.billing.domain.PlanType;
+import com.tradejournal.auth.domain.User;
+import com.tradejournal.auth.repository.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.ApplicationArguments;

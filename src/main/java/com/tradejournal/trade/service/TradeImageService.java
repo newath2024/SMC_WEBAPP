@@ -1,8 +1,8 @@
-package com.tradejournal.service;
+package com.tradejournal.trade.service;
 
-import com.tradejournal.entity.Trade;
-import com.tradejournal.entity.TradeImage;
-import com.tradejournal.repository.TradeImageRepository;
+import com.tradejournal.trade.domain.Trade;
+import com.tradejournal.trade.domain.TradeImage;
+import com.tradejournal.trade.repository.TradeImageRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;

@@ -1,6 +1,6 @@
-package com.tradejournal.repository;
+package com.tradejournal.billing.repository;
 
-import com.tradejournal.entity.BillingInvoice;
+import com.tradejournal.billing.domain.BillingInvoice;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;

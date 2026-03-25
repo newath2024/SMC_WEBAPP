@@ -1,13 +1,13 @@
-package com.tradejournal.controller;
+package com.tradejournal.ai.controller;
 
-import com.tradejournal.entity.Setup;
-import com.tradejournal.entity.User;
-import com.tradejournal.service.HoldingTimeResolver;
-import com.tradejournal.service.ResultResolver;
-import com.tradejournal.service.SetupMatcher;
-import com.tradejournal.service.SetupService;
-import com.tradejournal.service.TradingViewChartImportService;
-import com.tradejournal.service.UserService;
+import com.tradejournal.setup.domain.Setup;
+import com.tradejournal.auth.domain.User;
+import com.tradejournal.trade.service.HoldingTimeResolver;
+import com.tradejournal.trade.service.ResultResolver;
+import com.tradejournal.setup.service.SetupMatcher;
+import com.tradejournal.setup.service.SetupService;
+import com.tradejournal.ai.integration.TradingViewChartImportService;
+import com.tradejournal.auth.service.UserService;
 import jakarta.servlet.http.HttpSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

@@ -1,5 +1,6 @@
-package com.tradejournal.service;
+package com.tradejournal.trade.service;
 
+import com.tradejournal.ai.integration.TradingViewChartImportService;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 

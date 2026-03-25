@@ -1,6 +1,6 @@
-package com.tradejournal.repository;
+package com.tradejournal.mistake.repository;
 
-import com.tradejournal.entity.MistakeTag;
+import com.tradejournal.mistake.domain.MistakeTag;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;

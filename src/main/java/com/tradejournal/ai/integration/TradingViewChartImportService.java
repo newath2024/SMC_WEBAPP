@@ -1,4 +1,4 @@
-package com.tradejournal.service;
+package com.tradejournal.ai.integration;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -630,7 +630,7 @@ public class TradingViewChartImportService {
         );
     }
 
-    static Double parseVisiblePrice(String value) {
+    public static Double parseVisiblePrice(String value) {
         if (!StringUtils.hasText(value)) {
             return null;
         }

@@ -1,8 +1,8 @@
-package com.tradejournal.service;
+package com.tradejournal.auth.service;
 
-import com.tradejournal.entity.PlanType;
-import com.tradejournal.entity.User;
-import com.tradejournal.repository.UserRepository;
+import com.tradejournal.billing.domain.PlanType;
+import com.tradejournal.auth.domain.User;
+import com.tradejournal.auth.repository.UserRepository;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 

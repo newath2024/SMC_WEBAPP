@@ -1,6 +1,6 @@
-package com.tradejournal.repository;
+package com.tradejournal.trade.repository;
 
-import com.tradejournal.entity.TradeReview;
+import com.tradejournal.trade.domain.TradeReview;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;

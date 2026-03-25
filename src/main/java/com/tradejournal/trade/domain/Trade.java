@@ -1,5 +1,8 @@
-package com.tradejournal.entity;
+package com.tradejournal.trade.domain;
 
+import com.tradejournal.auth.domain.User;
+import com.tradejournal.mistake.domain.MistakeTag;
+import com.tradejournal.setup.domain.Setup;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;

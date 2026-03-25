@@ -1,10 +1,11 @@
-package com.tradejournal.service;
+package com.tradejournal.trade.service;
 
-import com.tradejournal.entity.Setup;
-import com.tradejournal.entity.Trade;
-import com.tradejournal.entity.User;
-import com.tradejournal.repository.SetupRepository;
-import com.tradejournal.repository.TradeRepository;
+import com.tradejournal.auth.service.UserService;
+import com.tradejournal.setup.domain.Setup;
+import com.tradejournal.trade.domain.Trade;
+import com.tradejournal.auth.domain.User;
+import com.tradejournal.setup.repository.SetupRepository;
+import com.tradejournal.trade.repository.TradeRepository;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.DataFormatter;
 import org.apache.poi.ss.usermodel.Row;

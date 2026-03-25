@@ -1,8 +1,8 @@
-package com.tradejournal.controller;
+package com.tradejournal.auth.controller;
 
-import com.tradejournal.entity.User;
-import com.tradejournal.service.AuthService;
-import com.tradejournal.service.UserService;
+import com.tradejournal.auth.domain.User;
+import com.tradejournal.auth.service.AuthService;
+import com.tradejournal.auth.service.UserService;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;

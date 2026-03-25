@@ -1,6 +1,6 @@
-package com.tradejournal.repository;
+package com.tradejournal.auth.repository;
 
-import com.tradejournal.entity.User;
+import com.tradejournal.auth.domain.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;
