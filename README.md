@@ -1,131 +1,108 @@
 # TradeJournal
 
-TradeJournal la ung dung web ghi nhat ky giao dich duoc xay bang Spring Boot + Thymeleaf. Muc tieu cua app la giup trader luu trade, review qua trinh, theo doi hieu suat, nhan AI insight, va quan ly tai khoan tren cung mot workspace.
+TradeJournal is a Spring Boot + Thymeleaf trading journal application for logging trades, reviewing execution quality, tracking analytics, managing billing, and using AI-assisted screenshot import and trade review.
 
-## Tong quan nhanh
-
-- Quan ly trade, setup, mistake tag va hinh anh trade.
-- Dashboard, analytics, reports va weekly coach report de theo doi performance.
-- AI screenshot import tu TradingView khi co `OPENAI_API_KEY`.
-- AI review cho trade detail de danh gia process va quality.
-- Billing, settings, export du lieu va xoa tai khoan.
-- Khu admin rieng cho user management, analytics, billing va reports.
-
-## Cong nghe chinh
+## Stack
 
 - Java 21
 - Spring Boot 4
 - Spring MVC + Thymeleaf
-- Spring Data JPA / Hibernate
-- SQLite cho local profile
-- PostgreSQL cho moi truong deploy / default profile
-- Bootstrap, Chart.js
-- OpenAI API cho screenshot import va AI review
+- Spring Data JPA
+- PostgreSQL for deployed environments
+- SQLite for local profile
+- OpenAI API for screenshot import and AI review
 
-## Cac khu chuc nang chinh
-
-- `Auth`: login, register, logout
-- `Trades`: tao/sua/xoa trade, import trade, upload hinh anh, trade detail
-- `Analytics`: dashboard, analytics page, reports, weekly coaching report
-- `Setups` va `Mistakes`: quan ly setup va loi giao dich
-- `Settings`: profile, password, preferences, notifications, export, delete account
-- `Billing`: plan, invoices, webhook Stripe
-- `Admin`: dashboard, users, billing, analytics, reports, settings
-
-## Chay local
-
-### Yeu cau
-
-- Java 21
-- Maven wrapper co san trong repo
-
-### Cach chay nhanh
-
-1. Tao file env local:
-
-```powershell
-Copy-Item .env.local.example .env.local
-```
-
-2. Cap nhat bien moi truong trong `.env.local`.
-
-- `OPENAI_API_KEY` la optional. Neu khong co thi cac tinh nang AI se bi tat.
-
-3. Chay app:
-
-```powershell
-./run-local.ps1
-```
-
-4. Mo trinh duyet:
+## Module Layout
 
 ```text
-http://localhost:8082
+src/main/java/com/tradejournal
+  shared/config
+  auth
+  trade
+  analytics
+  setup
+  mistake
+  settings
+  billing
+  admin
+  ai
 ```
 
-`run-local.ps1` se:
+The repository is organized as a modular monolith. Controllers stay thin, persistence remains in repositories, and feature logic is grouped by business domain instead of a global layer-first layout.
 
-- Nap bien trong `.env.local`
-- Bat profile `local`
-- Dat port mac dinh `8082` neu chua khai bao
-- Chay `mvnw.cmd spring-boot:run`
+## Profiles
 
-## Cau hinh moi truong
+- `local`: SQLite at `data/trading_journal.db`, default port `8082`
+- `prod`: PostgreSQL from environment variables, default port `8081`
 
-### Local profile
+Config files live under `src/main/resources`:
 
-- File cau hinh: `src/main/resources/application-local.yml`
-- DB local: `data/trading_journal.db`
-- Port mac dinh: `8082`
-- Database: SQLite
+- `application.yml`
+- `application-local.yml`
+- `application-prod.yml`
 
-### Default / deploy profile
+## Local Run
 
-- File cau hinh: `src/main/resources/application.properties`
-- Database mac dinh: PostgreSQL qua env vars
-- Port mac dinh: `PORT` hoac fallback `8081`
+Requirements:
 
-### Bien moi truong quan trong
+- Java 21
+- Maven wrapper included in the repo
 
-- `OPENAI_API_KEY`: bat AI screenshot import va AI review
-- `OPENAI_BASE_URL`: custom OpenAI-compatible endpoint neu can
-- `BILLING_WEBHOOK_SECRET`: xac thuc webhook billing
+Run with the local profile:
+
+```powershell
+$env:SPRING_PROFILES_ACTIVE='local'
+./mvnw.cmd spring-boot:run
+```
+
+Open `http://localhost:8082`.
+
+## Environment Variables
+
+- `SPRING_PROFILES_ACTIVE`
 - `SPRING_DATASOURCE_URL`
 - `SPRING_DATASOURCE_USERNAME`
 - `SPRING_DATASOURCE_PASSWORD`
+- `DATABASE_URL`
+- `DB_SSL_MODE`
+- `OPENAI_API_KEY`
+- `OPENAI_BASE_URL`
+- `OPENAI_TRADE_CHART_MODEL`
+- `OPENAI_TRADE_REVIEW_MODEL`
+- `BILLING_WEBHOOK_SECRET`
+- `ADMIN_EMAIL`
+- `ADMIN_USERNAME`
+- `ADMIN_PASSWORD`
 - `LOCAL_SERVER_PORT`
-- `ADMIN_EMAIL`, `ADMIN_USERNAME`, `ADMIN_PASSWORD`: bootstrap admin account
 
-## Lenh huu ich
+## AI Features
+
+- Screenshot import requires `OPENAI_API_KEY`
+- AI review requires `OPENAI_API_KEY`
+- If AI is not configured, the rest of the app still works and AI actions should fail gracefully
+
+## Billing / Webhooks
+
+- Stripe-style webhook endpoint: `/webhooks/stripe`
+- Protect production webhooks with `BILLING_WEBHOOK_SECRET`
+- Review billing plan mapping and invoice semantics before enabling live billing
+
+## Tests
+
+Compile:
+
+```powershell
+./mvnw.cmd -DskipTests compile
+```
+
+Run tests:
 
 ```powershell
 ./mvnw.cmd test
-./mvnw.cmd -DskipTests compile
-./mvnw.cmd package
 ```
 
-## Cau truc thu muc
+## Notes
 
-```text
-src/main/java/com/example/demo
-  controller/   MVC controllers va API endpoints
-  service/      business logic, analytics, AI, billing, settings
-  entity/       JPA entities
-  repository/   Spring Data repositories
-  config/       datasource, bootstrap, web config
-
-src/main/resources
-  templates/    Thymeleaf pages
-  static/       CSS, JS, images
-  application.properties
-  application-local.yml
-
-data/
-  trading_journal.db   SQLite local database
-```
-
-## Ghi chu
-
-- `.env.local` nen giu tren may local va khong commit secret.
-- Neu khong set `OPENAI_API_KEY`, app van chay binh thuong nhung cac tinh nang AI se khong hoat dong.
-- README nay la ban tom tat so bo; co the mo rong them setup deploy, test flow, database schema, va user roles sau.
+- Do not commit `.m2`, `target`, local database files, or secrets
+- Local runtime data stays under `data/`
+- The refactor keeps Thymeleaf templates and existing routes in place
