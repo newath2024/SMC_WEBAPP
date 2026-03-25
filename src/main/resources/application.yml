@@ -1,0 +1,28 @@
+spring:
+  application:
+    name: tradejournal
+  profiles:
+    default: local
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 30MB
+
+server:
+  port: ${PORT:8081}
+  tomcat:
+    max-http-form-post-size: 30MB
+
+spring.jpa.hibernate.ddl-auto: update
+
+billing:
+  webhook:
+    secret: ${BILLING_WEBHOOK_SECRET:}
+
+openai:
+  api-key: ${OPENAI_API_KEY:}
+  base-url: ${OPENAI_BASE_URL:https://api.openai.com/v1}
+  trade-chart-model: ${OPENAI_TRADE_CHART_MODEL:gpt-4.1}
+  trade-chart-timeout-seconds: ${OPENAI_TRADE_CHART_TIMEOUT_SECONDS:60}
+  trade-review-model: ${OPENAI_TRADE_REVIEW_MODEL:gpt-4.1-mini}
+  trade-review-timeout-seconds: ${OPENAI_TRADE_REVIEW_TIMEOUT_SECONDS:90}
