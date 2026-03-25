@@ -12,8 +12,8 @@
 	<groupId>com.tradejournal</groupId>
 	<artifactId>tradejournal</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name>tradejournal</name>
-	<description>TradeJournal modular monolith for journaling, analytics, coaching, billing, and AI-assisted trade review.</description>
+	<name>TradeJournal</name>
+	<description>Trading journal web application with analytics, AI review, and coaching features</description>
 
 	<properties>
 		<java.version>21</java.version>

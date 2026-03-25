@@ -2,6 +2,9 @@
 
 TradeJournal is a Spring Boot + Thymeleaf trading journal application for logging trades, reviewing execution quality, tracking analytics, managing billing, and using AI-assisted screenshot import and trade review.
 
+- Maven coordinates: `com.tradejournal:tradejournal`
+- Root Java package: `com.tradejournal`
+
 ## Stack
 
 - Java 21
@@ -16,6 +19,7 @@ TradeJournal is a Spring Boot + Thymeleaf trading journal application for loggin
 
 ```text
 src/main/java/com/tradejournal
+  TradeJournalApplication.java
   shared/config
   auth
   trade
@@ -48,12 +52,13 @@ Requirements:
 - Java 21
 - Maven wrapper included in the repo
 
-Run with the local profile:
+Run locally:
 
 ```powershell
-$env:SPRING_PROFILES_ACTIVE='local'
 ./mvnw.cmd spring-boot:run
 ```
+
+The default profile is `local`, so the command above starts the app against SQLite by default.
 
 Open `http://localhost:8082`.
 
@@ -63,8 +68,6 @@ Open `http://localhost:8082`.
 - `SPRING_DATASOURCE_URL`
 - `SPRING_DATASOURCE_USERNAME`
 - `SPRING_DATASOURCE_PASSWORD`
-- `DATABASE_URL`
-- `DB_SSL_MODE`
 - `OPENAI_API_KEY`
 - `OPENAI_BASE_URL`
 - `OPENAI_TRADE_CHART_MODEL`
