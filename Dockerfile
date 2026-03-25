@@ -12,7 +12,7 @@ RUN ./mvnw -q clean package -DskipTests
 FROM eclipse-temurin:21-jre-jammy
 WORKDIR /app
 
-COPY --from=build /workspace/target/demo-0.0.1-SNAPSHOT.jar app.jar
+COPY --from=build /workspace/target/tradejournal-0.0.1-SNAPSHOT.jar app.jar
 
 RUN mkdir -p /app/data/uploads
 
