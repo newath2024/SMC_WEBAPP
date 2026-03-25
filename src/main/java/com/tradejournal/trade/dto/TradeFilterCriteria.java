@@ -1,4 +1,4 @@
-package com.tradejournal.service;
+package com.tradejournal.trade.dto;
 
 import org.springframework.util.StringUtils;
 

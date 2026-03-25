@@ -1,7 +1,10 @@
 package com.tradejournal.service;
 
-import com.tradejournal.entity.Setup;
-import com.tradejournal.entity.User;
+import com.tradejournal.ai.integration.TradingViewChartImportService;
+import com.tradejournal.setup.domain.Setup;
+import com.tradejournal.setup.service.SetupMatcher;
+import com.tradejournal.setup.service.SetupService;
+import com.tradejournal.auth.domain.User;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;

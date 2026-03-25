@@ -1,17 +1,17 @@
 package com.tradejournal.controller;
 
-import com.tradejournal.entity.MistakeTag;
-import com.tradejournal.entity.Trade;
-import com.tradejournal.entity.TradeImage;
-import com.tradejournal.entity.TradeMistakeTag;
-import com.tradejournal.entity.TradeReview;
-import com.tradejournal.entity.User;
-import com.tradejournal.repository.MistakeTagRepository;
-import com.tradejournal.repository.TradeImageRepository;
-import com.tradejournal.repository.TradeMistakeTagRepository;
-import com.tradejournal.repository.TradeRepository;
-import com.tradejournal.repository.TradeReviewRepository;
-import com.tradejournal.repository.UserRepository;
+import com.tradejournal.mistake.domain.MistakeTag;
+import com.tradejournal.trade.domain.Trade;
+import com.tradejournal.trade.domain.TradeImage;
+import com.tradejournal.trade.domain.TradeMistakeTag;
+import com.tradejournal.trade.domain.TradeReview;
+import com.tradejournal.auth.domain.User;
+import com.tradejournal.mistake.repository.MistakeTagRepository;
+import com.tradejournal.trade.repository.TradeImageRepository;
+import com.tradejournal.trade.repository.TradeMistakeTagRepository;
+import com.tradejournal.trade.repository.TradeRepository;
+import com.tradejournal.trade.repository.TradeReviewRepository;
+import com.tradejournal.auth.repository.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,7 +30,7 @@ import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
 
-import static com.tradejournal.controller.AuthController.SESSION_USER_ID;
+import static com.tradejournal.auth.controller.AuthController.SESSION_USER_ID;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;

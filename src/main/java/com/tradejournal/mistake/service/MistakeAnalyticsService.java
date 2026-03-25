@@ -1,9 +1,10 @@
-package com.tradejournal.service;
+package com.tradejournal.mistake.service;
 
-import com.tradejournal.entity.MistakeTag;
-import com.tradejournal.entity.Trade;
-import com.tradejournal.entity.TradeReview;
-import com.tradejournal.repository.TradeReviewRepository;
+import com.tradejournal.mistake.domain.MistakeTag;
+import com.tradejournal.trade.domain.Trade;
+import com.tradejournal.trade.domain.TradeReview;
+import com.tradejournal.trade.repository.TradeReviewRepository;
+import com.tradejournal.trade.service.TradeService;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -96,7 +97,7 @@ public class MistakeAnalyticsService {
             Map<String, String> combinedMistakes = resolveCombinedMistakes(trade, reviewByTradeId.get(trade.getId()));
             combinedMistakes.forEach((key, label) -> {
                 labels.putIfAbsent(key, label);
-                counts.merge(key, 1L, Long::sum);
+                counts.merge(key, 1L, (current, increment) -> current + increment);
             });
         }
 

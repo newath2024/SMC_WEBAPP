@@ -1,4 +1,4 @@
-package com.tradejournal.service;
+package com.tradejournal.trade.domain;
 
 public class SymbolSpec {
     private final String symbol;

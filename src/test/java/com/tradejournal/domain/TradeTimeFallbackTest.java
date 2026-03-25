@@ -1,5 +1,6 @@
-package com.tradejournal.entity;
+package com.tradejournal.domain;
 
+import com.tradejournal.trade.domain.Trade;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDateTime;

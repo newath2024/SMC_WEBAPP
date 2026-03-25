@@ -1,11 +1,11 @@
-package com.tradejournal.controller;
+package com.tradejournal.trade.controller;
 
-import com.tradejournal.entity.Trade;
-import com.tradejournal.entity.User;
-import com.tradejournal.entity.TradeImage;
-import com.tradejournal.service.TradeImageService;
-import com.tradejournal.service.TradeService;
-import com.tradejournal.service.UserService;
+import com.tradejournal.trade.domain.Trade;
+import com.tradejournal.auth.domain.User;
+import com.tradejournal.trade.domain.TradeImage;
+import com.tradejournal.trade.service.TradeImageService;
+import com.tradejournal.trade.service.TradeService;
+import com.tradejournal.auth.service.UserService;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;

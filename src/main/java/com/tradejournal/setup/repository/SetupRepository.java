@@ -1,6 +1,6 @@
-package com.tradejournal.repository;
+package com.tradejournal.setup.repository;
 
-import com.tradejournal.entity.Setup;
+import com.tradejournal.setup.domain.Setup;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;

@@ -1,10 +1,10 @@
 package com.tradejournal.controller;
 
-import com.tradejournal.entity.PlanType;
-import com.tradejournal.entity.Trade;
-import com.tradejournal.entity.User;
-import com.tradejournal.repository.TradeRepository;
-import com.tradejournal.repository.UserRepository;
+import com.tradejournal.billing.domain.PlanType;
+import com.tradejournal.trade.domain.Trade;
+import com.tradejournal.auth.domain.User;
+import com.tradejournal.trade.repository.TradeRepository;
+import com.tradejournal.auth.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,7 +24,7 @@ import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
 import java.util.List;
 
-import static com.tradejournal.controller.AuthController.SESSION_USER_ID;
+import static com.tradejournal.auth.controller.AuthController.SESSION_USER_ID;
 import static org.hamcrest.Matchers.containsString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;

@@ -1,10 +1,11 @@
-package com.tradejournal.service;
+package com.tradejournal.analytics.service;
 
-import com.tradejournal.entity.Trade;
-import com.tradejournal.entity.TradeMistakeTag;
-import com.tradejournal.entity.TradeReview;
-import com.tradejournal.repository.TradeMistakeTagRepository;
-import com.tradejournal.repository.TradeReviewRepository;
+import com.tradejournal.trade.domain.Trade;
+import com.tradejournal.trade.domain.TradeMistakeTag;
+import com.tradejournal.trade.domain.TradeReview;
+import com.tradejournal.trade.repository.TradeMistakeTagRepository;
+import com.tradejournal.trade.repository.TradeReviewRepository;
+import com.tradejournal.trade.service.TradeService;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.json.JsonMapper;

@@ -1,8 +1,8 @@
-package com.tradejournal.service;
+package com.tradejournal.mistake.service;
 
-import com.tradejournal.entity.MistakeTag;
-import com.tradejournal.repository.MistakeTagRepository;
-import com.tradejournal.repository.TradeMistakeTagRepository;
+import com.tradejournal.mistake.domain.MistakeTag;
+import com.tradejournal.mistake.repository.MistakeTagRepository;
+import com.tradejournal.trade.repository.TradeMistakeTagRepository;
 import org.springframework.dao.CannotAcquireLockException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

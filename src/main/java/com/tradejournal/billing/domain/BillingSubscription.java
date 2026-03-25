@@ -1,5 +1,6 @@
-package com.tradejournal.entity;
+package com.tradejournal.billing.domain;
 
+import com.tradejournal.auth.domain.User;
 import jakarta.persistence.*;
 
 import java.time.LocalDate;

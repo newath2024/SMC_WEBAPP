@@ -1,11 +1,11 @@
-package com.tradejournal.controller;
+package com.tradejournal.mistake.controller;
 
-import com.tradejournal.entity.MistakeTag;
-import com.tradejournal.repository.TradeMistakeTagRepository;
-import com.tradejournal.entity.User;
-import com.tradejournal.service.MistakeAnalyticsService;
-import com.tradejournal.service.MistakeTagService;
-import com.tradejournal.service.UserService;
+import com.tradejournal.mistake.domain.MistakeTag;
+import com.tradejournal.trade.repository.TradeMistakeTagRepository;
+import com.tradejournal.auth.domain.User;
+import com.tradejournal.mistake.service.MistakeAnalyticsService;
+import com.tradejournal.mistake.service.MistakeTagService;
+import com.tradejournal.auth.service.UserService;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;

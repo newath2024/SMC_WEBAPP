@@ -1,7 +1,7 @@
-package com.tradejournal.service;
+package com.tradejournal.settings.service;
 
-import com.tradejournal.entity.User;
-import com.tradejournal.repository.UserRepository;
+import com.tradejournal.auth.domain.User;
+import com.tradejournal.auth.repository.UserRepository;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;

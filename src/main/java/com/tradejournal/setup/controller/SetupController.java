@@ -1,10 +1,10 @@
-package com.tradejournal.controller;
+package com.tradejournal.setup.controller;
 
-import com.tradejournal.entity.Setup;
-import com.tradejournal.entity.User;
-import com.tradejournal.repository.TradeRepository;
-import com.tradejournal.service.SetupService;
-import com.tradejournal.service.UserService;
+import com.tradejournal.setup.domain.Setup;
+import com.tradejournal.auth.domain.User;
+import com.tradejournal.trade.repository.TradeRepository;
+import com.tradejournal.setup.service.SetupService;
+import com.tradejournal.auth.service.UserService;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;

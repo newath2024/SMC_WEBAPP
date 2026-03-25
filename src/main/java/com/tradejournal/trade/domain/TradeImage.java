@@ -1,4 +1,4 @@
-package com.tradejournal.entity;
+package com.tradejournal.trade.domain;
 
 import jakarta.persistence.*;
 

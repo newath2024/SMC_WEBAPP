@@ -1,5 +1,6 @@
-package com.tradejournal.entity;
+package com.tradejournal.auth.domain;
 
+import com.tradejournal.billing.domain.PlanType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;

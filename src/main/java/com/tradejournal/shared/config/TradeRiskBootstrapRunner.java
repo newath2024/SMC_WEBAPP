@@ -1,6 +1,6 @@
-package com.tradejournal.config;
+package com.tradejournal.shared.config;
 
-import com.tradejournal.service.TradeService;
+import com.tradejournal.trade.service.TradeService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.ApplicationArguments;
