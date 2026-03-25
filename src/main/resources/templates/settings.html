@@ -21,352 +21,572 @@
     <aside th:replace="~{fragments/sidebar :: appSidebar('settings', @{/dashboard/export.csv(period='ALL')})}"></aside>
 
     <main class="main-content settings-main">
-      <section class="card settings-hero shadow-sm border-0">
-        <div class="card-body">
-          <div class="d-flex flex-column flex-xl-row justify-content-between align-items-xl-center gap-3">
-            <div>
-              <span class="settings-kicker"><i class="bi bi-sliders2-vertical me-1"></i>Account workspace</span>
-              <h1 class="settings-title mt-3 mb-2">User Settings</h1>
-              <p class="settings-copy mb-0">Manage your profile, password, trading defaults, notifications, and privacy controls from one clean workspace.</p>
-            </div>
-            <div class="settings-hero-panel">
-              <div class="hero-panel-label">Workspace plan</div>
-              <div class="hero-panel-value" th:text="${settingsPlanLabel}">Pro Plan</div>
-              <div class="hero-panel-meta">
-                <span>Member since</span>
-                <strong th:text="${memberSince}">Mar 2026</strong>
-              </div>
-              <div class="hero-panel-meta">
-                <span>Login email</span>
-                <strong th:text="${currentUser.email}">user@example.com</strong>
-              </div>
-            </div>
+      <section class="settings-overview">
+        <div class="settings-overview-copy">
+          <span class="settings-kicker"><i class="bi bi-sliders2 me-1"></i>Account workspace</span>
+          <h1 class="settings-title">Settings</h1>
+          <p class="settings-copy">A tighter control surface for your account, security, journaling defaults, and notifications.</p>
+        </div>
+        <div class="settings-overview-meta">
+          <div class="overview-stat">
+            <span>Plan</span>
+            <strong th:text="${settingsPlanLabel}">Pro Plan</strong>
+          </div>
+          <div class="overview-stat">
+            <span>Member since</span>
+            <strong th:text="${memberSince}">Mar 2026</strong>
+          </div>
+          <div class="overview-stat">
+            <span>Email</span>
+            <strong th:text="${currentUser.email}">user@example.com</strong>
           </div>
         </div>
       </section>
 
-      <section class="row g-3">
-        <div class="col-12 col-xxl-7">
-          <article id="profile-card" class="card shadow-sm border-0 settings-card h-100">
-            <div class="card-header bg-transparent border-0 pb-0">
-              <div class="d-flex flex-wrap justify-content-between align-items-start gap-2">
+      <section class="settings-workspace" data-settings-workspace th:attr="data-initial-section=${'profile'}">
+        <aside class="settings-nav-shell">
+          <div class="settings-nav-label">Settings</div>
+          <nav class="settings-nav" aria-label="Settings sections">
+            <button class="settings-nav-item is-active" type="button" data-section-trigger="profile">
+              <span class="settings-nav-icon"><i class="bi bi-person"></i></span>
+              <span class="settings-nav-copy">
+                <strong>Profile</strong>
+                <small>Identity and exports</small>
+              </span>
+            </button>
+            <button class="settings-nav-item" type="button" data-section-trigger="security">
+              <span class="settings-nav-icon"><i class="bi bi-shield-lock"></i></span>
+              <span class="settings-nav-copy">
+                <strong>Security</strong>
+                <small>Password and account removal</small>
+              </span>
+            </button>
+            <button class="settings-nav-item" type="button" data-section-trigger="preferences">
+              <span class="settings-nav-icon"><i class="bi bi-graph-up-arrow"></i></span>
+              <span class="settings-nav-copy">
+                <strong>Trading Preferences</strong>
+                <small>Defaults for journaling</small>
+              </span>
+            </button>
+            <button class="settings-nav-item" type="button" data-section-trigger="notifications">
+              <span class="settings-nav-icon"><i class="bi bi-bell"></i></span>
+              <span class="settings-nav-copy">
+                <strong>Notifications</strong>
+                <small>Email and weekly reports</small>
+              </span>
+            </button>
+          </nav>
+        </aside>
+
+        <div class="settings-panel-shell">
+          <div class="settings-feedback-stack">
+            <div class="settings-global-feedback d-none" data-global-feedback></div>
+            <div class="settings-savebar d-none" data-savebar>
+              <div class="savebar-copy">
+                <div class="settings-savebar-status-row">
+                  <strong data-savebar-title>No unsaved changes</strong>
+                  <span class="settings-savebar-status" data-save-status>Idle</span>
+                </div>
+                <span data-savebar-text>Changes appear here before saving.</span>
+              </div>
+              <div class="savebar-actions">
+                <button class="btn btn-light rounded-pill d-none" type="button" data-cancel-edit>Cancel</button>
+                <button class="btn btn-primary rounded-pill" type="button" data-save-active>
+                  <span class="spinner-border spinner-border-sm d-none" aria-hidden="true" data-save-spinner></span>
+                  <span data-save-label>Save changes</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="settings-section-mount" data-section-mount aria-live="polite"></div>
+        </div>
+      </section>
+
+      <template id="settings-template-profile">
+        <section class="settings-section" data-section-key="profile" data-section-title="Profile">
+          <div class="settings-section-header">
+            <div>
+              <div class="section-eyebrow">Profile</div>
+              <h2 class="section-title">Personal account details</h2>
+              <p class="section-copy">Read first, edit only when needed. Export actions stay in the same workspace.</p>
+            </div>
+            <button class="btn btn-dark rounded-pill settings-edit-button" type="button" data-edit-toggle>
+              <i class="bi bi-pencil-square"></i>
+              <span>Edit profile</span>
+            </button>
+          </div>
+
+          <div class="alert alert-success settings-inline-alert" data-feedback="success" th:if="${profileSuccess != null}" th:text="${profileSuccess}">Profile updated successfully.</div>
+          <div class="alert alert-danger settings-inline-alert" data-feedback="error" th:if="${profileError != null}" th:text="${profileError}">Profile update failed.</div>
+
+          <div class="settings-mode-view" data-mode="view">
+            <div class="settings-card-grid">
+              <article class="settings-card settings-card-primary settings-profile-card">
+                <div class="settings-card-topline">
+                  <span class="settings-card-kicker">Workspace identity</span>
+                  <span class="settings-card-meta">Visible in exports and shared account surfaces</span>
+                </div>
+                <div class="settings-avatar-block">
+                  <div class="avatar-preview">
+                    <img class="avatar-preview-image"
+                         th:classappend="${profileAvatarDataUrl == null or #strings.isEmpty(profileAvatarDataUrl)} ? ' d-none' : ''"
+                         th:src="${profileAvatarDataUrl}"
+                         data-view-avatar-image
+                         alt="Avatar preview">
+                    <span class="avatar-preview-fallback"
+                          th:classappend="${profileAvatarDataUrl != null and !#strings.isEmpty(profileAvatarDataUrl)} ? ' d-none' : ''"
+                          data-view-avatar-fallback
+                          th:text="${#strings.substring(profileFormName != null and !#strings.isEmpty(profileFormName) ? profileFormName : currentUser.username, 0, 1).toUpperCase()}">U</span>
+                  </div>
+                  <div>
+                    <div class="info-label">Profile photo</div>
+                    <div class="info-value">Visible inside your workspace and exports</div>
+                  </div>
+                </div>
+
+                <div class="settings-info-list">
+                  <div class="info-row">
+                    <span class="info-label">Name</span>
+                    <strong class="info-value" data-view-field="name" th:text="${profileFormName}">User Name</strong>
+                  </div>
+                  <div class="info-row">
+                    <span class="info-label">Email</span>
+                    <strong class="info-value" data-view-field="email" th:text="${profileFormEmail}">user@example.com</strong>
+                  </div>
+                  <div class="info-row">
+                    <span class="info-label">Timezone</span>
+                    <strong class="info-value" data-view-field="timezone" th:text="${selectedProfileTimezone}">Asia/Bangkok</strong>
+                  </div>
+                  <div class="info-row">
+                    <span class="info-label">Country</span>
+                    <strong class="info-value" data-view-field="country" th:text="${selectedCountry}">Thailand</strong>
+                  </div>
+                </div>
+              </article>
+
+              <article class="settings-card settings-card-secondary">
+                <div class="settings-card-topline">
+                  <span class="settings-card-kicker">Data and privacy</span>
+                  <span class="settings-card-meta">Export files without leaving this workspace</span>
+                </div>
+                <div class="card-mini-title">Data and Privacy</div>
+                <p class="section-copy compact-copy">Generate clean exports without leaving the settings flow.</p>
+                <div class="settings-action-grid">
+                  <form method="get" th:action="@{/settings/export/all}">
+                    <button class="btn btn-outline-dark rounded-pill w-100" type="submit">Export all data</button>
+                  </form>
+                  <form method="get" th:action="@{/settings/export/trades.csv}">
+                    <button class="btn btn-outline-primary rounded-pill w-100" type="submit">Download CSV</button>
+                  </form>
+                </div>
+                <div class="settings-note compact-note">
+                  <i class="bi bi-shield-lock"></i>
+                  <span>Exports include private trading history. Store them securely.</span>
+                </div>
+              </article>
+            </div>
+          </div>
+
+          <div class="settings-mode-edit d-none" data-mode="edit">
+            <div class="settings-mode-shell">
+              <div class="settings-mode-header">
                 <div>
-                  <h2 class="section-title h5 mb-1">Profile</h2>
-                  <p class="section-copy mb-0">Update your personal account details, avatar, and localization settings.</p>
+                  <div class="settings-mode-kicker">Editing profile</div>
+                  <h3 class="settings-mode-title">Update the account identity shown across your workspace</h3>
                 </div>
-                <span class="section-pill">Personal account</span>
               </div>
-            </div>
-            <div class="card-body">
-              <div class="alert alert-success settings-inline-alert" th:if="${profileSuccess != null}" th:text="${profileSuccess}">Profile updated successfully.</div>
-              <div class="alert alert-danger settings-inline-alert" th:if="${profileError != null}" th:text="${profileError}">Profile update failed.</div>
-
-              <form class="row g-3" method="post" th:action="@{/settings/profile}" enctype="multipart/form-data">
-                <div class="col-12">
-                  <div class="profile-identity-card">
-                    <div class="avatar-preview-shell">
-                      <div class="avatar-preview">
-                        <img class="avatar-preview-image"
-                             th:classappend="${profileAvatarDataUrl == null or #strings.isEmpty(profileAvatarDataUrl)} ? ' d-none' : ''"
-                             th:src="${profileAvatarDataUrl}"
-                             data-avatar-preview
-                             alt="Avatar preview">
-                        <span class="avatar-preview-fallback"
-                              th:classappend="${profileAvatarDataUrl != null and !#strings.isEmpty(profileAvatarDataUrl)} ? ' d-none' : ''"
-                              data-avatar-fallback
-                              th:text="${#strings.substring(profileFormName != null and !#strings.isEmpty(profileFormName) ? profileFormName : currentUser.username, 0, 1).toUpperCase()}">U</span>
+              <article class="settings-card settings-card-primary">
+                <form class="row g-3" method="post" th:action="@{/settings/profile}" enctype="multipart/form-data" data-settings-form data-dirty-label="Profile" data-loading-label="Saving profile">
+                  <div class="col-12">
+                    <div class="profile-identity-card compact-card">
+                      <div class="avatar-preview-shell">
+                        <div class="avatar-preview">
+                          <img class="avatar-preview-image"
+                               th:classappend="${profileAvatarDataUrl == null or #strings.isEmpty(profileAvatarDataUrl)} ? ' d-none' : ''"
+                               th:src="${profileAvatarDataUrl}"
+                               data-avatar-preview
+                               alt="Avatar preview">
+                          <span class="avatar-preview-fallback"
+                                th:classappend="${profileAvatarDataUrl != null and !#strings.isEmpty(profileAvatarDataUrl)} ? ' d-none' : ''"
+                                data-avatar-fallback
+                                th:text="${#strings.substring(profileFormName != null and !#strings.isEmpty(profileFormName) ? profileFormName : currentUser.username, 0, 1).toUpperCase()}">U</span>
+                        </div>
+                      </div>
+                      <div class="profile-identity-copy">
+                        <div class="profile-identity-title">Profile photo</div>
+                        <p class="section-copy compact-copy">PNG or JPG, up to 5MB.</p>
+                        <div class="d-flex flex-wrap gap-2">
+                          <label class="btn btn-outline-dark rounded-pill px-3 mb-0">
+                            <i class="bi bi-upload me-1"></i>Upload avatar
+                            <input class="d-none" type="file" name="avatarFile" accept="image/*" data-avatar-input>
+                          </label>
+                          <button class="btn btn-outline-secondary rounded-pill px-3" type="button" data-avatar-reset>Remove</button>
+                          <input type="hidden" name="removeAvatar" value="false" data-remove-avatar>
+                        </div>
                       </div>
                     </div>
-                    <div class="profile-identity-copy">
-                      <div class="profile-identity-title">Profile photo</div>
-                      <p class="section-copy mb-3">Upload a clean avatar for your workspace and exported reports.</p>
-                      <div class="d-flex flex-wrap gap-2">
-                        <label class="btn btn-outline-dark rounded-pill px-3 mb-0">
-                          <i class="bi bi-upload me-1"></i>Upload avatar
-                          <input class="d-none" type="file" name="avatarFile" accept="image/*" data-avatar-input>
+                  </div>
+
+                  <div class="col-md-6">
+                    <label class="form-label" for="settingsName">Name</label>
+                    <input id="settingsName" class="form-control" type="text" name="name" data-field-input="name" th:value="${profileFormName}">
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label" for="settingsEmail">Email</label>
+                    <input id="settingsEmail" class="form-control" type="email" name="email" data-field-input="email" th:value="${profileFormEmail}">
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label" for="settingsTimezone">Timezone</label>
+                    <select id="settingsTimezone" class="form-select" name="timezone" data-field-input="timezone">
+                      <option th:each="timezone : ${timezoneOptions}"
+                              th:value="${timezone}"
+                              th:selected="${timezone == selectedProfileTimezone}"
+                              th:text="${timezone}">Asia/Bangkok</option>
+                    </select>
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label" for="settingsCountry">Country</label>
+                    <select id="settingsCountry" class="form-select" name="country" data-field-input="country">
+                      <option th:each="country : ${countryOptions}"
+                              th:value="${country}"
+                              th:selected="${country == selectedCountry}"
+                              th:text="${country}">Thailand</option>
+                    </select>
+                  </div>
+                </form>
+              </article>
+            </div>
+          </div>
+        </section>
+      </template>
+
+      <template id="settings-template-security">
+        <section class="settings-section" data-section-key="security" data-section-title="Security">
+          <div class="settings-section-header">
+            <div>
+              <div class="section-eyebrow">Security</div>
+              <h2 class="section-title">Password and account protection</h2>
+              <p class="section-copy">Keep credential changes deliberate and put destructive actions behind a hard boundary.</p>
+            </div>
+            <button class="btn btn-dark rounded-pill settings-edit-button" type="button" data-edit-toggle>
+              <i class="bi bi-shield-lock"></i>
+              <span>Edit security</span>
+            </button>
+          </div>
+
+          <div class="alert alert-success settings-inline-alert" data-feedback="success" th:if="${securitySuccess != null}" th:text="${securitySuccess}">Password updated successfully.</div>
+          <div class="alert alert-danger settings-inline-alert" data-feedback="error" th:if="${securityError != null}" th:text="${securityError}">Password update failed.</div>
+          <div class="alert alert-danger settings-inline-alert" data-feedback="error" th:if="${dangerError != null}" th:text="${dangerError}">Account deletion failed.</div>
+
+          <div class="settings-mode-view" data-mode="view">
+            <div class="settings-card-grid">
+              <article class="settings-card settings-card-primary">
+                <div class="settings-card-topline">
+                  <span class="settings-card-kicker">Protection status</span>
+                  <span class="settings-card-meta">Credential state and account recovery hygiene</span>
+                </div>
+                <div class="card-mini-title">Password</div>
+                <div class="settings-info-list">
+                  <div class="info-row">
+                    <span class="info-label">Last known state</span>
+                    <strong class="info-value" data-view-field="passwordState">Protected by password authentication</strong>
+                  </div>
+                  <div class="info-row">
+                    <span class="info-label">Recommended</span>
+                    <strong class="info-value">Use a unique password and rotate it regularly</strong>
+                  </div>
+                </div>
+              </article>
+
+              <article class="settings-card settings-card-secondary danger-surface">
+                <div class="settings-card-topline">
+                  <span class="settings-card-kicker">Sensitive actions</span>
+                  <span class="settings-card-meta">This area permanently affects your account</span>
+                </div>
+                <div class="card-mini-title text-danger-emphasis">Danger Zone</div>
+                <p class="section-copy compact-copy">Deleting the account permanently removes your profile, trades, screenshots, setups, and reports.</p>
+                <div class="danger-checklist compact-checklist">
+                  <div><i class="bi bi-x-circle"></i>Trade history is erased permanently.</div>
+                  <div><i class="bi bi-x-circle"></i>Active subscriptions should be canceled first.</div>
+                  <div><i class="bi bi-x-circle"></i>Exports are your only backup.</div>
+                </div>
+              </article>
+            </div>
+          </div>
+
+          <div class="settings-mode-edit d-none" data-mode="edit">
+            <div class="settings-mode-shell">
+              <div class="settings-mode-header">
+                <div>
+                  <div class="settings-mode-kicker">Editing security</div>
+                  <h3 class="settings-mode-title">Update your password without leaving the control panel</h3>
+                </div>
+              </div>
+              <div class="settings-stack">
+                <article class="settings-card settings-card-primary">
+                  <form class="row g-3" method="post" th:action="@{/settings/security}" data-settings-form data-dirty-label="Security" data-loading-label="Saving security">
+                    <div class="col-12">
+                      <div class="security-note-card compact-card">
+                        <div class="security-note-title">Password hygiene</div>
+                        <p class="mb-0">Use a unique password for your trading workspace and rotate it if exports are handled on shared devices.</p>
+                      </div>
+                    </div>
+                    <div class="col-12">
+                      <label class="form-label" for="currentPassword">Current password</label>
+                      <input id="currentPassword" class="form-control" type="password" name="currentPassword" placeholder="Enter current password">
+                    </div>
+                    <div class="col-12">
+                      <label class="form-label" for="newPassword">New password</label>
+                      <input id="newPassword" class="form-control" type="password" name="newPassword" placeholder="Create a stronger password">
+                    </div>
+                    <div class="col-12">
+                      <label class="form-label" for="confirmPassword">Confirm new password</label>
+                      <input id="confirmPassword" class="form-control" type="password" name="confirmPassword" placeholder="Re-enter your new password">
+                    </div>
+                  </form>
+                </article>
+
+                <article class="settings-card settings-card-secondary danger-surface">
+                  <div class="settings-card-topline">
+                    <span class="settings-card-kicker">Danger zone</span>
+                    <span class="settings-card-meta">This action stays on full-page submit for safety</span>
+                  </div>
+                  <div class="card-mini-title text-danger-emphasis">Delete account</div>
+                  <form class="danger-form mt-3" method="post" th:action="@{/settings/delete-account}">
+                    <div class="mb-3">
+                      <label class="form-label" for="deleteCurrentPassword">Current password</label>
+                      <input id="deleteCurrentPassword" class="form-control" type="password" name="currentPassword" placeholder="Enter your current password" required>
+                    </div>
+                    <div class="mb-0">
+                      <label class="form-label" for="deleteConfirmationText">Type DELETE to confirm</label>
+                      <input id="deleteConfirmationText" class="form-control" type="text" name="confirmationText" placeholder="DELETE" required>
+                    </div>
+                    <div class="danger-submit">
+                      <button class="btn btn-danger rounded-pill px-4 mt-3" type="submit">Delete account</button>
+                    </div>
+                  </form>
+                </article>
+              </div>
+            </div>
+          </div>
+        </section>
+      </template>
+
+      <template id="settings-template-preferences">
+        <section class="settings-section" data-section-key="preferences" data-section-title="Trading Preferences">
+          <div class="settings-section-header">
+            <div>
+              <div class="section-eyebrow">Trading Preferences</div>
+              <h2 class="section-title">Journaling defaults</h2>
+              <p class="section-copy">Keep new trade entries fast by locking in sane defaults for your workflow.</p>
+            </div>
+            <button class="btn btn-dark rounded-pill settings-edit-button" type="button" data-edit-toggle>
+              <i class="bi bi-sliders"></i>
+              <span>Edit preferences</span>
+            </button>
+          </div>
+
+          <div class="alert alert-success settings-inline-alert" data-feedback="success" th:if="${preferencesSuccess != null}" th:text="${preferencesSuccess}">Trading preferences updated successfully.</div>
+          <div class="alert alert-danger settings-inline-alert" data-feedback="error" th:if="${preferencesError != null}" th:text="${preferencesError}">Trading preferences update failed.</div>
+
+          <div class="settings-mode-view" data-mode="view">
+            <article class="settings-card settings-card-primary">
+              <div class="settings-card-topline">
+                <span class="settings-card-kicker">Execution defaults</span>
+                <span class="settings-card-meta">Applied across trade forms and chart review flows</span>
+              </div>
+              <div class="settings-info-list compact-grid">
+                <div class="info-row">
+                  <span class="info-label">Default account</span>
+                  <strong class="info-value" data-view-field="defaultAccount" th:text="${selectedDefaultAccount}">Personal Journal Account</strong>
+                </div>
+                <div class="info-row">
+                  <span class="info-label">Currency</span>
+                  <strong class="info-value" data-view-field="preferredCurrency" th:text="${selectedCurrency}">USD</strong>
+                </div>
+                <div class="info-row">
+                  <span class="info-label">Risk unit</span>
+                  <strong class="info-value" data-view-field="riskUnitLabel" th:text="${selectedRiskUnit == 'R_MULTIPLE' ? 'R multiple' : 'Currency'}">R multiple</strong>
+                </div>
+                <div class="info-row">
+                  <span class="info-label">Chart timezone</span>
+                  <strong class="info-value" data-view-field="chartTimezone" th:text="${selectedChartTimezone}">America/New_York</strong>
+                </div>
+              </div>
+            </article>
+          </div>
+
+          <div class="settings-mode-edit d-none" data-mode="edit">
+            <div class="settings-mode-shell">
+              <div class="settings-mode-header">
+                <div>
+                  <div class="settings-mode-kicker">Editing preferences</div>
+                  <h3 class="settings-mode-title">Set the defaults used when you journal and review trades</h3>
+                </div>
+              </div>
+              <article class="settings-card settings-card-primary">
+                <form class="row g-3" method="post" th:action="@{/settings/preferences}" data-settings-form data-dirty-label="Trading Preferences" data-loading-label="Saving preferences">
+                  <div class="col-md-6">
+                    <label class="form-label" for="defaultAccount">Default account</label>
+                    <select id="defaultAccount" class="form-select" name="defaultAccount" data-field-input="defaultAccount">
+                      <option th:each="account : ${accountOptions}"
+                              th:value="${account}"
+                              th:selected="${account == selectedDefaultAccount}"
+                              th:text="${account}">Personal Journal Account</option>
+                    </select>
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label" for="defaultCurrency">Currency</label>
+                    <select id="defaultCurrency" class="form-select" name="preferredCurrency" data-field-input="preferredCurrency">
+                      <option th:each="currency : ${currencyOptions}"
+                              th:value="${currency}"
+                              th:selected="${currency == selectedCurrency}"
+                              th:text="${currency}">USD</option>
+                    </select>
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label" for="riskUnit">Risk unit</label>
+                    <select id="riskUnit" class="form-select" name="riskUnit" data-field-input="riskUnit">
+                      <option th:each="riskUnit : ${riskUnitOptions}"
+                              th:value="${riskUnit}"
+                              th:selected="${riskUnit == selectedRiskUnit}"
+                              th:text="${riskUnit == 'R_MULTIPLE' ? 'R multiple' : 'Currency'}">R multiple</option>
+                    </select>
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label" for="chartTimezone">Chart timezone</label>
+                    <select id="chartTimezone" class="form-select" name="chartTimezone" data-field-input="chartTimezone">
+                      <option th:each="timezone : ${timezoneOptions}"
+                              th:value="${timezone}"
+                              th:selected="${timezone == selectedChartTimezone}"
+                              th:text="${timezone}">America/New_York</option>
+                    </select>
+                  </div>
+                  <div class="col-12">
+                    <div class="prefs-note-grid compact-grid-two">
+                      <div class="prefs-note-card">
+                        <span>Defaults apply to</span>
+                        <strong>Trade forms and chart review views</strong>
+                      </div>
+                      <div class="prefs-note-card">
+                        <span>Best practice</span>
+                        <strong>Match chart timezone to your execution session</strong>
+                      </div>
+                    </div>
+                  </div>
+                </form>
+              </article>
+            </div>
+          </div>
+        </section>
+      </template>
+
+      <template id="settings-template-notifications">
+        <section class="settings-section" data-section-key="notifications" data-section-title="Notifications">
+          <div class="settings-section-header">
+            <div>
+              <div class="section-eyebrow">Notifications</div>
+              <h2 class="section-title">Email signals and summaries</h2>
+              <p class="section-copy">Keep the signal-to-noise ratio high and only receive updates you actually care about.</p>
+            </div>
+            <button class="btn btn-dark rounded-pill settings-edit-button" type="button" data-edit-toggle>
+              <i class="bi bi-bell"></i>
+              <span>Edit notifications</span>
+            </button>
+          </div>
+
+          <div class="alert alert-success settings-inline-alert" data-feedback="success" th:if="${notificationsSuccess != null}" th:text="${notificationsSuccess}">Notification settings updated successfully.</div>
+
+          <div class="settings-mode-view" data-mode="view">
+            <article class="settings-card settings-card-primary">
+              <div class="settings-card-topline">
+                <span class="settings-card-kicker">Signal routing</span>
+                <span class="settings-card-meta">Only the highest-value updates should reach your inbox</span>
+              </div>
+              <div class="switch-stack compact-stack">
+                <div class="switch-card compact-card">
+                  <div>
+                    <div class="switch-title">Email notifications</div>
+                    <p class="section-copy mb-0" data-view-field="emailNotificationsSummary" th:text="${emailNotificationsEnabled ? 'Enabled for important account activity.' : 'Disabled.'}">Enabled for important account activity.</p>
+                  </div>
+                  <span class="settings-badge" data-view-field="emailNotificationsBadge" th:text="${emailNotificationsEnabled ? 'On' : 'Off'}">On</span>
+                </div>
+                <div class="switch-card compact-card">
+                  <div>
+                    <div class="switch-title">Weekly report summary</div>
+                    <p class="section-copy mb-0" data-view-field="weeklySummarySummary" th:text="${weeklySummaryEnabled ? 'Weekly summaries are enabled.' : 'Weekly summaries are disabled.'}">Weekly summaries are enabled.</p>
+                  </div>
+                  <span class="settings-badge" data-view-field="weeklySummaryBadge" th:text="${weeklySummaryEnabled ? 'On' : 'Off'}">On</span>
+                </div>
+                <div class="switch-card compact-card">
+                  <div>
+                    <div class="switch-title">Billing notifications</div>
+                    <p class="section-copy mb-0" data-view-field="billingNotificationsSummary" th:text="${billingNotificationsEnabled ? 'Billing notices are enabled.' : 'Billing notices are disabled.'}">Billing notices are enabled.</p>
+                  </div>
+                  <span class="settings-badge" data-view-field="billingNotificationsBadge" th:text="${billingNotificationsEnabled ? 'On' : 'Off'}">On</span>
+                </div>
+              </div>
+            </article>
+          </div>
+
+          <div class="settings-mode-edit d-none" data-mode="edit">
+            <div class="settings-mode-shell">
+              <div class="settings-mode-header">
+                <div>
+                  <div class="settings-mode-kicker">Editing notifications</div>
+                  <h3 class="settings-mode-title">Tune your inbox so reporting stays useful instead of noisy</h3>
+                </div>
+              </div>
+              <article class="settings-card settings-card-primary">
+                <form method="post" th:action="@{/settings/notifications}" data-settings-form data-dirty-label="Notifications" data-loading-label="Saving notifications">
+                  <div class="switch-stack">
+                    <div class="switch-card compact-card">
+                      <div>
+                        <div class="switch-title">Email notifications</div>
+                        <p class="section-copy mb-0">Important account activity and login alerts.</p>
+                      </div>
+                      <div class="settings-switch-shell">
+                        <input type="hidden" name="emailNotificationsEnabled" value="false">
+                        <label class="settings-switch">
+                          <input id="emailNotifications" class="settings-switch-input" type="checkbox" name="emailNotificationsEnabled" value="true" data-field-input="emailNotificationsEnabled" th:checked="${emailNotificationsEnabled}">
+                          <span class="settings-switch-track"></span>
                         </label>
-                        <button class="btn btn-outline-secondary rounded-pill px-3" type="button" data-avatar-reset>Remove</button>
-                        <input type="hidden" name="removeAvatar" value="false" data-remove-avatar>
                       </div>
-                      <div class="field-meta mt-2">PNG or JPG, square crop recommended, up to 5MB.</div>
+                    </div>
+                    <div class="switch-card compact-card">
+                      <div>
+                        <div class="switch-title">Weekly report summary</div>
+                        <p class="section-copy mb-0">Receive a weekly recap of performance, mistakes, and process quality.</p>
+                      </div>
+                      <div class="settings-switch-shell">
+                        <input type="hidden" name="weeklySummaryEnabled" value="false">
+                        <label class="settings-switch">
+                          <input id="weeklySummary" class="settings-switch-input" type="checkbox" name="weeklySummaryEnabled" value="true" data-field-input="weeklySummaryEnabled" th:checked="${weeklySummaryEnabled}">
+                          <span class="settings-switch-track"></span>
+                        </label>
+                      </div>
+                    </div>
+                    <div class="switch-card compact-card">
+                      <div>
+                        <div class="switch-title">Billing notifications</div>
+                        <p class="section-copy mb-0">Renewals, invoices, payment failures, and trial reminders.</p>
+                      </div>
+                      <div class="settings-switch-shell">
+                        <input type="hidden" name="billingNotificationsEnabled" value="false">
+                        <label class="settings-switch">
+                          <input id="billingNotifications" class="settings-switch-input" type="checkbox" name="billingNotificationsEnabled" value="true" data-field-input="billingNotificationsEnabled" th:checked="${billingNotificationsEnabled}">
+                          <span class="settings-switch-track"></span>
+                        </label>
+                      </div>
                     </div>
                   </div>
-                </div>
-
-                <div class="col-md-6">
-                  <label class="form-label" for="settingsName">Name</label>
-                  <input id="settingsName" class="form-control" type="text" name="name" th:value="${profileFormName}">
-                </div>
-                <div class="col-md-6">
-                  <label class="form-label" for="settingsEmail">Email</label>
-                  <input id="settingsEmail" class="form-control" type="email" name="email" th:value="${profileFormEmail}">
-                </div>
-                <div class="col-md-6">
-                  <label class="form-label" for="settingsTimezone">Timezone</label>
-                  <select id="settingsTimezone" class="form-select" name="timezone">
-                    <option th:each="timezone : ${timezoneOptions}"
-                            th:value="${timezone}"
-                            th:selected="${timezone == selectedProfileTimezone}"
-                            th:text="${timezone}">Asia/Bangkok</option>
-                  </select>
-                </div>
-                <div class="col-md-6">
-                  <label class="form-label" for="settingsCountry">Country</label>
-                  <select id="settingsCountry" class="form-select" name="country">
-                    <option th:each="country : ${countryOptions}"
-                            th:value="${country}"
-                            th:selected="${country == selectedCountry}"
-                            th:text="${country}">Thailand</option>
-                  </select>
-                </div>
-
-                <div class="col-12">
-                  <div class="settings-form-actions">
-                    <span class="field-meta">Your public-facing details stay private unless you explicitly share reports.</span>
-                    <button class="btn btn-primary rounded-pill px-4" type="submit">Save profile</button>
-                  </div>
-                </div>
-              </form>
+                </form>
+              </article>
             </div>
-          </article>
-        </div>
-
-        <div class="col-12 col-xxl-5">
-          <article id="security-card" class="card shadow-sm border-0 settings-card h-100">
-            <div class="card-header bg-transparent border-0 pb-0">
-              <h2 class="section-title h5 mb-1">Security</h2>
-              <p class="section-copy mb-0">Change your password and keep your trading journal access secure.</p>
-            </div>
-            <div class="card-body">
-              <div class="alert alert-success settings-inline-alert" th:if="${securitySuccess != null}" th:text="${securitySuccess}">Password updated successfully.</div>
-              <div class="alert alert-danger settings-inline-alert" th:if="${securityError != null}" th:text="${securityError}">Password update failed.</div>
-
-              <form class="row g-3" method="post" th:action="@{/settings/security}">
-                <div class="col-12">
-                  <div class="security-note-card">
-                    <div class="security-note-title">Password hygiene</div>
-                    <p class="mb-0">Use a unique password for your trading workspace and rotate it regularly if you export reports to shared devices.</p>
-                  </div>
-                </div>
-                <div class="col-12">
-                  <label class="form-label" for="currentPassword">Current password</label>
-                  <input id="currentPassword" class="form-control" type="password" name="currentPassword" placeholder="Enter current password">
-                </div>
-                <div class="col-12">
-                  <label class="form-label" for="newPassword">New password</label>
-                  <input id="newPassword" class="form-control" type="password" name="newPassword" placeholder="Create a stronger password">
-                </div>
-                <div class="col-12">
-                  <label class="form-label" for="confirmPassword">Confirm new password</label>
-                  <input id="confirmPassword" class="form-control" type="password" name="confirmPassword" placeholder="Re-enter your new password">
-                </div>
-                <div class="col-12">
-                  <div class="settings-form-actions">
-                    <span class="field-meta">Minimum 8 characters, ideally with a mix of words, numbers, and symbols.</span>
-                    <button class="btn btn-primary rounded-pill px-4" type="submit">Update password</button>
-                  </div>
-                </div>
-              </form>
-            </div>
-          </article>
-        </div>
-      </section>
-
-      <section class="row g-3">
-        <div class="col-12 col-xl-6">
-          <article id="preferences-card" class="card shadow-sm border-0 settings-card h-100">
-            <div class="card-header bg-transparent border-0 pb-0">
-              <h2 class="section-title h5 mb-1">Trading Preferences</h2>
-              <p class="section-copy mb-0">Set the defaults used when you journal new trades and view charts.</p>
-            </div>
-            <div class="card-body">
-              <div class="alert alert-success settings-inline-alert" th:if="${preferencesSuccess != null}" th:text="${preferencesSuccess}">Trading preferences updated successfully.</div>
-              <div class="alert alert-danger settings-inline-alert" th:if="${preferencesError != null}" th:text="${preferencesError}">Trading preferences update failed.</div>
-
-              <form class="row g-3" method="post" th:action="@{/settings/preferences}">
-                <div class="col-md-6">
-                  <label class="form-label" for="defaultAccount">Default account</label>
-                  <select id="defaultAccount" class="form-select" name="defaultAccount">
-                    <option th:each="account : ${accountOptions}"
-                            th:value="${account}"
-                            th:selected="${account == selectedDefaultAccount}"
-                            th:text="${account}">Personal Journal Account</option>
-                  </select>
-                </div>
-                <div class="col-md-6">
-                  <label class="form-label" for="defaultCurrency">Currency</label>
-                  <select id="defaultCurrency" class="form-select" name="preferredCurrency">
-                    <option th:each="currency : ${currencyOptions}"
-                            th:value="${currency}"
-                            th:selected="${currency == selectedCurrency}"
-                            th:text="${currency}">USD</option>
-                  </select>
-                </div>
-                <div class="col-md-6">
-                  <label class="form-label" for="riskUnit">Risk unit</label>
-                  <select id="riskUnit" class="form-select" name="riskUnit">
-                    <option th:each="riskUnit : ${riskUnitOptions}"
-                            th:value="${riskUnit}"
-                            th:selected="${riskUnit == selectedRiskUnit}"
-                            th:text="${riskUnit == 'R_MULTIPLE' ? 'R multiple' : 'Currency'}">R multiple</option>
-                  </select>
-                </div>
-                <div class="col-md-6">
-                  <label class="form-label" for="chartTimezone">Chart timezone</label>
-                  <select id="chartTimezone" class="form-select" name="chartTimezone">
-                    <option th:each="timezone : ${timezoneOptions}"
-                            th:value="${timezone}"
-                            th:selected="${timezone == selectedChartTimezone}"
-                            th:text="${timezone}">America/New_York</option>
-                  </select>
-                </div>
-                <div class="col-12">
-                  <div class="prefs-note-grid">
-                    <div class="prefs-note-card">
-                      <span>Defaults apply to</span>
-                      <strong>Trade forms and chart review views</strong>
-                    </div>
-                    <div class="prefs-note-card">
-                      <span>Best practice</span>
-                      <strong>Match chart timezone to your execution session</strong>
-                    </div>
-                  </div>
-                </div>
-                <div class="col-12">
-                  <div class="settings-form-actions">
-                    <span class="field-meta">These defaults help keep your journal entries fast and consistent.</span>
-                    <button class="btn btn-primary rounded-pill px-4" type="submit">Save preferences</button>
-                  </div>
-                </div>
-              </form>
-            </div>
-          </article>
-        </div>
-
-        <div class="col-12 col-xl-6">
-          <article id="notifications-card" class="card shadow-sm border-0 settings-card h-100">
-            <div class="card-header bg-transparent border-0 pb-0">
-              <h2 class="section-title h5 mb-1">Notifications</h2>
-              <p class="section-copy mb-0">Control which account updates and summaries you receive by email.</p>
-            </div>
-            <div class="card-body">
-              <div class="alert alert-success settings-inline-alert" th:if="${notificationsSuccess != null}" th:text="${notificationsSuccess}">Notification settings updated successfully.</div>
-
-              <form method="post" th:action="@{/settings/notifications}">
-                <div class="switch-stack">
-                  <div class="switch-card">
-                    <div>
-                      <div class="switch-title">Email notifications</div>
-                      <p class="section-copy mb-0">Important account activity and login alerts.</p>
-                    </div>
-                    <div class="form-check form-switch m-0">
-                      <input type="hidden" name="emailNotificationsEnabled" value="false">
-                      <input id="emailNotifications" class="form-check-input" type="checkbox" name="emailNotificationsEnabled" value="true" th:checked="${emailNotificationsEnabled}">
-                    </div>
-                  </div>
-                  <div class="switch-card">
-                    <div>
-                      <div class="switch-title">Weekly report summary</div>
-                      <p class="section-copy mb-0">Receive a weekly recap of performance, mistakes, and process quality.</p>
-                    </div>
-                    <div class="form-check form-switch m-0">
-                      <input type="hidden" name="weeklySummaryEnabled" value="false">
-                      <input id="weeklySummary" class="form-check-input" type="checkbox" name="weeklySummaryEnabled" value="true" th:checked="${weeklySummaryEnabled}">
-                    </div>
-                  </div>
-                  <div class="switch-card">
-                    <div>
-                      <div class="switch-title">Billing notifications</div>
-                      <p class="section-copy mb-0">Renewals, invoices, payment failures, and trial reminders.</p>
-                    </div>
-                    <div class="form-check form-switch m-0">
-                      <input type="hidden" name="billingNotificationsEnabled" value="false">
-                      <input id="billingNotifications" class="form-check-input" type="checkbox" name="billingNotificationsEnabled" value="true" th:checked="${billingNotificationsEnabled}">
-                    </div>
-                  </div>
-                </div>
-                <div class="settings-form-actions mt-3">
-                  <span class="field-meta">Billing notices stay enabled for important payment events.</span>
-                  <button class="btn btn-primary rounded-pill px-4" type="submit">Save notifications</button>
-                </div>
-              </form>
-            </div>
-          </article>
-        </div>
-      </section>
-
-      <section class="row g-3">
-        <div class="col-12 col-xl-7">
-          <article class="card shadow-sm border-0 settings-card h-100">
-            <div class="card-header bg-transparent border-0 pb-0">
-              <h2 class="section-title h5 mb-1">Data &amp; Privacy</h2>
-              <p class="section-copy mb-0">Export your journal history or download a clean CSV snapshot of your trading data.</p>
-            </div>
-            <div class="card-body">
-              <div class="row g-3">
-                <div class="col-12 col-lg-6">
-                  <div class="privacy-action-card h-100">
-                    <div class="privacy-action-icon"><i class="bi bi-cloud-arrow-down"></i></div>
-                    <div class="privacy-action-title">Export all data</div>
-                    <p class="section-copy mb-3">Bundle your trades, setups, tags, and profile details into a portable archive.</p>
-                    <form method="get" th:action="@{/settings/export/all}">
-                      <button class="btn btn-outline-dark rounded-pill px-3" type="submit">Export all data</button>
-                    </form>
-                  </div>
-                </div>
-                <div class="col-12 col-lg-6">
-                  <div class="privacy-action-card h-100">
-                    <div class="privacy-action-icon accent"><i class="bi bi-filetype-csv"></i></div>
-                    <div class="privacy-action-title">Download CSV</div>
-                    <p class="section-copy mb-3">Quickly export journal rows for spreadsheet analysis or external backups.</p>
-                    <form method="get" th:action="@{/settings/export/trades.csv}">
-                      <button class="btn btn-outline-primary rounded-pill px-3" type="submit">Download CSV</button>
-                    </form>
-                  </div>
-                </div>
-                <div class="col-12">
-                  <div class="privacy-note">
-                    <i class="bi bi-shield-lock"></i>
-                    <span>Exports are generated on demand and should be stored securely if they include account performance history.</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </article>
-        </div>
-
-        <div class="col-12 col-xl-5">
-          <article id="danger-zone-card" class="card shadow-sm border-0 settings-card danger-card h-100">
-            <div class="card-header bg-transparent border-0 pb-0">
-              <h2 class="section-title h5 mb-1">Danger Zone</h2>
-              <p class="section-copy mb-0">Permanently remove your account and trading journal workspace.</p>
-            </div>
-            <div class="card-body d-flex flex-column">
-              <div class="alert alert-danger settings-inline-alert" th:if="${dangerError != null}" th:text="${dangerError}">Account deletion failed.</div>
-              <div class="danger-alert">
-                <div class="danger-alert-title">Delete account</div>
-                <p class="mb-0">This action removes your profile, trades, screenshots, setups, and reports. It cannot be undone.</p>
-              </div>
-              <div class="danger-checklist">
-                <div><i class="bi bi-x-circle"></i>Trade history and screenshots are permanently erased.</div>
-                <div><i class="bi bi-x-circle"></i>Active subscriptions should be canceled before deletion.</div>
-                <div><i class="bi bi-x-circle"></i>Exports are your only backup once the account is removed.</div>
-              </div>
-              <form class="danger-form mt-auto pt-3" method="post" th:action="@{/settings/delete-account}">
-                <div class="mb-3">
-                  <label class="form-label" for="deleteCurrentPassword">Current password</label>
-                  <input id="deleteCurrentPassword" class="form-control" type="password" name="currentPassword" placeholder="Enter your current password" required>
-                </div>
-                <div class="mb-3">
-                  <label class="form-label" for="deleteConfirmationText">Type DELETE to confirm</label>
-                  <input id="deleteConfirmationText" class="form-control" type="text" name="confirmationText" placeholder="DELETE" required>
-                </div>
-                <button class="btn btn-danger rounded-pill px-4" type="submit">Delete account</button>
-              </form>
-            </div>
-          </article>
-        </div>
-      </section>
+          </div>
+        </section>
+      </template>
     </main>
   </div>
 </div>
