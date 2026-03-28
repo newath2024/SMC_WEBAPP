@@ -35,11 +35,11 @@
               <i class="bi bi-arrow-left"></i>
               <span>Back to Dashboard</span>
             </a>
-            <a class="header-icon-btn" th:href="@{/reports}">
+            <a class="header-icon-btn" th:href="${reportsHomeUrl}">
               <i class="bi bi-bar-chart"></i>
             </a>
             <a class="header-avatar"
-               th:href="@{/settings}"
+               th:href="${settingsUrl}"
                aria-label="Account settings"
                th:text="${currentUser != null ? #strings.substring(currentUser.username, 0, 1).toUpperCase() : 'U'}">U</a>
           </div>

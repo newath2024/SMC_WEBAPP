@@ -24,6 +24,7 @@ import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 
 @Controller
 public class AnalyticsController {
@@ -62,14 +63,17 @@ public class AnalyticsController {
             return "redirect:/login";
         }
 
-        boolean hasProAccess = userService.hasProAccess(currentUser);
-        int tradeLimit = userService.resolveTradeLimit(currentUser);
-
         boolean adminView = userService.isAdmin(currentUser);
         List<User> managedUsers = adminView
-                ? userRepository.findAll(Sort.by(Sort.Direction.ASC, "username"))
+                ? userRepository.findAll(Sort.by(Sort.Direction.ASC, "username")).stream()
+                .filter(user -> user != null && !Objects.equals(user.getId(), currentUser.getId()))
+                .toList()
                 : List.of();
         User targetUser = resolveTargetUser(currentUser, selectedUserId);
+        boolean viewerHasProAccess = userService.hasProAccess(currentUser);
+        boolean targetHasProAccess = userService.hasProAccess(targetUser);
+        int targetTradeLimit = userService.resolveTradeLimit(targetUser);
+        long totalTradeUsage = analyticsService.countTradesForUser(targetUser.getId());
 
         ResolvedRange range = resolveRange(period, from, to);
 
@@ -86,7 +90,7 @@ public class AnalyticsController {
         boolean hasAiTradeReviews = tradeReviewRepository
                 .findTopByTradeUserIdAndQualityScoreIsNotNullOrderByUpdatedAtDesc(targetUser.getId())
                 .isPresent();
-        WeeklyCoachReportGenerator.WeeklyCoachReport weeklyCoach = hasProAccess
+        WeeklyCoachReportGenerator.WeeklyCoachReport weeklyCoach = viewerHasProAccess
                 ? weeklyTradingCoachService.buildReportForUser(targetUser.getId())
                 : null;
 
@@ -103,14 +107,17 @@ public class AnalyticsController {
         model.addAttribute("period", range.period());
         model.addAttribute("from", range.fromDate());
         model.addAttribute("to", range.toDate());
-        model.addAttribute("hasProAccess", hasProAccess);
-        model.addAttribute("tradeUsage", hasProAccess ? report.getOverview().getTotalTrades() : Math.min(report.getOverview().getTotalTrades(), tradeLimit));
-        model.addAttribute("tradeUsageLimit", hasProAccess ? 0 : tradeLimit);
-        model.addAttribute("tradeLimitReached", !hasProAccess && report.getOverview().getTotalTrades() >= tradeLimit);
-        model.addAttribute("aiReviewedTradesUrl", "/trades?view=ai-reviewed");
+        model.addAttribute("hasProAccess", viewerHasProAccess);
+        model.addAttribute("targetHasProAccess", targetHasProAccess);
+        model.addAttribute("tradeUsage", targetHasProAccess ? totalTradeUsage : Math.min(totalTradeUsage, targetTradeLimit));
+        model.addAttribute("tradeUsageLimit", targetHasProAccess ? 0 : targetTradeLimit);
+        model.addAttribute("tradeLimitReached", !targetHasProAccess && totalTradeUsage >= targetTradeLimit);
+        model.addAttribute("aiReviewedTradesUrl", buildAiReviewedTradesUrl(currentUser, targetUser));
+        model.addAttribute("aiReviewedTradesActionLabel", buildAiReviewedTradesActionLabel(currentUser, targetUser));
         model.addAttribute("hasAiTradeReviews", hasAiTradeReviews);
         model.addAttribute("weeklyCoach", weeklyCoach);
-        model.addAttribute("weeklyCoachReportUrl", "/reports/weekly" + (selectedUserId != null && !selectedUserId.isBlank() ? "?userId=" + targetUser.getId() : ""));
+        model.addAttribute("weeklyCoachReportUrl", buildWeeklyCoachReportUrl(currentUser, targetUser));
+        model.addAttribute("settingsUrl", buildSettingsUrl(currentUser));
 
         return "dashboard";
     }
@@ -176,6 +183,7 @@ public class AnalyticsController {
 
         boolean hasProAccess = userService.hasProAccess(currentUser);
         int tradeLimit = userService.resolveTradeLimit(currentUser);
+        long totalTradeUsage = analyticsService.countTradesForUser(currentUser.getId());
 
         ResolvedRange range = resolveRange(period, from, to);
         AnalyticsService.AnalyticsWorkspaceReport report = analyticsService.buildWorkspaceReportForUser(
@@ -188,15 +196,9 @@ public class AnalyticsController {
                 classification,
                 mistakeTag
         );
-        int workspaceTradeCount = analyticsService.findTradesForUser(
-                currentUser.getId(),
-                range.fromDateTime(),
-                range.toDateTime()
-        ).size();
-
         model.addAttribute("currentUser", currentUser);
         model.addAttribute("hasProAccess", hasProAccess);
-        model.addAttribute("tradeUsage", hasProAccess ? workspaceTradeCount : Math.min(workspaceTradeCount, tradeLimit));
+        model.addAttribute("tradeUsage", hasProAccess ? totalTradeUsage : Math.min(totalTradeUsage, tradeLimit));
         model.addAttribute("tradeUsageLimit", hasProAccess ? 0 : tradeLimit);
         model.addAttribute("period", range.period());
         model.addAttribute("from", range.fromDate());
@@ -228,6 +230,7 @@ public class AnalyticsController {
 
         boolean hasProAccess = userService.hasProAccess(currentUser);
         int tradeLimit = userService.resolveTradeLimit(currentUser);
+        long totalTradeUsage = analyticsService.countTradesForUser(currentUser.getId());
 
         ResolvedRange range = resolveRange(period, from, to);
         AnalyticsService.AnalyticsReport report = analyticsService.buildReportForUser(
@@ -257,7 +260,7 @@ public class AnalyticsController {
 
         model.addAttribute("currentUser", currentUser);
         model.addAttribute("hasProAccess", hasProAccess);
-        model.addAttribute("tradeUsage", hasProAccess ? filteredTrades.size() : Math.min(filteredTrades.size(), tradeLimit));
+        model.addAttribute("tradeUsage", hasProAccess ? totalTradeUsage : Math.min(totalTradeUsage, tradeLimit));
         model.addAttribute("tradeUsageLimit", hasProAccess ? 0 : tradeLimit);
         model.addAttribute("period", range.period());
         model.addAttribute("from", range.fromDate());
@@ -288,11 +291,18 @@ public class AnalyticsController {
 
         User targetUser = resolveTargetUser(currentUser, selectedUserId);
         WeeklyCoachReportGenerator.WeeklyCoachReport weeklyCoach = weeklyTradingCoachService.buildReportForUser(targetUser.getId());
+        boolean targetHasProAccess = userService.hasProAccess(targetUser);
+        int targetTradeLimit = userService.resolveTradeLimit(targetUser);
+        long totalTradeUsage = analyticsService.countTradesForUser(targetUser.getId());
 
         model.addAttribute("currentUser", currentUser);
         model.addAttribute("weeklyCoach", weeklyCoach);
         model.addAttribute("weeklyCoachTargetUser", targetUser);
         model.addAttribute("selectedUserId", targetUser.getId());
+        model.addAttribute("tradeUsage", targetHasProAccess ? totalTradeUsage : Math.min(totalTradeUsage, targetTradeLimit));
+        model.addAttribute("tradeUsageLimit", targetHasProAccess ? 0 : targetTradeLimit);
+        model.addAttribute("reportsHomeUrl", buildReportsHomeUrl(currentUser));
+        model.addAttribute("settingsUrl", buildSettingsUrl(currentUser));
         return "weeklyReport";
     }
 
@@ -370,6 +380,50 @@ public class AnalyticsController {
             return currentUser;
         }
         return userRepository.findById(selectedUserId).orElse(currentUser);
+    }
+
+    private String buildAiReviewedTradesUrl(User currentUser, User targetUser) {
+        if (currentUser != null
+                && targetUser != null
+                && userService.isAdmin(currentUser)
+                && !Objects.equals(currentUser.getId(), targetUser.getId())) {
+            return "/admin/users/" + targetUser.getId();
+        }
+        return "/trades?view=ai-reviewed";
+    }
+
+    private String buildAiReviewedTradesActionLabel(User currentUser, User targetUser) {
+        if (currentUser != null
+                && targetUser != null
+                && userService.isAdmin(currentUser)
+                && !Objects.equals(currentUser.getId(), targetUser.getId())) {
+            return "Open account detail";
+        }
+        return "Open AI-reviewed trades";
+    }
+
+    private String buildWeeklyCoachReportUrl(User currentUser, User targetUser) {
+        if (currentUser != null
+                && targetUser != null
+                && userService.isAdmin(currentUser)
+                && !Objects.equals(currentUser.getId(), targetUser.getId())) {
+            return "/reports/weekly?userId=" + targetUser.getId();
+        }
+        return "/reports/weekly";
+    }
+
+    private String buildReportsHomeUrl(User currentUser) {
+        if (currentUser != null && userService.isAdmin(currentUser)) {
+            return "/admin/reports";
+        }
+        return "/reports";
+    }
+
+    private String buildSettingsUrl(User currentUser) {
+        if (currentUser != null && userService.isAdmin(currentUser)) {
+            return "/admin/settings";
+        }
+        return "/settings";
     }
 
     private ResolvedRange resolveRange(String period, LocalDate from, LocalDate to) {

@@ -54,6 +54,10 @@ public class AnalyticsService {
         return buildReportForUser(userId, null, null);
     }
 
+    public long countTradesForUser(String userId) {
+        return tradeService.countByUserId(userId);
+    }
+
     @Transactional(readOnly = true)
     public AnalyticsReport buildReportForUser(String userId, LocalDateTime from, LocalDateTime to) {
         return buildReportForUser(userId, from, to, null, null, null);

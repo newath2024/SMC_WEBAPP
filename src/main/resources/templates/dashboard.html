@@ -40,11 +40,11 @@
               <i class="bi bi-lock-fill"></i>
               <span>Export CSV (Pro)</span>
             </button>
-            <a class="header-icon-btn" th:href="@{/settings}" aria-label="Settings">
+            <a class="header-icon-btn" th:href="${settingsUrl}" aria-label="Settings">
               <i class="bi bi-gear"></i>
             </a>
             <a class="header-avatar"
-               th:href="@{/settings}"
+               th:href="${settingsUrl}"
                aria-label="Account settings"
                th:text="${currentUser != null ? #strings.substring(currentUser.username, 0, 1).toUpperCase() : 'U'}">U</a>
           </div>
@@ -102,7 +102,7 @@
         </form>
       </header>
 
-      <section class="upgrade-banner" th:if="${!hasProAccess}">
+      <section class="upgrade-banner" th:if="${!targetHasProAccess}">
         <div>
           <div class="eyebrow">Unlock advanced analytics</div>
           <h2>Session heatmap, strategy edge score, and AI trade review.</h2>
@@ -160,7 +160,7 @@
       <section class="upgrade-banner" th:if="${tradeLimitReached}">
         <div>
           <div class="eyebrow">Trade limit reached</div>
-          <h2>You reached the free plan limit (100 trades).</h2>
+          <h2 th:text="${'You reached the free plan limit (' + tradeUsageLimit + ' trades).'}">You reached the free plan limit (100 trades).</h2>
           <p>Upgrade to Pro for unlimited trade tracking, export, and advanced analytics.</p>
         </div>
         <a class="upgrade-banner-btn" href="#billing">Upgrade to Pro</a>
@@ -495,7 +495,7 @@
         </div>
       </section>
 
-      <section class="pricing-grid" id="billing" th:if="${!hasProAccess}">
+      <section class="pricing-grid" id="billing" th:if="${!targetHasProAccess}">
         <article class="pricing-card">
           <div class="pricing-tier">Free</div>
           <div class="pricing-price">$0</div>
@@ -594,7 +594,7 @@
               <span>Generate your first AI review from any trade detail page.</span>
             </div>
             <span class="conversion-hook-action">
-              Open AI-reviewed trades
+              <span th:text="${aiReviewedTradesActionLabel}">Open AI-reviewed trades</span>
               <i class="bi bi-arrow-up-right"></i>
             </span>
           </a>
