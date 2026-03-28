@@ -41,8 +41,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class TradeDeleteControllerIntegrationTest {
 
     private static final String USER_ID = "02681084-a5b8-43c3-abf3-2c774a89dc0a";
+    private static final String OTHER_USER_ID = "8d90c2eb-6e8a-4c58-98f6-2a1730a4b9c1";
     private static final String TRADE_ID_1 = "7ad3d190-e6b2-40a7-8684-1f64eda0378e";
     private static final String TRADE_ID_2 = "29a56d8e-1fff-4b8e-a7ef-e1f1858b0220";
+    private static final String OTHER_TRADE_ID = "9169054f-e6d4-4da6-bbd7-8d1bd972d11f";
     private static final String REVIEW_ID_1 = "controller-review-0001-000000000001";
     private static final String REVIEW_ID_2 = "controller-review-0002-000000000002";
     private static final String TAG_ID = "controller-mistake-0001-0000000001";
@@ -50,6 +52,7 @@ class TradeDeleteControllerIntegrationTest {
     private static final String LINK_ID_2 = "controller-link-0002-000000000002";
     private static final String IMAGE_ID_1 = "controller-image-0001-00000000001";
     private static final String IMAGE_ID_2 = "controller-image-0002-00000000002";
+    private static final String OTHER_IMAGE_ID = "controller-image-0003-00000000003";
     private static final Path SOURCE_DB = Path.of("data", "trading_journal.db");
     private static final Path TEST_DIR = Path.of("target", "test-data");
     private static final Path TEST_DB = TEST_DIR.resolve("trade-delete-controller-repro.db");
@@ -121,12 +124,39 @@ class TradeDeleteControllerIntegrationTest {
                 .andExpect(jsonPath("$.deletedTradeIds.length()").value(2));
     }
 
+    @Test
+    void deleteSingleDoesNotDeleteAnotherUsersTradeImages() throws Exception {
+        MockHttpSession session = new MockHttpSession();
+        session.setAttribute(SESSION_USER_ID, USER_ID);
+
+        mockMvc.perform(post("/trades/{id}/delete", OTHER_TRADE_ID)
+                        .session(session)
+                        .header("Accept", "application/json")
+                        .header("X-Requested-With", "XMLHttpRequest"))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentTypeCompatibleWith("application/json"))
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").value("Trade not found."));
+
+        org.junit.jupiter.api.Assertions.assertTrue(tradeRepository.findById(OTHER_TRADE_ID).isPresent());
+        org.junit.jupiter.api.Assertions.assertTrue(tradeImageRepository.findById(OTHER_IMAGE_ID).isPresent());
+    }
+
     private void seedData() {
         User user = userRepository.findById(USER_ID).orElseGet(() -> {
             User created = new User();
             created.setId(USER_ID);
             created.setUsername("controller-delete-test-user");
             created.setEmail("controller-delete-test-user@example.com");
+            created.setPasswordHash("noop");
+            created.setRole("USER");
+            return userRepository.save(created);
+        });
+        User otherUser = userRepository.findById(OTHER_USER_ID).orElseGet(() -> {
+            User created = new User();
+            created.setId(OTHER_USER_ID);
+            created.setUsername("controller-delete-other-user");
+            created.setEmail("controller-delete-other-user@example.com");
             created.setPasswordHash("noop");
             created.setRole("USER");
             return userRepository.save(created);
@@ -142,6 +172,7 @@ class TradeDeleteControllerIntegrationTest {
 
         Trade tradeOne = ensureTrade(user, TRADE_ID_1, "BTCUSD", LocalDateTime.of(2026, 3, 12, 15, 47));
         Trade tradeTwo = ensureTrade(user, TRADE_ID_2, "XAUUSD", LocalDateTime.of(2026, 3, 6, 12, 13));
+        Trade otherTrade = ensureTrade(otherUser, OTHER_TRADE_ID, "ETHUSD", LocalDateTime.of(2026, 3, 15, 9, 30));
 
         ensureReview(tradeOne, REVIEW_ID_1);
         ensureReview(tradeTwo, REVIEW_ID_2);
@@ -149,6 +180,7 @@ class TradeDeleteControllerIntegrationTest {
         ensureMistakeLink(tradeTwo, mistakeTag, LINK_ID_2);
         ensureImage(tradeOne, IMAGE_ID_1, "/uploads/trade-images/controller-delete-test-1.png");
         ensureImage(tradeTwo, IMAGE_ID_2, "/uploads/trade-images/controller-delete-test-2.png");
+        ensureImage(otherTrade, OTHER_IMAGE_ID, "/uploads/trade-images/controller-delete-test-3.png");
     }
 
     private Trade ensureTrade(User user, String tradeId, String symbol, LocalDateTime entryTime) {

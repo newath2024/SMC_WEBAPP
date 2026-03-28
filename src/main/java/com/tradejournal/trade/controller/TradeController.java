@@ -104,12 +104,20 @@ public class TradeController {
     }
 
     private void fillTradeFormData(Model model, User currentUser) {
+        fillTradeFormData(model, currentUser, currentUser);
+    }
+
+    private void fillTradeFormData(Model model, User currentUser, User formOwner) {
+        User resolvedFormOwner = resolveTradeFormOwner(currentUser, formOwner);
         model.addAttribute("currentUser", currentUser);
-        model.addAttribute("setups", setupService.findActiveByUser(currentUser.getId()));
-        model.addAttribute("mistakeTags", mistakeTagService.findActive());
-        model.addAttribute("tradeUsage", Math.min(tradeService.findAllByUser(currentUser.getId()).size(), userService.resolveTradeLimit(currentUser)));
-        model.addAttribute("tradeUsageLimit", userService.hasProAccess(currentUser) ? 0 : userService.resolveTradeLimit(currentUser));
-        model.addAttribute("hasProAccess", userService.hasProAccess(currentUser));
+        model.addAttribute("setups", setupService.findActiveByUser(resolvedFormOwner.getId()));
+        model.addAttribute("mistakeTags", mistakeTagService.findActiveForUser(resolvedFormOwner.getId()));
+        model.addAttribute("tradeUsage", Math.min(
+                tradeService.findAllByUser(resolvedFormOwner.getId()).size(),
+                userService.resolveTradeLimit(resolvedFormOwner)
+        ));
+        model.addAttribute("tradeUsageLimit", userService.hasProAccess(resolvedFormOwner) ? 0 : userService.resolveTradeLimit(resolvedFormOwner));
+        model.addAttribute("hasProAccess", userService.hasProAccess(resolvedFormOwner));
         model.addAttribute("tradeChartImportConfigured", tradingViewChartImportService.isConfigured());
     }
 
@@ -428,9 +436,10 @@ public class TradeController {
             return "redirect:/login";
         }
 
-        Trade trade = userService.isAdmin(currentUser)
-                ? tradeService.findByIdForAdmin(id)
-                : tradeService.findByIdForUser(id, currentUser.getId());
+        Trade trade = findAccessibleTrade(id, currentUser);
+        if (trade == null) {
+            return "redirect:/trades";
+        }
 
         populateTradeDetailModel(model, currentUser, trade, null);
         return "tradeDetail";
@@ -448,9 +457,10 @@ public class TradeController {
             return "redirect:/login";
         }
 
-        Trade trade = userService.isAdmin(currentUser)
-                ? tradeService.findByIdForAdmin(id)
-                : tradeService.findByIdForUser(id, currentUser.getId());
+        Trade trade = findAccessibleTrade(id, currentUser);
+        if (trade == null) {
+            return "redirect:/trades";
+        }
 
         try {
             TradeReview saved = tradeReviewService.upsertForTrade(trade, reviewForm);
@@ -475,9 +485,11 @@ public class TradeController {
             return "redirect:/login";
         }
 
-        Trade trade = userService.isAdmin(currentUser)
-                ? tradeService.findByIdForAdmin(id)
-                : tradeService.findByIdForUser(id, currentUser.getId());
+        Trade trade = findAccessibleTrade(id, currentUser);
+        if (trade == null) {
+            redirectAttributes.addFlashAttribute("aiReviewNoticeError", "Trade not found.");
+            return "redirect:/trades";
+        }
 
         TradeReview review = tradeReviewService.getOrInitByTrade(trade);
         boolean hadExistingAiReview = review.hasAiReview();
@@ -510,14 +522,15 @@ public class TradeController {
             return "redirect:/login";
         }
 
-        Trade trade = userService.isAdmin(currentUser)
-                ? tradeService.findByIdForAdmin(id)
-                : tradeService.findEditableByIdForUser(id, currentUser.getId());
+        Trade trade = findAccessibleEditableTrade(id, currentUser);
+        if (trade == null) {
+            return "redirect:/trades";
+        }
 
         model.addAttribute("trade", trade);
         model.addAttribute("editMode", true);
         model.addAttribute("tradeImages", tradeImageService.findByTradeId(trade.getId()));
-        fillTradeFormData(model, currentUser);
+        fillTradeFormData(model, currentUser, trade.getUser());
 
         return "tradeForm";
     }
@@ -543,12 +556,17 @@ public class TradeController {
             bindingResult.rejectValue("setup", "required", "Setup is required");
         }
 
+        User formOwner = resolveTradeFormOwnerForEdit(id, currentUser);
+        if (formOwner == null) {
+            return "redirect:/trades";
+        }
+
         if (bindingResult.hasErrors()) {
             trade.setId(id);
             model.addAttribute("trade", trade);
             model.addAttribute("editMode", true);
             model.addAttribute("tradeImages", tradeImageService.findByTradeId(id));
-            fillTradeFormData(model, currentUser);
+            fillTradeFormData(model, currentUser, formOwner);
             model.addAttribute("error", buildFormErrorSummary(bindingResult));
             return "tradeForm";
         }
@@ -565,7 +583,7 @@ public class TradeController {
             model.addAttribute("trade", trade);
             model.addAttribute("editMode", true);
             model.addAttribute("tradeImages", tradeImageService.findByTradeId(id));
-            fillTradeFormData(model, currentUser);
+            fillTradeFormData(model, currentUser, formOwner);
             model.addAttribute("error", friendlyErrorMessage(ex));
             return "tradeForm";
         }
@@ -583,13 +601,24 @@ public class TradeController {
             return buildDeleteUnauthenticatedResponse(request);
         }
 
+        Trade trade = findAccessibleEditableTrade(id, currentUser);
+        if (trade == null) {
+            return buildDeleteErrorResponse(
+                    request,
+                    "redirect:/trades",
+                    "Trade not found.",
+                    redirectAttributes,
+                    HttpStatus.BAD_REQUEST
+            );
+        }
+
         try {
             if (userService.isAdmin(currentUser)) {
-                tradeImageService.deleteByTradeId(id);
-                tradeService.deleteForAdmin(id);
+                tradeImageService.deleteByTradeId(trade.getId());
+                tradeService.deleteForAdmin(trade.getId());
             } else {
-                tradeImageService.deleteByTradeId(id);
-                tradeService.deleteForUser(id, currentUser.getId());
+                tradeImageService.deleteByTradeId(trade.getId());
+                tradeService.deleteForUser(trade.getId(), currentUser.getId());
             }
         } catch (RuntimeException ex) {
             return buildDeleteErrorResponse(
@@ -604,7 +633,7 @@ public class TradeController {
         return buildDeleteSuccessResponse(
                 request,
                 "redirect:/trades",
-                List.of(id),
+                List.of(trade.getId()),
                 "Deleted 1 trade.",
                 redirectAttributes
         );
@@ -1160,6 +1189,47 @@ public class TradeController {
             trade.setSetup(setup);
         }
         setup.setId(setupId.trim());
+    }
+
+    private Trade findAccessibleTrade(String tradeId, User currentUser) {
+        if (currentUser == null) {
+            return null;
+        }
+        try {
+            return userService.isAdmin(currentUser)
+                    ? tradeService.findByIdForAdmin(tradeId)
+                    : tradeService.findByIdForUser(tradeId, currentUser.getId());
+        } catch (IllegalArgumentException ex) {
+            return null;
+        }
+    }
+
+    private Trade findAccessibleEditableTrade(String tradeId, User currentUser) {
+        if (currentUser == null) {
+            return null;
+        }
+        try {
+            return userService.isAdmin(currentUser)
+                    ? tradeService.findByIdForAdmin(tradeId)
+                    : tradeService.findEditableByIdForUser(tradeId, currentUser.getId());
+        } catch (IllegalArgumentException ex) {
+            return null;
+        }
+    }
+
+    private User resolveTradeFormOwner(User currentUser, User formOwner) {
+        if (formOwner != null && formOwner.getId() != null && !formOwner.getId().isBlank()) {
+            return formOwner;
+        }
+        return currentUser;
+    }
+
+    private User resolveTradeFormOwnerForEdit(String tradeId, User currentUser) {
+        Trade existingTrade = findAccessibleEditableTrade(tradeId, currentUser);
+        if (existingTrade == null) {
+            return null;
+        }
+        return resolveTradeFormOwner(currentUser, existingTrade.getUser());
     }
 
     private record DeleteTradesResponse(

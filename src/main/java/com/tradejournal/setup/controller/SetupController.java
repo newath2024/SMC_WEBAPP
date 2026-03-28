@@ -101,9 +101,14 @@ public class SetupController {
         User user = userService.getCurrentUser(session);
         if (user == null) return "redirect:/login";
 
-        Setup setup = userService.isAdmin(user)
-                ? setupService.findByIdForAdmin(id)
-                : setupService.findByIdForUser(id, user.getId());
+        Setup setup;
+        try {
+            setup = userService.isAdmin(user)
+                    ? setupService.findByIdForAdmin(id)
+                    : setupService.findByIdForUser(id, user.getId());
+        } catch (IllegalArgumentException ex) {
+            return "redirect:/setups";
+        }
 
         model.addAttribute("setup", setup);
         model.addAttribute("currentUser", user);
@@ -155,10 +160,14 @@ public class SetupController {
         User user = userService.getCurrentUser(session);
         if (user == null) return "redirect:/login";
 
-        if (userService.isAdmin(user)) {
-            setupService.setActiveForAdmin(id, active);
-        } else {
-            setupService.setActiveForUser(id, user.getId(), active);
+        try {
+            if (userService.isAdmin(user)) {
+                setupService.setActiveForAdmin(id, active);
+            } else {
+                setupService.setActiveForUser(id, user.getId(), active);
+            }
+        } catch (IllegalArgumentException ex) {
+            return "redirect:/setups";
         }
 
         return "redirect:/setups";
