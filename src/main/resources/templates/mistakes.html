@@ -155,6 +155,9 @@
                 <td>
                   <div class="mistake-name-cell" th:text="${m.name}">Mistake Name</div>
                   <span class="badge rounded-pill text-bg-light mistake-code-badge" th:text="${m.code}">MISTAKE_CODE</span>
+                  <span class="badge rounded-pill text-bg-primary-subtle text-primary-emphasis ms-1"
+                        th:if="${m.scopeLabel != null and !#strings.isEmpty(m.scopeLabel)}"
+                        th:text="${m.scopeLabel}">System tag</span>
                 </td>
                 <td class="text-muted"
                     th:text="${m.description != null && !#strings.isEmpty(m.description) ? m.description : 'No description provided'}">
@@ -169,7 +172,7 @@
                         th:text="${m.usageCount == 1 ? '1 trade' : m.usageCount + ' trades'}">0 trades</span>
                 </td>
                 <td class="text-end">
-                  <div class="dropdown dropup mistake-action-dropdown">
+                  <div class="dropdown dropup mistake-action-dropdown" th:if="${m.manageable}">
                     <button class="btn btn-sm btn-outline-secondary mistake-action-trigger"
                             type="button"
                             data-bs-toggle="dropdown"
@@ -209,6 +212,7 @@
                       </li>
                     </ul>
                   </div>
+                  <span class="text-muted small" th:if="${!m.manageable}">Read only</span>
                 </td>
               </tr>
               </tbody>
@@ -368,4 +372,3 @@
 
 </body>
 </html>
-

@@ -43,7 +43,10 @@ public class MistakeTagController {
             return "redirect:/login";
         }
 
+        boolean adminView = userService.isAdmin(currentUser);
+
         model.addAttribute("currentUser", currentUser);
+        model.addAttribute("adminView", adminView);
 
         var usageByTagId = tradeMistakeTagRepository.countUsageByMistakeTagForUser(currentUser.getId())
                 .stream()
@@ -52,10 +55,16 @@ public class MistakeTagController {
                         TradeMistakeTagRepository.MistakeUsageRow::getUsageCount
                 ));
 
-        var tableRows = mistakeTagService.findAll().stream()
+        var visibleTags = adminView
+                ? mistakeTagService.findAllForAdmin()
+                : mistakeTagService.findAllVisibleToUser(currentUser.getId());
+
+        var tableRows = visibleTags.stream()
                 .map(tag -> new MistakeRowView(
                         tag,
-                        usageByTagId.getOrDefault(tag.getId(), 0L)
+                        usageByTagId.getOrDefault(tag.getId(), 0L),
+                        adminView || isOwnedByCurrentUser(tag, currentUser),
+                        resolveScopeLabel(tag, adminView)
                 ))
                 .toList();
         MistakeAnalyticsService.MistakeTrendReport trendReport = mistakeAnalyticsService.buildTrendReportForUser(currentUser.getId());
@@ -143,6 +152,10 @@ public class MistakeTagController {
         model.addAttribute("currentUser", currentUser);
         model.addAttribute("mistake", new MistakeTag());
         model.addAttribute("editMode", false);
+        if (!userService.isAdmin(currentUser)
+                && mistakeTagService.countOwnedByUser(currentUser.getId()) >= userService.resolveMistakeTagLimit(currentUser)) {
+            model.addAttribute("error", "Standard plan includes up to 10 custom mistake tags. Upgrade to Pro for more.");
+        }
 
         return "mistakeForm";
     }
@@ -161,9 +174,13 @@ public class MistakeTagController {
         }
 
         try {
-            mistakeTagService.create(code, name, description);
+            if (userService.isAdmin(currentUser)) {
+                mistakeTagService.createGlobal(code, name, description);
+            } else {
+                mistakeTagService.createForUser(code, name, description, currentUser);
+            }
             return "redirect:/mistakes";
-        } catch (IllegalArgumentException e) {
+        } catch (IllegalArgumentException | IllegalStateException e) {
             MistakeTag mistake = new MistakeTag();
             mistake.setCode(code);
             mistake.setName(name);
@@ -184,11 +201,16 @@ public class MistakeTagController {
             return "redirect:/login";
         }
 
-        model.addAttribute("currentUser", currentUser);
-        model.addAttribute("mistake", mistakeTagService.findById(id));
-        model.addAttribute("editMode", true);
-
-        return "mistakeForm";
+        try {
+            model.addAttribute("currentUser", currentUser);
+            model.addAttribute("mistake", userService.isAdmin(currentUser)
+                    ? mistakeTagService.findByIdForAdmin(id)
+                    : mistakeTagService.findByIdForUser(id, currentUser.getId()));
+            model.addAttribute("editMode", true);
+            return "mistakeForm";
+        } catch (IllegalArgumentException ex) {
+            return "redirect:/mistakes";
+        }
     }
 
     @PostMapping("/{id}/edit")
@@ -207,7 +229,11 @@ public class MistakeTagController {
         }
 
         try {
-            mistakeTagService.update(id, code, name, description, active);
+            if (userService.isAdmin(currentUser)) {
+                mistakeTagService.updateGlobal(id, code, name, description, active);
+            } else {
+                mistakeTagService.updateForUser(id, code, name, description, active, currentUser.getId());
+            }
             return "redirect:/mistakes";
         } catch (IllegalArgumentException e) {
             MistakeTag mistake = new MistakeTag();
@@ -232,7 +258,15 @@ public class MistakeTagController {
             return "redirect:/login";
         }
 
-        mistakeTagService.toggleActive(id);
+        try {
+            if (userService.isAdmin(currentUser)) {
+                mistakeTagService.toggleActiveGlobal(id);
+            } else {
+                mistakeTagService.toggleActiveForUser(id, currentUser.getId());
+            }
+        } catch (IllegalArgumentException ex) {
+            return "redirect:/mistakes";
+        }
         return "redirect:/mistakes";
     }
 
@@ -243,7 +277,15 @@ public class MistakeTagController {
             return "redirect:/login";
         }
 
-        mistakeTagService.delete(id);
+        try {
+            if (userService.isAdmin(currentUser)) {
+                mistakeTagService.deleteGlobal(id);
+            } else {
+                mistakeTagService.deleteForUser(id, currentUser.getId());
+            }
+        } catch (IllegalArgumentException ex) {
+            return "redirect:/mistakes";
+        }
         return "redirect:/mistakes";
     }
 
@@ -253,16 +295,20 @@ public class MistakeTagController {
             String name,
             String description,
             boolean active,
-            long usageCount
+            long usageCount,
+            boolean manageable,
+            String scopeLabel
     ) {
-        public MistakeRowView(MistakeTag tag, long usageCount) {
+        public MistakeRowView(MistakeTag tag, long usageCount, boolean manageable, String scopeLabel) {
             this(
                     tag.getId(),
                     tag.getCode(),
                     tag.getName(),
                     tag.getDescription(),
                     tag.isActive(),
-                    usageCount
+                    usageCount,
+                    manageable,
+                    scopeLabel
             );
         }
     }
@@ -308,6 +354,28 @@ public class MistakeTagController {
             return "Unknown";
         }
         return value.trim();
+    }
+
+    private boolean isOwnedByCurrentUser(MistakeTag tag, User currentUser) {
+        return tag != null
+                && tag.getUser() != null
+                && currentUser != null
+                && currentUser.getId() != null
+                && currentUser.getId().equals(tag.getUser().getId());
+    }
+
+    private String resolveScopeLabel(MistakeTag tag, boolean adminView) {
+        if (tag == null) {
+            return null;
+        }
+        if (tag.getUser() == null) {
+            return adminView ? "System" : "System tag";
+        }
+        String owner = tag.getUser().getUsername();
+        if (owner == null || owner.isBlank()) {
+            owner = "User";
+        }
+        return adminView ? owner : "Private tag";
     }
 
     private long toPercent(long value, long total) {

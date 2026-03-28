@@ -1,5 +1,6 @@
 package com.tradejournal.mistake.domain;
 
+import com.tradejournal.auth.domain.User;
 import jakarta.persistence.*;
 
 import java.time.LocalDateTime;
@@ -24,6 +25,10 @@ public class MistakeTag {
 
     @Column(nullable = false)
     private boolean active = true;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id")
+    private User user;
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
@@ -78,6 +83,14 @@ public class MistakeTag {
 
     public void setActive(boolean active) {
         this.active = active;
+    }
+
+    public User getUser() {
+        return user;
+    }
+
+    public void setUser(User user) {
+        this.user = user;
     }
 
     public LocalDateTime getCreatedAt() {
