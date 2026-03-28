@@ -1,5 +1,6 @@
 package com.tradejournal.service;
 
+import com.tradejournal.auth.domain.User;
 import com.tradejournal.mistake.domain.MistakeTag;
 import com.tradejournal.setup.domain.Setup;
 import com.tradejournal.trade.domain.Trade;
@@ -23,8 +24,12 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -147,6 +152,39 @@ class TradeServiceTest {
         verify(tradeReviewRepository).deleteByTradeIdIn(List.of("trade-1"));
         verify(tradeMistakeTagRepository).deleteByTradeIdIn(List.of("trade-1"));
         verify(repo).deleteAllByIdInBatch(List.of("trade-1"));
+    }
+
+    @Test
+    void updateForAdminRejectsSetupOwnedByAnotherUser() {
+        User owner = new User();
+        owner.setId("owner-1");
+
+        Trade existingTrade = trade(
+                "trade-1",
+                "XAUUSD",
+                "WIN",
+                setup("Owner Setup"),
+                LocalDateTime.of(2026, 3, 12, 9, 0)
+        );
+        existingTrade.setUser(owner);
+
+        Trade formTrade = new Trade();
+        Setup submittedSetup = new Setup();
+        submittedSetup.setId("foreign-setup");
+        formTrade.setSetup(submittedSetup);
+
+        when(repo.findById("trade-1")).thenReturn(Optional.of(existingTrade));
+        when(tradeMistakeTagRepository.findByTradeId("trade-1")).thenReturn(List.of());
+        when(setupRepository.findByIdAndUserId("foreign-setup", "owner-1")).thenReturn(Optional.empty());
+
+        IllegalArgumentException ex = assertThrows(
+                IllegalArgumentException.class,
+                () -> tradeService.updateForAdmin("trade-1", formTrade, List.of(), null)
+        );
+
+        assertEquals("Invalid setup selected", ex.getMessage());
+        verify(setupRepository).findByIdAndUserId("foreign-setup", "owner-1");
+        verify(repo, never()).save(any(Trade.class));
     }
 
     private Trade trade(String id, String symbol, String result, Setup setup, LocalDateTime entryTime) {

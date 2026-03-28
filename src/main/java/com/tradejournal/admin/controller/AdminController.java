@@ -366,8 +366,10 @@ public class AdminController {
             return "redirect:/trades";
         }
 
-        User user = userRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("User not found: " + id));
+        User user = userRepository.findById(id).orElse(null);
+        if (user == null) {
+            return "redirect:/admin/users";
+        }
 
         List<Trade> trades = tradeRepository.findByUserIdOrderByEntryTimeDesc(user.getId());
         List<Setup> setups = setupRepository.findByUserIdOrderByCreatedAtDesc(user.getId());
@@ -516,11 +518,13 @@ public class AdminController {
             return "redirect:/trades";
         }
 
-        User target = userRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("User not found: " + id));
+        User target = userRepository.findById(id).orElse(null);
+        if (target == null) {
+            return "redirect:/admin/users";
+        }
 
         if (admin.getId().equals(target.getId())) {
-            throw new IllegalArgumentException("You cannot disable yourself");
+            return "redirect:/admin/users";
         }
 
         target.setActive(!target.isActive());
@@ -541,11 +545,13 @@ public class AdminController {
             return "redirect:/trades";
         }
 
-        User target = userRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("User not found: " + id));
+        User target = userRepository.findById(id).orElse(null);
+        if (target == null) {
+            return "redirect:/admin/users";
+        }
 
         if (admin.getId().equals(target.getId())) {
-            throw new IllegalArgumentException("You cannot delete yourself");
+            return "redirect:/admin/users";
         }
 
         List<Trade> userTrades = tradeRepository.findByUserIdOrderByEntryTimeDesc(target.getId());
@@ -575,8 +581,10 @@ public class AdminController {
             return "redirect:/trades";
         }
 
-        User target = userRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("User not found: " + id));
+        User target = userRepository.findById(id).orElse(null);
+        if (target == null) {
+            return "redirect:/admin/users";
+        }
 
         if (isAdminUser(target) || target.getPlanType() == PlanType.ADMIN) {
             return "redirect:/admin/users";
@@ -600,8 +608,10 @@ public class AdminController {
             return "redirect:/trades";
         }
 
-        Trade trade = tradeRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Trade not found: " + id));
+        Trade trade = tradeRepository.findById(id).orElse(null);
+        if (trade == null) {
+            return "redirect:/admin";
+        }
 
         tradeImageService.deleteByTradeId(trade.getId());
         tradeService.deleteForAdmin(trade.getId());

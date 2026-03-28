@@ -90,6 +90,13 @@ public class TradeService {
         return trades;
     }
 
+    public long countByUserId(String userId) {
+        if (!StringUtils.hasText(userId)) {
+            return 0L;
+        }
+        return repo.countByUserId(userId.trim());
+    }
+
     public List<Trade> findFilteredByUser(String userId, TradeFilterCriteria criteria) {
         List<Trade> trades = findAllByUser(userId);
         return filterTrades(trades, criteria);
@@ -174,7 +181,7 @@ public class TradeService {
         String ownerUserId = existing.getUser() != null ? existing.getUser().getId() : null;
 
         applyEditableFields(existing, formTrade);
-        existing.setSetup(resolveSetupForAdmin(formTrade.getSetup()));
+        existing.setSetup(resolveSetupForAdmin(formTrade.getSetup(), ownerUserId));
         normalizeTrade(existing);
         existing.setPnl(calculatePnL(existing));
 
@@ -765,9 +772,12 @@ public class TradeService {
                 .orElseThrow(() -> new IllegalArgumentException("Invalid setup selected"));
     }
 
-    private Setup resolveSetupForAdmin(Setup rawSetup) {
+    private Setup resolveSetupForAdmin(Setup rawSetup, String ownerUserId) {
         String setupId = extractSetupId(rawSetup);
-        return setupRepository.findById(setupId)
+        if (!StringUtils.hasText(ownerUserId)) {
+            throw new IllegalStateException("Trade owner is required");
+        }
+        return setupRepository.findByIdAndUserId(setupId, ownerUserId)
                 .orElseThrow(() -> new IllegalArgumentException("Invalid setup selected"));
     }
 

@@ -235,9 +235,14 @@ public class AdminBillingController {
     @PostMapping("/subscriptions/{userId}/cancel")
     @Transactional
     public String cancelSubscription(@PathVariable String userId, HttpSession session) {
-        requireAdmin(session);
-        User target = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
+        String adminRedirect = requireAdminRedirect(session);
+        if (adminRedirect != null) {
+            return adminRedirect;
+        }
+        User target = userRepository.findById(userId).orElse(null);
+        if (target == null || isAdminUser(target)) {
+            return "redirect:/admin/billing";
+        }
 
         BillingSubscription sub = billingSubscriptionRepository.findByUserId(userId)
                 .orElseGet(() -> createDefaultSubscription(target, LocalDate.now(), LocalDateTime.now().minusDays(7)));
@@ -261,9 +266,14 @@ public class AdminBillingController {
     @PostMapping("/subscriptions/{userId}/extend-trial")
     @Transactional
     public String extendTrial(@PathVariable String userId, HttpSession session) {
-        requireAdmin(session);
-        User target = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
+        String adminRedirect = requireAdminRedirect(session);
+        if (adminRedirect != null) {
+            return adminRedirect;
+        }
+        User target = userRepository.findById(userId).orElse(null);
+        if (target == null || isAdminUser(target)) {
+            return "redirect:/admin/billing";
+        }
 
         BillingSubscription sub = billingSubscriptionRepository.findByUserId(userId)
                 .orElseGet(() -> createDefaultSubscription(target, LocalDate.now(), LocalDateTime.now().minusDays(7)));
@@ -290,9 +300,14 @@ public class AdminBillingController {
     @PostMapping("/subscriptions/{userId}/retry-payment")
     @Transactional
     public String retryPayment(@PathVariable String userId, HttpSession session) {
-        requireAdmin(session);
-        User target = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
+        String adminRedirect = requireAdminRedirect(session);
+        if (adminRedirect != null) {
+            return adminRedirect;
+        }
+        User target = userRepository.findById(userId).orElse(null);
+        if (target == null || isAdminUser(target)) {
+            return "redirect:/admin/billing";
+        }
 
         BillingSubscription sub = billingSubscriptionRepository.findByUserId(userId)
                 .orElseGet(() -> createDefaultSubscription(target, LocalDate.now(), LocalDateTime.now().minusDays(7)));
@@ -316,9 +331,14 @@ public class AdminBillingController {
     @PostMapping("/subscriptions/{userId}/change-plan")
     @Transactional
     public String changePlan(@PathVariable String userId, HttpSession session) {
-        requireAdmin(session);
-        User target = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
+        String adminRedirect = requireAdminRedirect(session);
+        if (adminRedirect != null) {
+            return adminRedirect;
+        }
+        User target = userRepository.findById(userId).orElse(null);
+        if (target == null || isAdminUser(target)) {
+            return "redirect:/admin/billing";
+        }
 
         BillingSubscription sub = billingSubscriptionRepository.findByUserId(userId)
                 .orElseGet(() -> createDefaultSubscription(target, LocalDate.now(), LocalDateTime.now().minusDays(7)));
@@ -493,12 +513,15 @@ public class AdminBillingController {
         };
     }
 
-    private User requireAdmin(HttpSession session) {
+    private String requireAdminRedirect(HttpSession session) {
         User admin = userService.getCurrentUser(session);
-        if (admin == null || !userService.isAdmin(admin)) {
-            throw new IllegalArgumentException("Admin permission required");
+        if (admin == null) {
+            return "redirect:/login";
         }
-        return admin;
+        if (!userService.isAdmin(admin)) {
+            return "redirect:/trades";
+        }
+        return null;
     }
 
     private boolean isAdminUser(User user) {
