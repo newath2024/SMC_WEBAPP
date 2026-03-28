@@ -9,6 +9,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.util.Base64;
 import java.util.Locale;
+import java.util.Set;
 
 @Service
 public class SettingsService {
@@ -16,6 +17,13 @@ public class SettingsService {
     private static final long MAX_AVATAR_SIZE_BYTES = 5L * 1024L * 1024L;
     private static final String DEFAULT_TIMEZONE = "Asia/Bangkok";
     private static final String DEFAULT_COUNTRY = "Thailand";
+    private static final Set<String> ALLOWED_AVATAR_CONTENT_TYPES = Set.of(
+            "image/png",
+            "image/jpeg",
+            "image/jpg",
+            "image/webp",
+            "image/gif"
+    );
 
     private final UserRepository userRepository;
     private final BCryptPasswordEncoder passwordEncoder;
@@ -148,9 +156,9 @@ public class SettingsService {
     }
 
     private String toAvatarDataUrl(MultipartFile avatarFile) {
-        String contentType = avatarFile.getContentType() == null ? "" : avatarFile.getContentType().toLowerCase(Locale.ROOT);
-        if (!contentType.startsWith("image/")) {
-            throw new IllegalArgumentException("Avatar must be an image file");
+        String contentType = normalizeContentType(avatarFile.getContentType());
+        if (!ALLOWED_AVATAR_CONTENT_TYPES.contains(contentType)) {
+            throw new IllegalArgumentException("Avatar must be PNG, JPG, WEBP, or GIF");
         }
 
         if (avatarFile.getSize() > MAX_AVATAR_SIZE_BYTES) {
@@ -163,6 +171,15 @@ public class SettingsService {
         } catch (IOException e) {
             throw new IllegalArgumentException("Avatar upload could not be processed");
         }
+    }
+
+    private String normalizeContentType(String contentType) {
+        if (contentType == null || contentType.isBlank()) {
+            return "";
+        }
+        String normalized = contentType.trim().toLowerCase(Locale.ROOT);
+        int separatorIndex = normalized.indexOf(';');
+        return separatorIndex >= 0 ? normalized.substring(0, separatorIndex).trim() : normalized;
     }
 
     private String defaultIfBlank(String value, String fallback) {

@@ -17,10 +17,13 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
+import javax.xml.XMLConstants;
 import java.io.Serializable;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.ByteArrayInputStream;
+import java.io.StringReader;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
@@ -30,6 +33,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
@@ -38,6 +42,7 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
+import org.xml.sax.InputSource;
 
 @Service
 public class TradeImportService {
@@ -48,6 +53,13 @@ public class TradeImportService {
             .appendPattern(":ss")
             .optionalEnd()
             .toFormatter(Locale.ENGLISH);
+    private static final String XLSX_SHEET_ENTRY = "xl/worksheets/sheet1.xml";
+    private static final String XLSX_SHARED_STRINGS_ENTRY = "xl/sharedStrings.xml";
+    private static final Set<String> XLSX_ALLOWED_XML_ENTRIES = Set.of(XLSX_SHEET_ENTRY, XLSX_SHARED_STRINGS_ENTRY);
+    private static final int MAX_XLSX_ENTRY_COUNT = 256;
+    private static final int MAX_XLSX_ENTRY_BYTES = 4 * 1024 * 1024;
+    private static final int MAX_XLSX_TOTAL_BYTES = 8 * 1024 * 1024;
+    private static final int ZIP_BUFFER_SIZE = 8 * 1024;
 
     private final TradeRepository tradeRepository;
     private final SetupRepository setupRepository;
@@ -274,12 +286,12 @@ public class TradeImportService {
     private ParsedReport parseXlsxReport(MultipartFile file) {
         try {
             Map<String, byte[]> entries = unzipEntries(file);
-            byte[] sheetBytes = entries.get("xl/worksheets/sheet1.xml");
+            byte[] sheetBytes = entries.get(XLSX_SHEET_ENTRY);
             if (sheetBytes == null) {
                 throw new IllegalArgumentException("The uploaded MT5 workbook does not contain sheet1.xml.");
             }
 
-            List<String> sharedStrings = parseSharedStrings(entries.get("xl/sharedStrings.xml"));
+            List<String> sharedStrings = parseSharedStrings(entries.get(XLSX_SHARED_STRINGS_ENTRY));
             List<Map<String, String>> rows = parseSheetRows(sheetBytes, sharedStrings);
 
             String accountLabel = null;
@@ -665,15 +677,58 @@ public class TradeImportService {
 
     private Map<String, byte[]> unzipEntries(MultipartFile file) throws IOException {
         Map<String, byte[]> entries = new HashMap<>();
+        int entryCount = 0;
+        int totalBytes = 0;
         try (ZipInputStream zipInputStream = new ZipInputStream(file.getInputStream())) {
             ZipEntry entry;
             while ((entry = zipInputStream.getNextEntry()) != null) {
-                if (!entry.isDirectory()) {
-                    entries.put(entry.getName(), zipInputStream.readAllBytes());
+                entryCount++;
+                if (entryCount > MAX_XLSX_ENTRY_COUNT) {
+                    throw new IllegalArgumentException("The uploaded MT5 workbook contains too many entries to import safely.");
                 }
+                if (entry.isDirectory()) {
+                    zipInputStream.closeEntry();
+                    continue;
+                }
+
+                String entryName = entry.getName();
+                if (entries.containsKey(entryName)) {
+                    throw new IllegalArgumentException("The uploaded MT5 workbook contains duplicate XML entries.");
+                }
+                if (!XLSX_ALLOWED_XML_ENTRIES.contains(entryName)) {
+                    zipInputStream.closeEntry();
+                    continue;
+                }
+
+                int remainingBytes = MAX_XLSX_TOTAL_BYTES - totalBytes;
+                if (remainingBytes <= 0) {
+                    throw new IllegalArgumentException("The uploaded MT5 workbook is too large to import safely.");
+                }
+                byte[] entryBytes = readEntryBytes(zipInputStream, remainingBytes);
+                totalBytes += entryBytes.length;
+                entries.put(entryName, entryBytes);
+                zipInputStream.closeEntry();
             }
         }
         return entries;
+    }
+
+    private byte[] readEntryBytes(ZipInputStream zipInputStream, int remainingBytes) throws IOException {
+        int limit = Math.min(MAX_XLSX_ENTRY_BYTES, remainingBytes);
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream(Math.min(limit, ZIP_BUFFER_SIZE));
+        byte[] buffer = new byte[ZIP_BUFFER_SIZE];
+        int totalRead = 0;
+
+        int read;
+        while ((read = zipInputStream.read(buffer)) != -1) {
+            totalRead += read;
+            if (totalRead > limit) {
+                throw new IllegalArgumentException("The uploaded MT5 workbook is too large to import safely.");
+            }
+            outputStream.write(buffer, 0, read);
+        }
+
+        return outputStream.toByteArray();
     }
 
     private List<String> parseSharedStrings(byte[] sharedStringsBytes) throws Exception {
@@ -733,8 +788,19 @@ public class TradeImportService {
     private Document parseXml(byte[] bytes) throws Exception {
         DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
         factory.setNamespaceAware(true);
+        factory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
+        factory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
+        factory.setFeature("http://xml.org/sax/features/external-general-entities", false);
+        factory.setFeature("http://xml.org/sax/features/external-parameter-entities", false);
+        factory.setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false);
+        factory.setAttribute(XMLConstants.ACCESS_EXTERNAL_DTD, "");
+        factory.setAttribute(XMLConstants.ACCESS_EXTERNAL_SCHEMA, "");
+        factory.setXIncludeAware(false);
+        factory.setExpandEntityReferences(false);
         try (ByteArrayInputStream inputStream = new ByteArrayInputStream(bytes)) {
-            return factory.newDocumentBuilder().parse(inputStream);
+            var builder = factory.newDocumentBuilder();
+            builder.setEntityResolver((publicId, systemId) -> new InputSource(new StringReader("")));
+            return builder.parse(inputStream);
         }
     }
 

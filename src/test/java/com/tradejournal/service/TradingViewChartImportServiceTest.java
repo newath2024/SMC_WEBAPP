@@ -2,9 +2,12 @@ package com.tradejournal.service;
 
 import com.tradejournal.ai.integration.TradingViewChartImportService;
 import org.junit.jupiter.api.Test;
+import org.springframework.mock.web.MockMultipartFile;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TradingViewChartImportServiceTest {
 
@@ -33,5 +36,24 @@ class TradingViewChartImportServiceTest {
         assertNull(TradingViewChartImportService.parseVisiblePrice(null));
         assertNull(TradingViewChartImportService.parseVisiblePrice(""));
         assertNull(TradingViewChartImportService.parseVisiblePrice("not-visible"));
+    }
+
+    @Test
+    void rejectsSvgScreenshots() {
+        TradingViewChartImportService service = new TradingViewChartImportService(
+                "test-key",
+                "https://api.openai.com/v1",
+                "gpt-4.1",
+                60
+        );
+        MockMultipartFile svg = new MockMultipartFile(
+                "file",
+                "chart.svg",
+                "image/svg+xml",
+                "<svg xmlns=\"http://www.w3.org/2000/svg\"></svg>".getBytes()
+        );
+
+        IllegalArgumentException error = assertThrows(IllegalArgumentException.class, () -> service.analyzeChart(svg));
+        assertTrue(error.getMessage().contains("Only PNG, JPG, WEBP, or GIF"));
     }
 }
