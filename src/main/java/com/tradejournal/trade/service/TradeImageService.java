@@ -23,6 +23,7 @@ public class TradeImageService {
 
     private static final String IMAGE_URL_PREFIX = "/uploads/trade-images/";
     private static final Path STORAGE_DIR = Path.of("data", "uploads", "trade-images");
+    private static final Path STORAGE_ROOT = STORAGE_DIR.toAbsolutePath().normalize();
     private static final long MAX_IMAGE_SIZE_BYTES = 10L * 1024L * 1024L;
     private static final Set<String> ALLOWED_IMAGE_CONTENT_TYPES = Set.of(
             "image/png",
@@ -66,7 +67,7 @@ public class TradeImageService {
             String originalName = file.getOriginalFilename();
             String extension = resolveStoredExtension(contentType);
             String storedName = UUID.randomUUID() + extension;
-            Path target = STORAGE_DIR.resolve(storedName);
+            Path target = STORAGE_ROOT.resolve(storedName);
 
             try {
                 Files.copy(file.getInputStream(), target, StandardCopyOption.REPLACE_EXISTING);
@@ -144,19 +145,32 @@ public class TradeImageService {
     }
 
     private void deletePhysicalFile(String imageUrl) {
-        if (imageUrl == null || !imageUrl.startsWith(IMAGE_URL_PREFIX)) {
-            return;
-        }
-
-        String filename = imageUrl.substring(IMAGE_URL_PREFIX.length());
-        if (filename.isBlank()) {
+        Path target = resolveStoredImagePath(imageUrl);
+        if (target == null) {
             return;
         }
 
         try {
-            Files.deleteIfExists(STORAGE_DIR.resolve(filename));
+            Files.deleteIfExists(target);
         } catch (IOException ignored) {
         }
+    }
+
+    private Path resolveStoredImagePath(String imageUrl) {
+        if (imageUrl == null || !imageUrl.startsWith(IMAGE_URL_PREFIX)) {
+            return null;
+        }
+
+        String filename = imageUrl.substring(IMAGE_URL_PREFIX.length()).trim();
+        if (filename.isBlank()) {
+            return null;
+        }
+
+        Path resolved = STORAGE_ROOT.resolve(filename).normalize();
+        if (!resolved.startsWith(STORAGE_ROOT)) {
+            return null;
+        }
+        return resolved;
     }
 
     private String normalizeContentType(String contentType) {

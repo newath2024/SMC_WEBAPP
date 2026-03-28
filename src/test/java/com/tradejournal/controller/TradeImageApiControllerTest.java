@@ -21,6 +21,7 @@ import java.util.List;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -54,6 +55,7 @@ class TradeImageApiControllerTest {
         user.setId("user-1");
         Trade trade = new Trade();
         trade.setId("trade-1");
+        trade.setUser(user);
 
         when(userService.getCurrentUser(any(HttpSession.class))).thenReturn(user);
         when(userService.isAdmin(user)).thenReturn(false);
@@ -66,6 +68,36 @@ class TradeImageApiControllerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value("Choose at least one image to upload."));
 
+        verify(tradeImageService, never()).saveSetupImages(eq(trade), any(), anyString());
+    }
+
+    @Test
+    void uploadImagesUsesTradeOwnerPlanLimitsForAdmin() throws Exception {
+        User admin = new User();
+        admin.setId("admin-1");
+        admin.setRole("ADMIN");
+
+        User owner = new User();
+        owner.setId("user-1");
+
+        Trade trade = new Trade();
+        trade.setId("trade-1");
+        trade.setUser(owner);
+
+        when(userService.getCurrentUser(any(HttpSession.class))).thenReturn(admin);
+        when(userService.isAdmin(admin)).thenReturn(true);
+        when(tradeService.findByIdForAdmin("trade-1")).thenReturn(trade);
+        when(userService.resolveImageLimitPerTrade(owner)).thenReturn(1);
+        when(userService.hasProAccess(owner)).thenReturn(false);
+        when(tradeImageService.findByTradeId("trade-1")).thenReturn(List.of(mock(com.tradejournal.trade.domain.TradeImage.class)));
+
+        mockMvc.perform(multipart("/api/trades/{id}/images", "trade-1")
+                        .file(new MockMultipartFile("files", "chart.png", "image/png", new byte[]{1, 2, 3})))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.message").value("Standard plan allows 1 image per trade. Upgrade to Pro for unlimited screenshots."));
+
+        verify(userService).resolveImageLimitPerTrade(owner);
+        verify(userService).hasProAccess(owner);
         verify(tradeImageService, never()).saveSetupImages(eq(trade), any(), anyString());
     }
 }

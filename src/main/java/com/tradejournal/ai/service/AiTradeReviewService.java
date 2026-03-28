@@ -43,6 +43,7 @@ public class AiTradeReviewService {
     private static final String DEFAULT_OPENAI_BASE_URL = "https://api.openai.com/v1";
     private static final String IMAGE_URL_PREFIX = "/uploads/trade-images/";
     private static final Path IMAGE_STORAGE_DIR = Path.of("data", "uploads", "trade-images");
+    private static final Path IMAGE_STORAGE_ROOT = IMAGE_STORAGE_DIR.toAbsolutePath().normalize();
     private static final int MAX_IMAGE_COUNT = 6;
     private static final long MAX_TOTAL_IMAGE_BYTES = 18L * 1024L * 1024L;
 
@@ -383,11 +384,15 @@ public class AiTradeReviewService {
         if (!StringUtils.hasText(imageUrl) || !imageUrl.startsWith(IMAGE_URL_PREFIX)) {
             return null;
         }
-        String filename = imageUrl.substring(IMAGE_URL_PREFIX.length());
+        String filename = imageUrl.substring(IMAGE_URL_PREFIX.length()).trim();
         if (!StringUtils.hasText(filename)) {
             return null;
         }
-        return IMAGE_STORAGE_DIR.resolve(filename);
+        Path resolved = IMAGE_STORAGE_ROOT.resolve(filename).normalize();
+        if (!resolved.startsWith(IMAGE_STORAGE_ROOT)) {
+            return null;
+        }
+        return resolved;
     }
 
     private String detectMimeType(Path path) {

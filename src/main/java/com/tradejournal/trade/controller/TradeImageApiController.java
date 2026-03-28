@@ -53,7 +53,8 @@ public class TradeImageApiController {
                     ? tradeService.findByIdForAdmin(id)
                     : tradeService.findEditableByIdForUser(id, currentUser.getId());
 
-            int imageLimit = userService.resolveImageLimitPerTrade(currentUser);
+            User tradeOwner = resolveTradeOwner(currentUser, trade);
+            int imageLimit = userService.resolveImageLimitPerTrade(tradeOwner);
             int existingImages = tradeImageService.findByTradeId(trade.getId()).size();
             int requestedImages = (int) java.util.Arrays.stream(files)
                     .filter(file -> file != null && !file.isEmpty())
@@ -62,7 +63,7 @@ public class TradeImageApiController {
                 return ResponseEntity.badRequest()
                         .body(Map.of("message", "Choose at least one image to upload."));
             }
-            if (!userService.hasProAccess(currentUser) && existingImages + requestedImages > imageLimit) {
+            if (!userService.hasProAccess(tradeOwner) && existingImages + requestedImages > imageLimit) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
                         .body(Map.of("message", "Standard plan allows 1 image per trade. Upgrade to Pro for unlimited screenshots."));
             }
@@ -114,5 +115,12 @@ public class TradeImageApiController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("message", "Unable to delete image"));
         }
+    }
+
+    private User resolveTradeOwner(User currentUser, Trade trade) {
+        if (trade != null && trade.getUser() != null && trade.getUser().getId() != null && !trade.getUser().getId().isBlank()) {
+            return trade.getUser();
+        }
+        return currentUser;
     }
 }
