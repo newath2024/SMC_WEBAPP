@@ -33,6 +33,15 @@ public class MistakeAnalyticsService {
 
     public MistakeTrendReport buildTrendReportForUser(String userId) {
         List<Trade> trades = new ArrayList<>(tradeService.findAllByUser(userId));
+        return buildTrendReport(trades);
+    }
+
+    public MistakeTrendReport buildTrendReportForAdmin() {
+        List<Trade> trades = new ArrayList<>(tradeService.findAllForAdmin());
+        return buildTrendReport(trades);
+    }
+
+    private MistakeTrendReport buildTrendReport(List<Trade> trades) {
         trades.sort(Comparator.comparing(this::resolveTradeTimestamp, Comparator.nullsLast(Comparator.reverseOrder())));
 
         Map<String, TradeReview> reviewByTradeId = loadReviewMap(trades);

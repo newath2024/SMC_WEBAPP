@@ -48,7 +48,9 @@ public class MistakeTagController {
         model.addAttribute("currentUser", currentUser);
         model.addAttribute("adminView", adminView);
 
-        var usageByTagId = tradeMistakeTagRepository.countUsageByMistakeTagForUser(currentUser.getId())
+        var usageByTagId = (adminView
+                ? tradeMistakeTagRepository.countUsageByMistakeTag()
+                : tradeMistakeTagRepository.countUsageByMistakeTagForUser(currentUser.getId()))
                 .stream()
                 .collect(java.util.stream.Collectors.toMap(
                         TradeMistakeTagRepository.MistakeUsageRow::getMistakeTagId,
@@ -67,19 +69,24 @@ public class MistakeTagController {
                         resolveScopeLabel(tag, adminView)
                 ))
                 .toList();
-        MistakeAnalyticsService.MistakeTrendReport trendReport = mistakeAnalyticsService.buildTrendReportForUser(currentUser.getId());
+        MistakeAnalyticsService.MistakeTrendReport trendReport = adminView
+                ? mistakeAnalyticsService.buildTrendReportForAdmin()
+                : mistakeAnalyticsService.buildTrendReportForUser(currentUser.getId());
 
         long totalCount = tableRows.size();
         long activeCount = tableRows.stream().filter(MistakeRowView::active).count();
         long disabledCount = totalCount - activeCount;
 
-        long sessionMaxUsage = tradeMistakeTagRepository.summarizeBySessionForUser(currentUser.getId())
+        List<TradeMistakeTagRepository.MistakeSessionRow> sessionRows = adminView
+                ? tradeMistakeTagRepository.summarizeBySession()
+                : tradeMistakeTagRepository.summarizeBySessionForUser(currentUser.getId());
+        long sessionMaxUsage = sessionRows
                 .stream()
                 .mapToLong(TradeMistakeTagRepository.MistakeSessionRow::getUsageCount)
                 .max()
                 .orElse(0L);
 
-        List<SessionUsageView> sessionUsage = tradeMistakeTagRepository.summarizeBySessionForUser(currentUser.getId())
+        List<SessionUsageView> sessionUsage = sessionRows
                 .stream()
                 .limit(5)
                 .map(item -> new SessionUsageView(
@@ -89,13 +96,16 @@ public class MistakeTagController {
                 ))
                 .toList();
 
-        long symbolMaxUsage = tradeMistakeTagRepository.summarizeBySymbolForUser(currentUser.getId())
+        List<TradeMistakeTagRepository.MistakeSymbolRow> symbolRows = adminView
+                ? tradeMistakeTagRepository.summarizeBySymbol()
+                : tradeMistakeTagRepository.summarizeBySymbolForUser(currentUser.getId());
+        long symbolMaxUsage = symbolRows
                 .stream()
                 .mapToLong(TradeMistakeTagRepository.MistakeSymbolRow::getUsageCount)
                 .max()
                 .orElse(0L);
 
-        List<SymbolUsageView> symbolUsage = tradeMistakeTagRepository.summarizeBySymbolForUser(currentUser.getId())
+        List<SymbolUsageView> symbolUsage = symbolRows
                 .stream()
                 .limit(5)
                 .map(item -> new SymbolUsageView(
@@ -105,7 +115,10 @@ public class MistakeTagController {
                 ))
                 .toList();
 
-        List<RecentMistakeView> recentMistakes = tradeMistakeTagRepository.findRecentMistakesForUser(currentUser.getId())
+        List<TradeMistakeTagRepository.RecentMistakeRow> recentMistakeRows = adminView
+                ? tradeMistakeTagRepository.findRecentMistakes()
+                : tradeMistakeTagRepository.findRecentMistakesForUser(currentUser.getId());
+        List<RecentMistakeView> recentMistakes = recentMistakeRows
                 .stream()
                 .limit(5)
                 .map(item -> new RecentMistakeView(

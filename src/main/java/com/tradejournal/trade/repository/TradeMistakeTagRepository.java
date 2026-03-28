@@ -70,6 +70,14 @@ public interface TradeMistakeTagRepository extends JpaRepository<TradeMistakeTag
     @Query("""
             select coalesce(nullif(trim(t.trade.session), ''), 'UNKNOWN') as session, count(t.id) as usageCount
             from TradeMistakeTag t
+            group by coalesce(nullif(trim(t.trade.session), ''), 'UNKNOWN')
+            order by count(t.id) desc
+            """)
+    List<MistakeSessionRow> summarizeBySession();
+
+    @Query("""
+            select coalesce(nullif(trim(t.trade.session), ''), 'UNKNOWN') as session, count(t.id) as usageCount
+            from TradeMistakeTag t
             where t.trade.user.id = :userId
             group by coalesce(nullif(trim(t.trade.session), ''), 'UNKNOWN')
             order by count(t.id) desc
@@ -79,11 +87,30 @@ public interface TradeMistakeTagRepository extends JpaRepository<TradeMistakeTag
     @Query("""
             select coalesce(nullif(trim(t.trade.symbol), ''), 'UNKNOWN') as symbol, count(t.id) as usageCount
             from TradeMistakeTag t
+            group by coalesce(nullif(trim(t.trade.symbol), ''), 'UNKNOWN')
+            order by count(t.id) desc
+            """)
+    List<MistakeSymbolRow> summarizeBySymbol();
+
+    @Query("""
+            select coalesce(nullif(trim(t.trade.symbol), ''), 'UNKNOWN') as symbol, count(t.id) as usageCount
+            from TradeMistakeTag t
             where t.trade.user.id = :userId
             group by coalesce(nullif(trim(t.trade.symbol), ''), 'UNKNOWN')
             order by count(t.id) desc
             """)
     List<MistakeSymbolRow> summarizeBySymbolForUser(@Param("userId") String userId);
+
+    @Query("""
+            select t.trade.id as tradeId,
+                   t.mistakeTag.name as mistakeName,
+                   t.trade.session as session,
+                   t.trade.symbol as symbol,
+                   t.trade.entryTime as entryTime
+            from TradeMistakeTag t
+            order by t.trade.entryTime desc
+            """)
+    List<RecentMistakeRow> findRecentMistakes();
 
     @Query("""
             select t.trade.id as tradeId,
