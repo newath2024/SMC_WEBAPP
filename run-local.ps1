@@ -28,7 +28,7 @@ if (Test-Path $envFile) {
 
 $env:SPRING_PROFILES_ACTIVE = "local"
 if (-not $env:LOCAL_SERVER_PORT) {
-    $env:LOCAL_SERVER_PORT = "8082"
+    $env:LOCAL_SERVER_PORT = "8083"
 }
 
 if ($env:OPENAI_API_KEY) {

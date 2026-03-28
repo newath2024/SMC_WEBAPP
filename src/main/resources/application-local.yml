@@ -19,4 +19,4 @@ spring:
         format_sql: true
 
 server:
-  port: ${LOCAL_SERVER_PORT:8082}
+  port: ${LOCAL_SERVER_PORT:8083}

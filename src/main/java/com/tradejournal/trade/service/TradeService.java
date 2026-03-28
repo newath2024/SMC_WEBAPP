@@ -74,7 +74,7 @@ public class TradeService {
         trade.setPnl(calculatePnL(trade));
 
         Trade saved = repo.save(trade);
-        replaceMistakes(saved, mistakeIds, customMistakes);
+        replaceMistakes(saved, user, mistakeIds, customMistakes);
         refreshRMultiplesForUser(user.getId());
 
         Trade refreshed = repo.findByIdAndUserId(saved.getId(), user.getId()).orElse(saved);
@@ -160,7 +160,7 @@ public class TradeService {
         existing.setPnl(calculatePnL(existing));
 
         Trade saved = repo.save(existing);
-        replaceMistakes(saved, mistakeIds, customMistakes);
+        replaceMistakes(saved, currentUser, mistakeIds, customMistakes);
         refreshRMultiplesForUser(currentUser.getId());
 
         Trade refreshed = repo.findByIdAndUserId(saved.getId(), currentUser.getId()).orElse(saved);
@@ -179,7 +179,7 @@ public class TradeService {
         existing.setPnl(calculatePnL(existing));
 
         Trade saved = repo.save(existing);
-        replaceMistakes(saved, mistakeIds, customMistakes);
+        replaceMistakes(saved, saved.getUser(), mistakeIds, customMistakes);
         if (ownerUserId != null && !ownerUserId.isBlank()) {
             refreshRMultiplesForUser(ownerUserId);
         }
@@ -533,13 +533,17 @@ public class TradeService {
         }
     }
 
-    private void replaceMistakes(Trade trade, List<String> mistakeIds, String customMistakes) {
+    private void replaceMistakes(Trade trade, User ownerUser, List<String> mistakeIds, String customMistakes) {
         tradeMistakeTagRepository.deleteByTradeId(trade.getId());
 
         List<MistakeTag> selectedTags = new ArrayList<>();
 
         if (mistakeIds != null && !mistakeIds.isEmpty()) {
-            selectedTags.addAll(mistakeTagRepository.findAllById(mistakeIds));
+            if (ownerUser != null && ownerUser.getId() != null && !ownerUser.getId().isBlank()) {
+                selectedTags.addAll(mistakeTagRepository.findVisibleByIdIn(ownerUser.getId(), mistakeIds));
+            } else {
+                selectedTags.addAll(mistakeTagRepository.findAllById(mistakeIds));
+            }
         }
 
         if (customMistakes != null && !customMistakes.isBlank()) {
@@ -551,7 +555,7 @@ public class TradeService {
                     continue;
                 }
 
-                MistakeTag tag = mistakeTagService.findOrCreateByName(raw);
+                MistakeTag tag = mistakeTagService.findOrCreateByName(raw, ownerUser);
 
                 boolean alreadyAdded = selectedTags.stream()
                         .anyMatch(existing -> existing.getId().equals(tag.getId()));

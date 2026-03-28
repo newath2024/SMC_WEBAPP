@@ -58,6 +58,10 @@ public class TradeImageApiController {
             int requestedImages = (int) java.util.Arrays.stream(files)
                     .filter(file -> file != null && !file.isEmpty())
                     .count();
+            if (requestedImages == 0) {
+                return ResponseEntity.badRequest()
+                        .body(Map.of("message", "Choose at least one image to upload."));
+            }
             if (!userService.hasProAccess(currentUser) && existingImages + requestedImages > imageLimit) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
                         .body(Map.of("message", "Standard plan allows 1 image per trade. Upgrade to Pro for unlimited screenshots."));

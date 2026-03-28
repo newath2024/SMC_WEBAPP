@@ -34,13 +34,13 @@ import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.time.format.TextStyle;
 import java.util.*;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/webhooks")
 public class BillingWebhookController {
 
     private static final double DEFAULT_PRO_MONTHLY_PRICE = 29.0;
+    private static final long SIGNATURE_TOLERANCE_SECONDS = 300L;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final UserRepository userRepository;
@@ -387,21 +387,69 @@ public class BillingWebhookController {
             return false;
         }
 
-        Map<String, String> parts = Arrays.stream(signatureHeader.split(","))
-                .map(String::trim)
-                .map(token -> token.split("=", 2))
-                .filter(arr -> arr.length == 2)
-                .collect(Collectors.toMap(arr -> arr[0], arr -> arr[1], (a, b) -> b));
-
-        String timestamp = parts.get("t");
-        String expected = parts.get("v1");
-        if (timestamp == null || expected == null) {
+        SignatureParts parts = parseSignatureHeader(signatureHeader);
+        if (parts.timestamp() == null || parts.v1Signatures().isEmpty()) {
             return false;
         }
 
-        String signedPayload = timestamp + "." + payload;
+        long timestamp = parseTimestamp(parts.timestamp());
+        if (timestamp <= 0L || isTimestampOutsideTolerance(timestamp)) {
+            return false;
+        }
+
+        String signedPayload = parts.timestamp() + "." + payload;
         String computed = hmacSha256Hex(webhookSecret, signedPayload);
-        return MessageDigest.isEqual(computed.getBytes(StandardCharsets.UTF_8), expected.getBytes(StandardCharsets.UTF_8));
+        return parts.v1Signatures().stream().anyMatch(candidate -> signatureMatches(computed, candidate));
+    }
+
+    private SignatureParts parseSignatureHeader(String signatureHeader) {
+        String timestamp = null;
+        List<String> v1Signatures = new ArrayList<>();
+
+        for (String token : signatureHeader.split(",")) {
+            String trimmed = token == null ? "" : token.trim();
+            int separatorIndex = trimmed.indexOf('=');
+            if (separatorIndex <= 0 || separatorIndex >= trimmed.length() - 1) {
+                continue;
+            }
+
+            String key = trimmed.substring(0, separatorIndex).trim();
+            String value = trimmed.substring(separatorIndex + 1).trim();
+            if (value.isBlank()) {
+                continue;
+            }
+
+            if ("t".equals(key) && timestamp == null) {
+                timestamp = value;
+            } else if ("v1".equals(key)) {
+                v1Signatures.add(value);
+            }
+        }
+
+        return new SignatureParts(timestamp, List.copyOf(v1Signatures));
+    }
+
+    private long parseTimestamp(String value) {
+        try {
+            return Long.parseLong(value);
+        } catch (NumberFormatException ex) {
+            return -1L;
+        }
+    }
+
+    private boolean isTimestampOutsideTolerance(long timestamp) {
+        long now = Instant.now().getEpochSecond();
+        return Math.abs(now - timestamp) > SIGNATURE_TOLERANCE_SECONDS;
+    }
+
+    private boolean signatureMatches(String computed, String candidate) {
+        if (candidate == null || candidate.isBlank()) {
+            return false;
+        }
+        return MessageDigest.isEqual(
+                computed.getBytes(StandardCharsets.UTF_8),
+                candidate.trim().toLowerCase(Locale.ENGLISH).getBytes(StandardCharsets.UTF_8)
+        );
     }
 
     private String hmacSha256Hex(String secret, String message) {
@@ -478,5 +526,8 @@ public class BillingWebhookController {
 
     private double centsToUsd(long cents) {
         return Math.round((cents / 100.0) * 100.0) / 100.0;
+    }
+
+    private record SignatureParts(String timestamp, List<String> v1Signatures) {
     }
 }

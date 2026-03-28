@@ -14,6 +14,8 @@ import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -21,6 +23,14 @@ public class TradeImageService {
 
     private static final String IMAGE_URL_PREFIX = "/uploads/trade-images/";
     private static final Path STORAGE_DIR = Path.of("data", "uploads", "trade-images");
+    private static final long MAX_IMAGE_SIZE_BYTES = 10L * 1024L * 1024L;
+    private static final Set<String> ALLOWED_IMAGE_CONTENT_TYPES = Set.of(
+            "image/png",
+            "image/jpeg",
+            "image/jpg",
+            "image/webp",
+            "image/gif"
+    );
 
     private final TradeImageRepository tradeImageRepository;
 
@@ -45,13 +55,16 @@ public class TradeImageService {
                 continue;
             }
 
-            String contentType = file.getContentType();
-            if (contentType == null || !contentType.toLowerCase().startsWith("image/")) {
-                throw new IllegalArgumentException("Only image files are allowed");
+            String contentType = normalizeContentType(file.getContentType());
+            if (!ALLOWED_IMAGE_CONTENT_TYPES.contains(contentType)) {
+                throw new IllegalArgumentException("Only PNG, JPG, WEBP, or GIF images are allowed");
+            }
+            if (file.getSize() > MAX_IMAGE_SIZE_BYTES) {
+                throw new IllegalArgumentException("Each image must be 10MB or smaller");
             }
 
             String originalName = file.getOriginalFilename();
-            String extension = extractExtension(originalName);
+            String extension = resolveStoredExtension(contentType);
             String storedName = UUID.randomUUID() + extension;
             Path target = STORAGE_DIR.resolve(storedName);
 
@@ -146,26 +159,29 @@ public class TradeImageService {
         }
     }
 
-    private String extractExtension(String filename) {
-        if (filename == null) {
-            return ".jpg";
+    private String normalizeContentType(String contentType) {
+        if (!StringUtils.hasText(contentType)) {
+            return "";
         }
-        int lastDot = filename.lastIndexOf('.');
-        if (lastDot <= -1 || lastDot >= filename.length() - 1) {
-            return ".jpg";
-        }
-        String ext = filename.substring(lastDot).toLowerCase();
-        if (ext.length() > 10) {
-            return ".jpg";
-        }
-        return ext;
+        String normalized = contentType.trim().toLowerCase(Locale.ROOT);
+        int separatorIndex = normalized.indexOf(';');
+        return separatorIndex >= 0 ? normalized.substring(0, separatorIndex).trim() : normalized;
+    }
+
+    private String resolveStoredExtension(String contentType) {
+        return switch (contentType) {
+            case "image/png" -> ".png";
+            case "image/webp" -> ".webp";
+            case "image/gif" -> ".gif";
+            default -> ".jpg";
+        };
     }
 
     private String normalizeImageType(String imageType) {
         if (imageType == null || imageType.isBlank()) {
             return "SETUP";
         }
-        String normalized = imageType.trim().toUpperCase();
+        String normalized = imageType.trim().toUpperCase(Locale.ROOT);
         return switch (normalized) {
             case "BEFORE", "AFTER", "REVIEW", "SETUP" -> normalized;
             default -> "SETUP";

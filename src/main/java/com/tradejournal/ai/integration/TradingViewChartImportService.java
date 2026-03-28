@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 import java.util.regex.Pattern;
 
 @Service
@@ -34,6 +35,13 @@ public class TradingViewChartImportService {
     private static final int MAX_IMAGE_COUNT = 5;
     private static final long MAX_IMAGE_SIZE_BYTES = 10L * 1024L * 1024L;
     private static final long MAX_TOTAL_IMAGE_SIZE_BYTES = 25L * 1024L * 1024L;
+    private static final Set<String> ALLOWED_IMAGE_CONTENT_TYPES = Set.of(
+            "image/png",
+            "image/jpeg",
+            "image/jpg",
+            "image/webp",
+            "image/gif"
+    );
     private static final Pattern THOUSANDS_GROUPS_WITH_COMMA = Pattern.compile("^-?\\d{1,3}(,\\d{3})+(\\.\\d+)?$");
     private static final Pattern THOUSANDS_GROUPS_WITH_DOT = Pattern.compile("^-?\\d{1,3}(\\.\\d{3})+(,\\d+)?$");
 
@@ -351,9 +359,9 @@ public class TradingViewChartImportService {
             throw new IllegalArgumentException("Choose between 1 and 5 TradingView screenshots to analyze.");
         }
 
-        String contentType = file.getContentType() == null ? "" : file.getContentType().trim().toLowerCase(Locale.ROOT);
-        if (!contentType.startsWith("image/")) {
-            throw new IllegalArgumentException("Only image files are supported for TradingView screenshot import.");
+        String contentType = normalizeContentType(file.getContentType());
+        if (!ALLOWED_IMAGE_CONTENT_TYPES.contains(contentType)) {
+            throw new IllegalArgumentException("Only PNG, JPG, WEBP, or GIF screenshots are supported for TradingView screenshot import.");
         }
 
         if (file.getSize() > MAX_IMAGE_SIZE_BYTES) {
@@ -367,7 +375,10 @@ public class TradingViewChartImportService {
         List<String> dataUrls = new ArrayList<>();
         for (MultipartFile file : files) {
             try {
-                String contentType = file.getContentType() == null ? "image/png" : file.getContentType().trim().toLowerCase(Locale.ROOT);
+                String contentType = normalizeContentType(file.getContentType());
+                if (!ALLOWED_IMAGE_CONTENT_TYPES.contains(contentType)) {
+                    throw new IllegalArgumentException("Only PNG, JPG, WEBP, or GIF screenshots are supported for TradingView screenshot import.");
+                }
                 String encoded = Base64.getEncoder().encodeToString(file.getBytes());
                 dataUrls.add("data:" + contentType + ";base64," + encoded);
             } catch (IOException ex) {
@@ -375,6 +386,15 @@ public class TradingViewChartImportService {
             }
         }
         return dataUrls;
+    }
+
+    private String normalizeContentType(String contentType) {
+        if (!StringUtils.hasText(contentType)) {
+            return "";
+        }
+        String normalized = contentType.trim().toLowerCase(Locale.ROOT);
+        int separatorIndex = normalized.indexOf(';');
+        return separatorIndex >= 0 ? normalized.substring(0, separatorIndex).trim() : normalized;
     }
 
     private String buildRequestBody(List<String> dataUrls) {

@@ -10,6 +10,7 @@ import com.tradejournal.trade.domain.TradeReview;
 import com.tradejournal.auth.domain.User;
 import com.tradejournal.billing.repository.BillingInvoiceRepository;
 import com.tradejournal.billing.repository.BillingSubscriptionRepository;
+import com.tradejournal.mistake.repository.MistakeTagRepository;
 import com.tradejournal.setup.repository.SetupRepository;
 import com.tradejournal.trade.repository.TradeImageRepository;
 import com.tradejournal.trade.repository.TradeMistakeTagRepository;
@@ -42,6 +43,7 @@ public class AccountPrivacyService {
     private final TradeReviewRepository tradeReviewRepository;
     private final TradeImageRepository tradeImageRepository;
     private final TradeMistakeTagRepository tradeMistakeTagRepository;
+    private final MistakeTagRepository mistakeTagRepository;
     private final SetupRepository setupRepository;
     private final BillingInvoiceRepository billingInvoiceRepository;
     private final BillingSubscriptionRepository billingSubscriptionRepository;
@@ -55,6 +57,7 @@ public class AccountPrivacyService {
             TradeReviewRepository tradeReviewRepository,
             TradeImageRepository tradeImageRepository,
             TradeMistakeTagRepository tradeMistakeTagRepository,
+            MistakeTagRepository mistakeTagRepository,
             SetupRepository setupRepository,
             BillingInvoiceRepository billingInvoiceRepository,
             BillingSubscriptionRepository billingSubscriptionRepository,
@@ -65,6 +68,7 @@ public class AccountPrivacyService {
         this.tradeReviewRepository = tradeReviewRepository;
         this.tradeImageRepository = tradeImageRepository;
         this.tradeMistakeTagRepository = tradeMistakeTagRepository;
+        this.mistakeTagRepository = mistakeTagRepository;
         this.setupRepository = setupRepository;
         this.billingInvoiceRepository = billingInvoiceRepository;
         this.billingSubscriptionRepository = billingSubscriptionRepository;
@@ -158,6 +162,7 @@ public class AccountPrivacyService {
         billingInvoiceRepository.deleteByUserId(currentUser.getId());
         billingSubscriptionRepository.deleteByUserId(currentUser.getId());
         setupRepository.deleteByUserId(currentUser.getId());
+        mistakeTagRepository.deleteByUserId(currentUser.getId());
         userRepository.deleteById(currentUser.getId());
     }
 

@@ -36,7 +36,7 @@ The repository is organized as a modular monolith. Controllers stay thin, persis
 
 ## Profiles
 
-- `local`: SQLite at `data/trading_journal.db`, default port `8082`
+- `local`: SQLite at `data/trading_journal.db`, default port `8083`
 - `prod`: PostgreSQL from environment variables, default port `8081`
 
 Config files live under `src/main/resources`:
@@ -60,7 +60,7 @@ Run locally:
 
 The default profile is `local`, so the command above starts the app against SQLite by default.
 
-Open `http://localhost:8082`.
+Open `http://localhost:8083`.
 
 ## Environment Variables
 
